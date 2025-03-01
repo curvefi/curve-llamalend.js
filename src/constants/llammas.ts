@@ -1,6 +1,6 @@
 import { IDict, ILlamma } from "../interfaces";
-import MonetaryPolicyABI from '../constants/abis/crvUSD/MonetaryPolicy.json' assert { type: 'json'};
-import MonetaryPolicy2ABI from '../constants/abis/crvUSD/MonetaryPolicy2.json' assert { type: 'json'};
+import MonetaryPolicyABI from './abis/crvUSD/MonetaryPolicy.json' assert { type: 'json'};
+import MonetaryPolicy2ABI from './abis/crvUSD/MonetaryPolicy2.json' assert { type: 'json'};
 import { lowerCaseLlammasAddresses } from "./utils";
 
 

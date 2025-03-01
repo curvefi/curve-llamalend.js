@@ -29,15 +29,15 @@ import MinterABI from './constants/abis/Minter.json' assert { type: 'json' };
 import LeverageZapABI from './constants/abis/LeverageZap.json' assert { type: 'json' };
 import gasOracleABI from './constants/abis/gas_oracle_optimism.json' assert { type: 'json'};
 import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' assert { type: 'json'};
-// CrvUSD ABIs
+// crvUSD ABIs
 import llammaABI from "./constants/abis/crvUSD/llamma.json" assert { type: 'json'};
-import controllerABI from "./constants/abis/CrvUSD/controller.json" assert { type: 'json'};
-import PegKeeper from "./constants/abis/CrvUSD/PegKeeper.json" assert { type: 'json'};
-import FactoryABI from "./constants/abis/CrvUSD/Factory.json" assert { type: 'json'};
-import MonetaryPolicy2ABI from "./constants/abis/CrvUSD/MonetaryPolicy2.json" assert { type: 'json'};
-import HealthCalculatorZapABI from "./constants/abis/CrvUSD/HealthCalculatorZap.json" assert { type: 'json'};
-import LeverageZapCrvUSDABI from "./constants/abis/CrvUSD/LeverageZap.json" assert { type: 'json'};
-import DeleverageZapABI from "./constants/abis/CrvUSD/DeleverageZap.json" assert { type: 'json'};
+import controllerABI from "./constants/abis/crvUSD/controller.json" assert { type: 'json'};
+import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" assert { type: 'json'};
+import FactoryABI from "./constants/abis/crvUSD/Factory.json" assert { type: 'json'};
+import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" assert { type: 'json'};
+import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" assert { type: 'json'};
+import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" assert { type: 'json'};
+import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" assert { type: 'json'};
 
 import {
     ALIASES_ETHEREUM,
@@ -80,6 +80,7 @@ import { L2Networks } from "./constants/L2Networks.js";
 import { createCall, handleMultiCallResponse} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
 import {_getMarketsData} from "./external-api.js";
+import { extractDecimals } from "./constants/utils.js";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
@@ -213,7 +214,7 @@ class Lending implements ILending {
             DECIMALS: {},
             NETWORK_NAME: 'ethereum',
             ALIASES: {},
-            ZERO_ADDRESS: ethers.ZeroAddress,
+            ZERO_ADDRESS: '0x000',
             EXCLUDED_PROTOCOLS_1INCH: "",
             FACTORY: "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC".toLowerCase(),
             PEG_KEEPERS: [
@@ -356,28 +357,30 @@ class Lending implements ILending {
         }
 
         // crvUSD contracts
-        this.setContract(this.address, ERC20ABI);
-        for (const llamma of Object.values(this.constants.LLAMMAS)) {
-            this.setContract(llamma.amm_address, llammaABI);
-            this.setContract(llamma.controller_address, controllerABI);
-            const monetary_policy_address = await this.contracts[llamma.controller_address].contract.monetary_policy(this.constantOptions);
-            llamma.monetary_policy_address = monetary_policy_address.toLowerCase();
-            this.setContract(llamma.monetary_policy_address, llamma.monetary_policy_abi);
-            if (llamma.collateral_address === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") {
-                this.setContract(this.constants.WETH, ERC20ABI);
-            } else {
-                this.setContract(llamma.collateral_address, ERC20ABI);
+        if(this.chainId === 1) {
+            this.setContract(this.constants.COINS.crvusd.toLowerCase(), ERC20ABI);
+            for (const llamma of Object.values(this.constants.LLAMMAS)) {
+                this.setContract(llamma.amm_address, llammaABI);
+                this.setContract(llamma.controller_address, controllerABI);
+                const monetary_policy_address = await this.contracts[llamma.controller_address].contract.monetary_policy(this.constantOptions);
+                llamma.monetary_policy_address = monetary_policy_address.toLowerCase();
+                this.setContract(llamma.monetary_policy_address, llamma.monetary_policy_abi);
+                if (llamma.collateral_address === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") {
+                    this.setContract(this.constants.WETH, ERC20ABI);
+                } else {
+                    this.setContract(llamma.collateral_address, ERC20ABI);
+                }
+                this.setContract(llamma.leverage_zap, LeverageZapCrvUSDABI);
+                this.setContract(llamma.deleverage_zap, DeleverageZapABI);
+                if (llamma.health_calculator_zap) this.setContract(llamma.health_calculator_zap, HealthCalculatorZapABI);
             }
-            this.setContract(llamma.leverage_zap, LeverageZapCrvUSDABI);
-            this.setContract(llamma.deleverage_zap, DeleverageZapABI);
-            if (llamma.health_calculator_zap) this.setContract(llamma.health_calculator_zap, HealthCalculatorZapABI);
-        }
-        for (const pegKeeper of this.constants.PEG_KEEPERS) {
-            this.setContract(pegKeeper, PegKeeper);
+            for (const pegKeeper of this.constants.PEG_KEEPERS) {
+                this.setContract(pegKeeper, PegKeeper);
+            }
         }
 
+        // TODO Put it in a separate method
         // Fetch new llammas
-
         this.setContract(this.constants.FACTORY, FactoryABI);
         const factoryContract = this.contracts[this.constants.FACTORY].contract;
         const factoryMulticallContract = this.contracts[this.constants.FACTORY].multicallContract;
@@ -443,7 +446,6 @@ class Lending implements ILending {
 
         this.constants.DECIMALS = extractDecimals(this.constants.LLAMMAS);
         this.constants.DECIMALS[this.address] = 18;
-        this.constants.COINS = COINS;
 
         if(L2Networks.includes(this.chainId)) {
             // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -511,6 +513,8 @@ class Lending implements ILending {
     }
 
     getOneWayMarketList = () => Object.keys(this.constants.ONE_WAY_MARKETS);
+
+    getLlammaList = () => Object.keys(this.constants.LLAMMAS);
 
     getFactoryMarketData = async () => {
         const factory = this.contracts[this.constants.ALIASES['one_way_factory']];

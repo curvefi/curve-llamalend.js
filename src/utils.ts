@@ -4,7 +4,7 @@ import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
 import { ICurveContract, IDict, TGas } from "./interfaces.js";
 import { _getUsdPricesFromApi } from "./external-api.js";
-import { lending } from "./lending.js";
+import { llamalend } from "./lending.js";
 import { JsonFragment } from "ethers/lib.esm";
 import { L2Networks } from "./constants/L2Networks.js";
 import memoize from "memoizee";
@@ -118,7 +118,7 @@ export const gasSum = (gas: number[], currentGas: number | number[]): number[] =
 }
 
 export const _getAddress = (address: string): string => {
-    address = address || lending.signerAddress;
+    address = address || llamalend.signerAddress;
     if (!address) throw Error("Need to connect wallet or pass address into args");
 
     return address
@@ -137,12 +137,12 @@ export const handleMultiCallResponse = (callsMap: string[], response: any[]) => 
 export const _getCoinAddressesNoCheck = (...coins: string[] | string[][]): string[] => {
     if (coins.length == 1 && Array.isArray(coins[0])) coins = coins[0];
     coins = coins as string[];
-    return coins.map((c) => c.toLowerCase()).map((c) => lending.constants.COINS[c] || c);
+    return coins.map((c) => c.toLowerCase()).map((c) => llamalend.constants.COINS[c] || c);
 }
 
 export const _getCoinAddresses = (coins: string[]): string[] => {
     const coinAddresses = _getCoinAddressesNoCheck(coins);
-    const availableAddresses = Object.keys(lending.constants.DECIMALS);
+    const availableAddresses = Object.keys(llamalend.constants.DECIMALS);
     for (const coinAddr of coinAddresses) {
         if (!availableAddresses.includes(coinAddr)) throw Error(`Coin with address '${coinAddr}' is not available`);
     }
@@ -151,7 +151,7 @@ export const _getCoinAddresses = (coins: string[]): string[] => {
 }
 
 export const _getCoinDecimals = (coinAddresses: string[]): number[] => {
-    return coinAddresses.map((coinAddr) => lending.constants.DECIMALS[coinAddr.toLowerCase()] ?? 18);
+    return coinAddresses.map((coinAddr) => llamalend.constants.DECIMALS[coinAddr.toLowerCase()] ?? 18);
 }
 
 
@@ -167,12 +167,12 @@ export const _getBalances = async (coinAddresses: string[], address = ""): Promi
 
     const contractCalls = [];
     for (const coinAddr of _coinAddresses) {
-        contractCalls.push(lending.contracts[coinAddr].multicallContract.balanceOf(address));
+        contractCalls.push(llamalend.contracts[coinAddr].multicallContract.balanceOf(address));
     }
-    const _balances: bigint[] = await lending.multicallProvider.all(contractCalls);
+    const _balances: bigint[] = await llamalend.multicallProvider.all(contractCalls);
 
     if (ethIndex !== -1) {
-        const ethBalance: bigint = await lending.provider.getBalance(address);
+        const ethBalance: bigint = await llamalend.provider.getBalance(address);
         _balances.splice(ethIndex, 0, ethBalance);
     }
 
@@ -196,10 +196,10 @@ export const _getAllowance = memoize(async (coins: string[], address: string, sp
 
     let allowance: bigint[];
     if (_coins.length === 1) {
-        allowance = [await lending.contracts[_coins[0]].contract.allowance(address, spender, lending.constantOptions)];
+        allowance = [await llamalend.contracts[_coins[0]].contract.allowance(address, spender, llamalend.constantOptions)];
     } else {
-        const contractCalls = _coins.map((coinAddr) => lending.contracts[coinAddr].multicallContract.allowance(address, spender));
-        allowance = await lending.multicallProvider.all(contractCalls);
+        const contractCalls = _coins.map((coinAddr) => llamalend.contracts[coinAddr].multicallContract.allowance(address, spender));
+        allowance = await llamalend.multicallProvider.all(contractCalls);
     }
 
     if (ethIndex !== -1) {
@@ -221,7 +221,7 @@ export const getAllowance = async (coins: string[], address: string, spender: st
     const decimals = _getCoinDecimals(coinAddresses);
     const _allowance = await _getAllowance(coinAddresses, address, spender);
 
-    return _allowance.map((a, i) => lending.formatUnits(a, decimals[i]))
+    return _allowance.map((a, i) => llamalend.formatUnits(a, decimals[i]))
 }
 
 // coins can be either addresses or symbols
@@ -235,17 +235,17 @@ export const hasAllowance = async (coins: string[], amounts: (number | string)[]
 }
 
 export const _ensureAllowance = async (coins: string[], _amounts: bigint[], spender: string, isMax = true): Promise<string[]> => {
-    const address = lending.signerAddress;
+    const address = llamalend.signerAddress;
     const _allowance: bigint[] = await _getAllowance(coins, address, spender);
 
     const txHashes: string[] = []
     for (let i = 0; i < _allowance.length; i++) {
         if (_allowance[i] < _amounts[i]) {
-            const contract = lending.contracts[coins[i]].contract;
+            const contract = llamalend.contracts[coins[i]].contract;
             const _approveAmount = isMax ? MAX_ALLOWANCE : _amounts[i];
-            await lending.updateFeeData();
-            const gasLimit = _mulBy1_3(DIGas(await contract.approve.estimateGas(spender, _approveAmount, lending.constantOptions)));
-            txHashes.push((await contract.approve(spender, _approveAmount, { ...lending.options, gasLimit })).hash);
+            await llamalend.updateFeeData();
+            const gasLimit = _mulBy1_3(DIGas(await contract.approve.estimateGas(spender, _approveAmount, llamalend.constantOptions)));
+            txHashes.push((await contract.approve(spender, _approveAmount, { ...llamalend.options, gasLimit })).hash);
         }
     }
 
@@ -257,14 +257,14 @@ export const ensureAllowanceEstimateGas = async (coins: string[], amounts: (numb
     const coinAddresses = _getCoinAddresses(coins);
     const decimals = _getCoinDecimals(coinAddresses);
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
-    const _allowance: bigint[] = await _getAllowance(coinAddresses, lending.signerAddress, spender);
+    const _allowance: bigint[] = await _getAllowance(coinAddresses, llamalend.signerAddress, spender);
 
     let gas = [0,0];
     for (let i = 0; i < _allowance.length; i++) {
         if (_allowance[i] < _amounts[i]) {
-            const contract = lending.contracts[coinAddresses[i]].contract;
+            const contract = llamalend.contracts[coinAddresses[i]].contract;
             const _approveAmount = isMax ? MAX_ALLOWANCE : _amounts[i];
-            const currentGas = smartNumber(await contract.approve.estimateGas(spender, _approveAmount, lending.constantOptions));
+            const currentGas = smartNumber(await contract.approve.estimateGas(spender, _approveAmount, llamalend.constantOptions));
             gas = gasSum(gas, currentGas);
         }
     }
@@ -283,11 +283,11 @@ export const ensureAllowance = async (coins: string[], amounts: (number | string
 
 const _usdRatesCache: IDict<{ rate: number, time: number }> = {}
 export const _getUsdRate = async (assetId: string): Promise<number> => {
-    if (lending.chainId === 1 && assetId.toLowerCase() === '0x8762db106b2c2a0bccb3a80d1ed41273552616e8') return 0; // RSR
+    if (llamalend.chainId === 1 && assetId.toLowerCase() === '0x8762db106b2c2a0bccb3a80d1ed41273552616e8') return 0; // RSR
     const pricesFromApi = await _getUsdPricesFromApi();
     if (assetId.toLowerCase() in pricesFromApi) return pricesFromApi[assetId.toLowerCase()];
 
-    if (assetId === 'USD' || (lending.chainId === 137 && (assetId.toLowerCase() === lending.constants.COINS.am3crv.toLowerCase()))) return 1
+    if (assetId === 'USD' || (llamalend.chainId === 137 && (assetId.toLowerCase() === llamalend.constants.COINS.am3crv.toLowerCase()))) return 1
 
     let chainName = {
         1: 'ethereum',
@@ -308,7 +308,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         43114: 'avalanche',
         42161: 'arbitrum-one',
         1313161554: 'aurora',
-    }[lending.chainId];
+    }[llamalend.chainId];
 
     const nativeTokenName = {
         1: 'ethereum',
@@ -329,7 +329,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         43114: 'avalanche-2',
         42161: 'ethereum',
         1313161554: 'ethereum',
-    }[lending.chainId] as string;
+    }[llamalend.chainId] as string;
 
     if (chainName === undefined) {
         throw Error('curve object is not initialized')
@@ -345,13 +345,13 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
     assetId = isEth(assetId) ? nativeTokenName : assetId.toLowerCase();
 
     // No EURT on Coingecko Polygon
-    if (lending.chainId === 137 && assetId.toLowerCase() === lending.constants.COINS.eurt) {
+    if (llamalend.chainId === 137 && assetId.toLowerCase() === llamalend.constants.COINS.eurt) {
         chainName = 'ethereum';
         assetId = '0xC581b735A1688071A1746c968e0798D642EDE491'.toLowerCase(); // EURT Ethereum
     }
 
     // CRV
-    if (assetId.toLowerCase() === lending.constants.ALIASES.crv) {
+    if (assetId.toLowerCase() === llamalend.constants.ALIASES.crv) {
         assetId = 'curve-dao-token';
     }
 
@@ -376,7 +376,7 @@ export const getUsdRate = async (coin: string): Promise<number> => {
 }
 
 export const getBaseFeeByLastBlock = async ()  => {
-    const provider = lending.provider;
+    const provider = llamalend.provider;
 
     try {
         const block = await provider.getBlock('latest');
@@ -391,15 +391,15 @@ export const getBaseFeeByLastBlock = async ()  => {
 }
 
 export const getGasPriceFromL1 = async (): Promise<number> => {
-    if(L2Networks.includes(lending.chainId) && lending.L1WeightedGasPrice) {
-        return lending.L1WeightedGasPrice + 1e9; // + 1 gwei
+    if(L2Networks.includes(llamalend.chainId) && llamalend.L1WeightedGasPrice) {
+        return llamalend.L1WeightedGasPrice + 1e9; // + 1 gwei
     } else {
         throw Error("This method exists only for L2 networks");
     }
 }
 
 export const getGasPriceFromL2 = async (): Promise<number> => {
-    if(lending.chainId === 42161) {
+    if(llamalend.chainId === 42161) {
         try {
             return await getBaseFeeByLastBlock()
         } catch (e: any) {
@@ -411,7 +411,7 @@ export const getGasPriceFromL2 = async (): Promise<number> => {
 }
 
 export const getGasInfoForL2 = async (): Promise<Record<string, number>> => {
-    if(lending.chainId === 42161) {
+    if(llamalend.chainId === 42161) {
         try {
             const baseFee = await getBaseFeeByLastBlock()
 
@@ -426,3 +426,72 @@ export const getGasInfoForL2 = async (): Promise<Record<string, number>> => {
         throw Error("This method exists only for ARBITRUM network");
     }
 }
+
+export const totalSupply = async (): Promise<{ total: string, minted: string, pegKeepersDebt: string }> => {
+    const calls = [];
+    for (const llammaId of llamalend.getLlammaList()) {
+        const controllerAddress = llamalend.constants.LLAMMAS[llammaId].controller_address;
+        const controllerContract = llamalend.contracts[controllerAddress].multicallContract;
+        calls.push(controllerContract.minted(), controllerContract.redeemed());
+    }
+    for (const pegKeeper of llamalend.constants.PEG_KEEPERS) {
+        calls.push(llamalend.contracts[pegKeeper].multicallContract.debt());
+    }
+    const res: bigint[] = await llamalend.multicallProvider.all(calls);
+
+    let mintedBN = BN(0);
+    for (let i = 0; i < llamalend.getLlammaList().length; i++) {
+        const [_minted, _redeemed] = res.splice(0, 2);
+        mintedBN = toBN(_minted).minus(toBN(_redeemed)).plus(mintedBN);
+    }
+    let pegKeepersBN = BN(0);
+    for (const _pegKeeperDebt of res) {
+        pegKeepersBN = pegKeepersBN.plus(toBN(_pegKeeperDebt));
+    }
+
+    return { total: mintedBN.plus(pegKeepersBN).toString(), minted: mintedBN.toString(), pegKeepersDebt: pegKeepersBN.toString() };
+}
+
+export const getLsdApy = memoize(async(name: 'wstETH' | 'sfrxETH'): Promise<{
+        apy: number,
+        baseApy: number,
+        apyMean30d: number,
+    }> => {
+    const response = await axios.get('https://yields.llama.fi/pools');
+    const {data} = response as { data: { chain: string, project: string, symbol: string, apy: number, apyBase: number, apyMean30d: number }[] };
+
+    const params = {
+        'wstETH': {
+            project: 'lido',
+            symbol: 'STETH',
+        },
+        'sfrxETH': {
+            project: 'frax-ether',
+            symbol: 'SFRXETH',
+        },
+    }
+
+    const result = data.find(({
+        chain,
+        project,
+        symbol,
+    }) => (
+        chain === 'Ethereum' &&
+            project === params[name].project &&
+            symbol === params[name].symbol
+    ));
+
+    if(result) {
+        return {
+            apy: result.apy,
+            baseApy: result.apyBase,
+            apyMean30d: result.apyMean30d,
+        };
+    }
+
+    throw new Error('Pool not found')
+},
+{
+    promise: true,
+    maxAge: 60 * 1000, // 1m
+});

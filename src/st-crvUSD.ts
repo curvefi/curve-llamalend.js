@@ -10,29 +10,29 @@ import {
     getBalances,
     MAX_ALLOWANCE,
 } from "./utils.js";
-import { lending } from "./lending.js";
+import { llamalend } from "./lending.js";
 import { TAmount, TGas } from "./interfaces.js";
 
 // ---------------- UTILS ----------------
 
 export const convertToShares = async (assets: TAmount): Promise<string> => {
     const _assets = parseUnits(assets);
-    const _shares = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.convertToShares(_assets);
+    const _shares = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.convertToShares(_assets);
 
-    return lending.formatUnits(_shares);
+    return llamalend.formatUnits(_shares);
 }
 
 export const convertToAssets = async (shares: TAmount): Promise<string> => {
     const _shares = parseUnits(shares);
-    const _assets = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.convertToAssets(_shares);
+    const _assets = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.convertToAssets(_shares);
 
-    return lending.formatUnits(_assets);
+    return llamalend.formatUnits(_assets);
 }
 
 // ---------------- BALANCES ----------------
 
-export const userBalances = async (address = lending.signerAddress): Promise<{ "crvUSD": string, "st_crvUSD": string }> => {
-    const rawBalances = await getBalances([lending.constants.ALIASES.crvUSD, lending.constants.ALIASES.st_crvUSD], address);
+export const userBalances = async (address = llamalend.signerAddress): Promise<{ "crvUSD": string, "st_crvUSD": string }> => {
+    const rawBalances = await getBalances([llamalend.constants.ALIASES.crvUSD, llamalend.constants.ALIASES.st_crvUSD], address);
     return {
         "crvUSD": rawBalances[0],
         "st_crvUSD": rawBalances[1],
@@ -40,12 +40,12 @@ export const userBalances = async (address = lending.signerAddress): Promise<{ "
 }
 
 export const totalSupplyAndCrvUSDLocked = async (): Promise<{ "crvUSD": string, "st_crvUSD": string }> => {
-    const contract = lending.contracts[lending.constants.ALIASES.st_crvUSD].contract;
+    const contract = llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract;
     const _totalSupply = await contract.totalSupply();
     const _crvUSDLocked = await contract.convertToAssets(_totalSupply)
     return {
-        "crvUSD": lending.formatUnits(_crvUSDLocked),
-        "st_crvUSD": lending.formatUnits(_totalSupply),
+        "crvUSD": llamalend.formatUnits(_crvUSDLocked),
+        "st_crvUSD": llamalend.formatUnits(_totalSupply),
     }
 }
 
@@ -53,45 +53,45 @@ export const totalSupplyAndCrvUSDLocked = async (): Promise<{ "crvUSD": string, 
 
 export const maxDeposit = async (address = ""): Promise<string> => {
     address = _getAddress(address);
-    const _assets = await lending.contracts[lending.constants.ALIASES.crvUSD].contract.balanceOf(address);
+    const _assets = await llamalend.contracts[llamalend.constants.ALIASES.crvUSD].contract.balanceOf(address);
 
     return formatUnits(_assets);
 }
 
 export const previewDeposit = async (assets: TAmount): Promise<string> => {
     const _assets = parseUnits(assets);
-    const _shares = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.previewDeposit(_assets);
+    const _shares = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.previewDeposit(_assets);
 
-    return lending.formatUnits(_shares);
+    return llamalend.formatUnits(_shares);
 }
 
 export const depositIsApproved = async(assets: TAmount): Promise<boolean> => {
-    return await hasAllowance([lending.constants.ALIASES.crvUSD], [assets], lending.signerAddress, lending.constants.ALIASES.st_crvUSD);
+    return await hasAllowance([llamalend.constants.ALIASES.crvUSD], [assets], llamalend.signerAddress, llamalend.constants.ALIASES.st_crvUSD);
 }
 
 export const depositAllowance = async(): Promise<string[]> => {
-    return await getAllowance([lending.constants.ALIASES.crvUSD], lending.signerAddress, lending.constants.ALIASES.st_crvUSD);
+    return await getAllowance([llamalend.constants.ALIASES.crvUSD], llamalend.signerAddress, llamalend.constants.ALIASES.st_crvUSD);
 }
 
 export const depositApproveEstimateGas = async (assets: TAmount): Promise<TGas> => {
-    return await ensureAllowanceEstimateGas([lending.constants.ALIASES.crvUSD], [assets], lending.constants.ALIASES.st_crvUSD);
+    return await ensureAllowanceEstimateGas([llamalend.constants.ALIASES.crvUSD], [assets], llamalend.constants.ALIASES.st_crvUSD);
 }
 
 export const depositApprove = async (assets: TAmount, isMax = true): Promise<string[]> => {
-    return await ensureAllowance([lending.constants.ALIASES.crvUSD], [assets], lending.constants.ALIASES.st_crvUSD, isMax);
+    return await ensureAllowance([llamalend.constants.ALIASES.crvUSD], [assets], llamalend.constants.ALIASES.st_crvUSD, isMax);
 }
 
 const _deposit = async (assets: TAmount, estimateGas = false): Promise<string | TGas> => {
     const _assets = parseUnits(assets);
-    const contract = lending.contracts[lending.constants.ALIASES.st_crvUSD].contract;
-    const gas = await contract.deposit.estimateGas(_assets, lending.signerAddress, { ...lending.constantOptions });
+    const contract = llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract;
+    const gas = await contract.deposit.estimateGas(_assets, llamalend.signerAddress, { ...llamalend.constantOptions });
     if (estimateGas) return smartNumber(gas);
 
-    await lending.updateFeeData();
+    await llamalend.updateFeeData();
 
     const gasLimit = _mulBy1_3(DIGas(gas));
 
-    return (await contract.deposit(_assets, lending.signerAddress, { ...lending.options, gasLimit })).hash;
+    return (await contract.deposit(_assets, llamalend.signerAddress, { ...llamalend.options, gasLimit })).hash;
 }
 
 export const depositEstimateGas = async (assets: TAmount): Promise<TGas> => {
@@ -108,55 +108,55 @@ export const deposit = async (assets: TAmount): Promise<string> => {
 
 export const maxMint = async (address = ""): Promise<string> => {
     address = _getAddress(address);
-    const _assetBalance = await lending.contracts[lending.constants.ALIASES.crvUSD].contract.balanceOf(address);
-    const _shares = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.convertToShares(_assetBalance);
+    const _assetBalance = await llamalend.contracts[llamalend.constants.ALIASES.crvUSD].contract.balanceOf(address);
+    const _shares = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.convertToShares(_assetBalance);
 
     return formatUnits(_shares);
 }
 
 export const previewMint = async (shares: TAmount): Promise<string> => {
     const _shares = parseUnits(shares);
-    const _assets = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.previewMint(_shares);
+    const _assets = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.previewMint(_shares);
 
     return formatUnits(_assets);
 }
 
 export const mintIsApproved = async (shares: TAmount): Promise<boolean> => {
     const assets = await previewMint(shares);
-    return await hasAllowance([lending.constants.ALIASES.crvUSD], [assets], lending.signerAddress, lending.constants.ALIASES.st_crvUSD);
+    return await hasAllowance([llamalend.constants.ALIASES.crvUSD], [assets], llamalend.signerAddress, llamalend.constants.ALIASES.st_crvUSD);
 }
 
 export const mintAllowance = async (): Promise<string[]> => {
-    const assets = await getAllowance([lending.constants.ALIASES.crvUSD], lending.signerAddress, lending.constants.ALIASES.st_crvUSD);
+    const assets = await getAllowance([llamalend.constants.ALIASES.crvUSD], llamalend.signerAddress, llamalend.constants.ALIASES.st_crvUSD);
     try {
         return [await convertToShares(assets[0])]
     } catch (e) {
-        if (parseUnits(assets[0]) === MAX_ALLOWANCE) return [lending.formatUnits(MAX_ALLOWANCE)];
+        if (parseUnits(assets[0]) === MAX_ALLOWANCE) return [llamalend.formatUnits(MAX_ALLOWANCE)];
         throw e;
     }
 }
 
 export const mintApproveEstimateGas = async (shares: TAmount): Promise<TGas> => {
     const assets = await previewMint(shares);
-    return await ensureAllowanceEstimateGas([lending.constants.ALIASES.crvUSD], [assets], lending.constants.ALIASES.st_crvUSD);
+    return await ensureAllowanceEstimateGas([llamalend.constants.ALIASES.crvUSD], [assets], llamalend.constants.ALIASES.st_crvUSD);
 }
 
 export const mintApprove = async (shares: TAmount, isMax = true): Promise<string[]> => {
     const assets = await previewMint(shares);
-    return await ensureAllowance([lending.constants.ALIASES.crvUSD], [assets], lending.constants.ALIASES.st_crvUSD, isMax);
+    return await ensureAllowance([llamalend.constants.ALIASES.crvUSD], [assets], llamalend.constants.ALIASES.st_crvUSD, isMax);
 }
 
 const _mint = async (shares: TAmount, estimateGas = false): Promise<string | TGas> => {
     const _shares = parseUnits(shares);
-    const contract = lending.contracts[lending.constants.ALIASES.st_crvUSD].contract;
-    const gas = await contract.mint.estimateGas(_shares, lending.signerAddress, { ...lending.constantOptions });
+    const contract = llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract;
+    const gas = await contract.mint.estimateGas(_shares, llamalend.signerAddress, { ...llamalend.constantOptions });
     if (estimateGas) return smartNumber(gas);
 
-    await lending.updateFeeData();
+    await llamalend.updateFeeData();
 
     const gasLimit = _mulBy1_3(DIGas(gas));
 
-    return (await contract.mint(_shares, lending.signerAddress, { ...lending.options, gasLimit })).hash;
+    return (await contract.mint(_shares, llamalend.signerAddress, { ...llamalend.options, gasLimit })).hash;
 }
 
 export const mintEstimateGas = async (shares: TAmount): Promise<TGas> => {
@@ -173,29 +173,29 @@ export const mint = async (shares: TAmount): Promise<string> => {
 
 export const maxWithdraw = async (address = ""): Promise<string> => {
     address = _getAddress(address);
-    const _assets = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.maxWithdraw(address);
+    const _assets = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.maxWithdraw(address);
 
     return formatUnits(_assets);
 }
 
 export const previewWithdraw = async (assets: TAmount): Promise<string> => {
     const _assets = parseUnits(assets);
-    const _shares = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.previewWithdraw(_assets);
+    const _shares = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.previewWithdraw(_assets);
 
     return formatUnits(_shares);
 }
 
 const _withdraw = async (assets: TAmount, estimateGas = false): Promise<string | TGas> => {
     const _assets = parseUnits(assets);
-    const contract = lending.contracts[lending.constants.ALIASES.st_crvUSD].contract;
-    const gas = await contract.withdraw.estimateGas(_assets, lending.signerAddress, lending.signerAddress, { ...lending.constantOptions });
+    const contract = llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract;
+    const gas = await contract.withdraw.estimateGas(_assets, llamalend.signerAddress, llamalend.signerAddress, { ...llamalend.constantOptions });
     if (estimateGas) return smartNumber(gas);
 
-    await lending.updateFeeData();
+    await llamalend.updateFeeData();
 
     const gasLimit = _mulBy1_3(DIGas(gas));
 
-    return (await contract.withdraw(_assets, lending.signerAddress, lending.signerAddress, { ...lending.options, gasLimit })).hash;
+    return (await contract.withdraw(_assets, llamalend.signerAddress, llamalend.signerAddress, { ...llamalend.options, gasLimit })).hash;
 }
 
 export const withdrawEstimateGas = async (assets: TAmount): Promise<TGas> => {
@@ -210,29 +210,29 @@ export const withdraw = async (assets: TAmount): Promise<string> => {
 
 export const maxRedeem = async (address = ""): Promise<string> => {
     address = _getAddress(address);
-    const _shares = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.maxRedeem(address)
+    const _shares = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.maxRedeem(address)
 
     return formatUnits(_shares);
 }
 
 export const previewRedeem = async (shares: TAmount): Promise<string> => {
     const _shares = parseUnits(shares, 18);
-    const _assets = await lending.contracts[lending.constants.ALIASES.st_crvUSD].contract.previewRedeem(_shares);
+    const _assets = await llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract.previewRedeem(_shares);
 
     return formatUnits(_assets);
 }
 
 const _redeem = async (shares: TAmount, estimateGas = false): Promise<string | TGas> => {
     const _shares = parseUnits(shares, 18);
-    const contract = lending.contracts[lending.constants.ALIASES.st_crvUSD].contract;
-    const gas = await contract.redeem.estimateGas(_shares, lending.signerAddress, lending.signerAddress, { ...lending.constantOptions });
+    const contract = llamalend.contracts[llamalend.constants.ALIASES.st_crvUSD].contract;
+    const gas = await contract.redeem.estimateGas(_shares, llamalend.signerAddress, llamalend.signerAddress, { ...llamalend.constantOptions });
     if (estimateGas) return smartNumber(gas);
 
-    await lending.updateFeeData();
+    await llamalend.updateFeeData();
 
     const gasLimit = _mulBy1_3(DIGas(gas));
 
-    return (await contract.redeem(_shares, lending.signerAddress, lending.signerAddress, { ...lending.options, gasLimit })).hash;
+    return (await contract.redeem(_shares, llamalend.signerAddress, llamalend.signerAddress, { ...llamalend.options, gasLimit })).hash;
 }
 
 export const redeemEstimateGas = async (shares: TAmount): Promise<TGas> => {

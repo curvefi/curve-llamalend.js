@@ -14,8 +14,9 @@ import {
     isEth,
     _cutZeros,
     formatUnits,
+    smartNumber,
     MAX_ALLOWANCE,
-    MAX_ACTIVE_BAND,
+    MAX_ACTIVE_BAND, _mulBy1_3, DIGas,
 } from "../utils";
 import {IDict, TGas} from "../interfaces";
 import {_getUserCollateralCrvUsd} from "../external-api.js";
@@ -738,7 +739,7 @@ export class LlammaTemplate {
         return await ensureAllowance([this.collateral], [collateral], this.controller);
     }
 
-    private async _createLoan(collateral: number | string, debt: number | string, range: number, estimateGas: boolean): Promise<string | number> {
+    private async _createLoan(collateral: number | string, debt: number | string, range: number, estimateGas: boolean): Promise<string | TGas> {
         if (await this.loanExists()) throw Error("Loan already created");
         this._checkRange(range);
 
@@ -746,11 +747,11 @@ export class LlammaTemplate {
         const _debt = parseUnits(debt);
         const contract = llamalend.contracts[this.controller].contract;
         const value = isEth(this.collateral) ? _collateral : llamalend.parseUnits("0");
-        const gas = await contract.estimateGas.create_loan(_collateral, _debt, range, { ...llamalend.constantOptions, value });
-        if (estimateGas) return gas.toNumber();
+        const gas = await contract.create_loan.estimateGas(_collateral, _debt, range, { ...llamalend.constantOptions, value });
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.create_loan(_collateral, _debt, range, { ...llamalend.options, gasLimit, value })).hash
     }
 
@@ -827,7 +828,7 @@ export class LlammaTemplate {
         return await ensureAllowance([this.collateral], [collateral], this.controller);
     }
 
-    private async _borrowMore(collateral: number | string, debt: number | string, estimateGas: boolean): Promise<string | number> {
+    private async _borrowMore(collateral: number | string, debt: number | string, estimateGas: boolean): Promise<string | TGas> {
         const { stablecoin, debt: currentDebt } = await this.userState();
         if (Number(currentDebt) === 0) throw Error(`Loan for ${llamalend.signerAddress} does not exist`);
         if (Number(stablecoin) > 0) throw Error(`User ${llamalend.signerAddress} is already in liquidation mode`);
@@ -836,11 +837,11 @@ export class LlammaTemplate {
         const _debt = parseUnits(debt);
         const contract = llamalend.contracts[this.controller].contract;
         const value = isEth(this.collateral) ? _collateral : llamalend.parseUnits("0");
-        const gas = await contract.estimateGas.borrow_more(_collateral, _debt, { ...llamalend.constantOptions, value });
-        if (estimateGas) return gas.toNumber();
+        const gas = await contract.borrow_more.estimateGas(_collateral, _debt, { ...llamalend.constantOptions, value });
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.borrow_more(_collateral, _debt, { ...llamalend.options, gasLimit, value })).hash
     }
 
@@ -904,7 +905,7 @@ export class LlammaTemplate {
         return await ensureAllowance([this.collateral], [collateral], this.controller);
     }
 
-    private async _addCollateral(collateral: number | string, address: string, estimateGas: boolean): Promise<string | number> {
+    private async _addCollateral(collateral: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
         const { stablecoin, debt: currentDebt } = await this.userState(address);
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
         if (Number(stablecoin) > 0) throw Error(`User ${address} is already in liquidation mode`);
@@ -912,11 +913,11 @@ export class LlammaTemplate {
         const _collateral = parseUnits(collateral, this.collateralDecimals);
         const contract = llamalend.contracts[this.controller].contract;
         const value = isEth(this.collateral) ? _collateral : llamalend.parseUnits("0");
-        const gas = await contract.estimateGas.add_collateral(_collateral, address, { ...llamalend.constantOptions, value });
-        if (estimateGas) return gas.toNumber();
+        const gas = await contract.add_collateral.estimateGas(_collateral, address, { ...llamalend.constantOptions, value });
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.add_collateral(_collateral, address, { ...llamalend.options, gasLimit, value })).hash
     }
 
@@ -977,18 +978,18 @@ export class LlammaTemplate {
         return formatUnits(_health);
     }
 
-    private async _removeCollateral(collateral: number | string, estimateGas: boolean): Promise<string | number> {
+    private async _removeCollateral(collateral: number | string, estimateGas: boolean): Promise<string | TGas> {
         const { stablecoin, debt: currentDebt } = await this.userState();
         if (Number(currentDebt) === 0) throw Error(`Loan for ${llamalend.signerAddress} does not exist`);
         if (Number(stablecoin) > 0) throw Error(`User ${llamalend.signerAddress} is already in liquidation mode`);
 
         const _collateral = parseUnits(collateral, this.collateralDecimals);
         const contract = llamalend.contracts[this.controller].contract;
-        const gas = await contract.estimateGas.remove_collateral(_collateral, isEth(this.collateral), llamalend.constantOptions);
-        if (estimateGas) return gas.toNumber();
+        const gas = await contract.remove_collateral.estimateGas(_collateral, isEth(this.collateral), llamalend.constantOptions);
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.remove_collateral(_collateral, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
     }
 
@@ -1049,7 +1050,7 @@ export class LlammaTemplate {
         return formatUnits(_health);
     }
 
-    private async _repay(debt: number | string, address: string, estimateGas: boolean): Promise<string | number> {
+    private async _repay(debt: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
         address = _getAddress(address);
         const { debt: currentDebt } = await this.userState(address);
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
@@ -1059,11 +1060,11 @@ export class LlammaTemplate {
         const [_, n1] = await this.userBands(address);
         const { stablecoin } = await this.userState(address);
         const n = (BN(stablecoin).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;  // In liquidation mode it doesn't matter if active band moves
-        const gas = await contract.estimateGas.repay(_debt, address, n, isEth(this.collateral), llamalend.constantOptions);
-        if (estimateGas) return gas.toNumber();
+        const gas = await contract.repay.estimateGas(_debt, address, n, isEth(this.collateral), llamalend.constantOptions);
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.repay(_debt, address, n, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
     }
 
@@ -1202,7 +1203,7 @@ export class LlammaTemplate {
         return await ensureAllowance([this.coinAddresses[i]], [amount], this.address);
     }
 
-    private async _swap(i: number, j: number, amount: number | string, slippage: number, estimateGas: boolean): Promise<string | number> {
+    private async _swap(i: number, j: number, amount: number | string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
         if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
 
         const [inDecimals, outDecimals] = [this.coinDecimals[i], this.coinDecimals[j]];
@@ -1211,11 +1212,11 @@ export class LlammaTemplate {
         const minRecvAmountBN: BigNumber = toBN(_expected, outDecimals).times(100 - slippage).div(100);
         const _minRecvAmount = fromBN(minRecvAmountBN, outDecimals);
         const contract = llamalend.contracts[this.address].contract;
-        const gas = await contract.estimateGas.exchange(i, j, _amount, _minRecvAmount, llamalend.constantOptions);
-        if (estimateGas) return gas.toNumber();
+        const gas = await contract.exchange.estimateGas(i, j, _amount, _minRecvAmount, llamalend.constantOptions);
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.exchange(i, j, _amount, _minRecvAmount, { ...llamalend.options, gasLimit })).hash
     }
 
@@ -1253,7 +1254,7 @@ export class LlammaTemplate {
         return await ensureAllowance([llamalend.address], [tokensToLiquidate], this.controller);
     }
 
-    private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | number> {
+    private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
         const { stablecoin, debt: currentDebt } = await this.userState(address);
         if (slippage <= 0) throw Error("Slippage must be > 0");
         if (slippage > 100) throw Error("Slippage must be <= 100");
@@ -1263,11 +1264,11 @@ export class LlammaTemplate {
         const minAmountBN: BigNumber = BN(stablecoin).times(100 - slippage).div(100);
         const _minAmount = fromBN(minAmountBN);
         const contract = llamalend.contracts[this.controller].contract;
-        const gas = (await contract.estimateGas.liquidate(address, _minAmount, isEth(this.collateral), llamalend.constantOptions))
-        if (estimateGas) return gas.toNumber();
+        const gas = (await contract.liquidate.estimateGas(address, _minAmount, isEth(this.collateral), llamalend.constantOptions))
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.liquidate(address, _minAmount, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
     }
 
@@ -1573,7 +1574,7 @@ export class LlammaTemplate {
         return BN(1).minus(rateBN.div(smallRateBN)).times(100).toFixed(4);
     }
 
-    private async _leverageCreateLoan(collateral: number | string, debt: number | string, range: number, slippage: number, estimateGas: boolean): Promise<string | number> {
+    private async _leverageCreateLoan(collateral: number | string, debt: number | string, range: number, slippage: number, estimateGas: boolean): Promise<string | TGas> {
         if (await this.loanExists()) throw Error("Loan already created");
         this._checkRange(range);
 
@@ -1586,7 +1587,7 @@ export class LlammaTemplate {
         const _minRecv = fromBN(minRecvBN, this.collateralDecimals);
         const contract = llamalend.contracts[this.controller].contract;
         const value = isEth(this.collateral) ? _collateral : llamalend.parseUnits("0");
-        const gas = await contract.estimateGas.create_loan_extended(
+        const gas = await contract.create_loan_extended.estimateGas(
             _collateral,
             _debt,
             range,
@@ -1594,10 +1595,10 @@ export class LlammaTemplate {
             [routeIdx, _minRecv],
             { ...llamalend.constantOptions, value }
         );
-        if (estimateGas) return gas.toNumber();
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.create_loan_extended(
             _collateral,
             _debt,
@@ -1750,7 +1751,7 @@ export class LlammaTemplate {
         return BN(1).minus(rateBN.div(smallRateBN)).times(100).toFixed(4);
     }
 
-    private async _deleverageRepay(collateral: number | string, slippage: number, estimateGas: boolean): Promise<string | number> {
+    private async _deleverageRepay(collateral: number | string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
         const { debt: currentDebt } = await this.userState(llamalend.signerAddress);
         if (Number(currentDebt) === 0) throw Error(`Loan for ${llamalend.signerAddress} does not exist`);
 
@@ -1760,11 +1761,11 @@ export class LlammaTemplate {
         const minRecvBN = toBN(_debt).times(100 - slippage).div(100);
         const _minRecv = fromBN(minRecvBN);
         const contract = llamalend.contracts[this.controller].contract;
-        const gas = await contract.estimateGas.repay_extended(this.deleverageZap, [routeIdx, _collateral, _minRecv], llamalend.constantOptions);
-        if (estimateGas) return gas.toNumber();
+        const gas = await contract.repay_extended.estimateGas(this.deleverageZap, [routeIdx, _collateral, _minRecv], llamalend.constantOptions);
+        if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
-        const gasLimit = gas.mul(130).div(100);
+        const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.repay_extended(this.deleverageZap, [routeIdx, _collateral, _minRecv], { ...llamalend.options, gasLimit })).hash
     }
 

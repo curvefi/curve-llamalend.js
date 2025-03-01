@@ -1,6 +1,7 @@
 import { ethers, Networkish } from "ethers";
 import { OneWayMarketTemplate, getOneWayMarket } from "./markets/index.js";
-import { lending as _lending } from "./lending.js";
+import { LlammaTemplate, getLlamma} from "./llammas";
+import { llamalend as _llamalend} from "./lending.js";
 import {
     getBalances,
     getAllowance,
@@ -11,6 +12,8 @@ import {
     getGasPriceFromL2,
     getGasInfoForL2,
     getGasPriceFromL1,
+    totalSupply,
+    getLsdApy,
 } from "./utils.js";
 import {
     convertToAssets,
@@ -49,15 +52,15 @@ async function init (
     providerSettings: { url?: string, privateKey?: string, batchMaxCount? : number } | { externalProvider: ethers.Eip1193Provider } | { network?: Networkish, apiKey?: string },
     options: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number, chainId?: number } = {}
 ): Promise<void> {
-    await _lending.init(providerType, providerSettings, options);
+    await _llamalend.init(providerType, providerSettings, options);
     // @ts-ignore
-    this.signerAddress = _lending.signerAddress;
+    this.signerAddress = _llamalend.signerAddress;
     // @ts-ignore
-    this.chainId = _lending.chainId;
+    this.chainId = _llamalend.chainId;
 }
 
 function setCustomFeeData (customFeeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number }): void {
-    _lending.setCustomFeeData(customFeeData);
+    _llamalend.setCustomFeeData(customFeeData);
 }
 
 const lending = {
@@ -66,6 +69,10 @@ const lending = {
     signerAddress: '',
     OneWayMarketTemplate,
     getOneWayMarket,
+    LlammaTemplate,
+    getLlamma,
+    totalSupply,
+    getLsdApy,
     setCustomFeeData,
     getBalances,
     getAllowance,
@@ -75,10 +82,11 @@ const lending = {
     getGasPriceFromL1,
     getGasPriceFromL2,
     getGasInfoForL2,
-    fetchStats: _lending.fetchStats,
+    fetchStats: _llamalend.fetchStats,
+    getLlammaList: _llamalend.getLlammaList,
     oneWayfactory: {
-        fetchMarkets:  _lending.fetchOneWayMarkets,
-        getMarketList: _lending.getOneWayMarketList,
+        fetchMarkets:  _llamalend.fetchOneWayMarkets,
+        getMarketList: _llamalend.getOneWayMarketList,
     },
     estimateGas: {
         ensureAllowance: ensureAllowanceEstimateGas,
