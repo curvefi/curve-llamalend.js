@@ -2,7 +2,7 @@ import axios from "axios";
 import { ethers } from "ethers";
 import memoize from "memoizee";
 import BigNumber from 'bignumber.js';
-import { llamalend } from "./lending.js";
+import { llamalend } from "./llamalend.js";
 import {
     IExtendedPoolDataFromApi,
     INetworkName,

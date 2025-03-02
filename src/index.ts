@@ -1,7 +1,7 @@
 import { ethers, Networkish } from "ethers";
 import { OneWayMarketTemplate, getOneWayMarket } from "./markets/index.js";
 import { LlammaTemplate, getLlamma} from "./llammas";
-import { llamalend as _llamalend} from "./lending.js";
+import { llamalend as _llamalend} from "./llamalend.js";
 import {
     getBalances,
     getAllowance,
@@ -63,7 +63,7 @@ function setCustomFeeData (customFeeData: { gasPrice?: number, maxFeePerGas?: nu
     _llamalend.setCustomFeeData(customFeeData);
 }
 
-const lending = {
+const llamalend = {
     init,
     chainId: 0,
     signerAddress: '',
@@ -125,4 +125,4 @@ const lending = {
     },
 }
 
-export default lending;
+export default llamalend;

@@ -1,6 +1,6 @@
 import memoize from "memoizee";
 import BigNumber from "bignumber.js";
-import { llamalend } from "../lending.js";
+import { llamalend } from "../llamalend.js";
 import {
     _getAddress,
     parseUnits,

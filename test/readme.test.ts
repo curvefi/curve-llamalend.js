@@ -1,32 +1,32 @@
-import lending from "../src/index.js";
+import llamalend from "../src/index.js";
 
 const generalMethodsTest = async () => {
-    await lending.init('JsonRpc', {});  // Polygon network
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});  // Polygon network
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const balances1 = await lending.getBalances(['sdt', 'weth']);
-    // OR const balances1 = await lending.getBalances(['0x361a5a4993493ce00f61c32d4ecca5512b82ce90', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619']);
+    const balances1 = await llamalend.getBalances(['sdt', 'weth']);
+    // OR const balances1 = await llamalend.getBalances(['0x361a5a4993493ce00f61c32d4ecca5512b82ce90', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619']);
     console.log(balances1);
 
     // You can specify address
-    const balances2 = await lending.getBalances(['sdt', 'weth'], "0x0063046686E46Dc6F15918b61AE2B121458534a5");
-    // OR const balances2 = await lending.getBalances(['0x361a5a4993493ce00f61c32d4ecca5512b82ce90', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'], '0x0063046686E46Dc6F15918b61AE2B121458534a5');
+    const balances2 = await llamalend.getBalances(['sdt', 'weth'], "0x0063046686E46Dc6F15918b61AE2B121458534a5");
+    // OR const balances2 = await llamalend.getBalances(['0x361a5a4993493ce00f61c32d4ecca5512b82ce90', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'], '0x0063046686E46Dc6F15918b61AE2B121458534a5');
     console.log(balances2);
 
     const spender = "0x136e783846ef68C8Bd00a3369F787dF8d683a696"
 
-    console.log(await lending.getAllowance(['sdt', 'weth'], lending.signerAddress, spender));
-    console.log(await lending.hasAllowance(['sdt', 'weth'], ['1000', '1000'], lending.signerAddress, spender));
-    console.log(await lending.ensureAllowance(['sdt', 'weth'], ['1000', '1000'], spender));
+    console.log(await llamalend.getAllowance(['sdt', 'weth'], llamalend.signerAddress, spender));
+    console.log(await llamalend.hasAllowance(['sdt', 'weth'], ['1000', '1000'], llamalend.signerAddress, spender));
+    console.log(await llamalend.ensureAllowance(['sdt', 'weth'], ['1000', '1000'], spender));
 
-    console.log(await lending.getUsdRate('0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'));
+    console.log(await llamalend.getUsdRate('0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'));
 }
 
 const oneWayMarketFieldsTest = async () => {
-    await lending.init('JsonRpc', {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
 
     console.log(oneWayMarket.id);
     console.log(oneWayMarket.name);
@@ -41,10 +41,10 @@ const oneWayMarketFieldsTest = async () => {
 }
 
 const walletBalancesTest = async () => {
-    await lending.init('JsonRpc', {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
 
     // 1. Current address (signer) balances
     console.log(await oneWayMarket.wallet.balances());
@@ -54,10 +54,10 @@ const walletBalancesTest = async () => {
 }
 
 const statsTest = async () => {
-    await lending.init('JsonRpc', {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
 
     console.log(await oneWayMarket.stats.parameters());
     console.log(await oneWayMarket.stats.rates());
@@ -74,10 +74,10 @@ const statsTest = async () => {
 }
 
 const vaultTest = async () => {
-    await lending.init('JsonRpc', {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-1');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-1');
 
     console.log(await oneWayMarket.wallet.balances());
 
@@ -151,12 +151,12 @@ const vaultTest = async () => {
 }
 
 const generalTest = async () => {
-    await lending.init('JsonRpc', {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    console.log(lending.oneWayfactory.getMarketList());
+    console.log(llamalend.oneWayfactory.getMarketList());
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
 
 
     console.log("\n--- CREATE LOAN ---\n");
@@ -278,10 +278,10 @@ const generalTest = async () => {
 }
 
 const createLoanAllRangesTest = async () => {
-    await lending.init('JsonRpc', {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
 
     console.log(await oneWayMarket.createLoanMaxRecvAllRanges(1));
     console.log(await oneWayMarket.createLoanBandsAllRanges(1, 1600));
@@ -289,10 +289,10 @@ const createLoanAllRangesTest = async () => {
 }
 
 const swapTest = async () => {
-    await lending.init('JsonRpc', {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
 
     // Load liquidity
     await oneWayMarket.vault.deposit(10000);
@@ -313,10 +313,10 @@ const swapTest = async () => {
 }
 
 const selfLiquidationTest = async () => {
-    await lending.init('JsonRpc', {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
 
     // Load liquidity
     await oneWayMarket.vault.deposit(10000);
@@ -337,10 +337,10 @@ const selfLiquidationTest = async () => {
 }
 
 const leverageTest = async () => {
-    await lending.init('JsonRpc', {}, {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {}, {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
     console.log(oneWayMarket.collateral_token, oneWayMarket.borrowed_token);
     console.log(await oneWayMarket.wallet.balances());
 
@@ -431,10 +431,10 @@ const leverageTest = async () => {
 }
 
 const leverageAllRangesTest = async () => {
-    await lending.init('JsonRpc', {}, {});
-    await lending.oneWayfactory.fetchMarkets();
+    await llamalend.init('JsonRpc', {}, {});
+    await llamalend.oneWayfactory.fetchMarkets();
 
-    const oneWayMarket = lending.getOneWayMarket('one-way-market-0');
+    const oneWayMarket = llamalend.getOneWayMarket('one-way-market-0');
 
     if (Number(await oneWayMarket.vault.totalLiquidity()) === 0) {
         const maxDeposit = Number(await oneWayMarket.vault.maxDeposit()) * 0.7;

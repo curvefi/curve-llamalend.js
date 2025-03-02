@@ -4,7 +4,7 @@ import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
 import { ICurveContract, IDict, TGas } from "./interfaces.js";
 import { _getUsdPricesFromApi } from "./external-api.js";
-import { llamalend } from "./lending.js";
+import { llamalend } from "./llamalend.js";
 import { JsonFragment } from "ethers/lib.esm";
 import { L2Networks } from "./constants/L2Networks.js";
 import memoize from "memoizee";

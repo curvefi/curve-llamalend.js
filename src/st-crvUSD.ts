@@ -10,7 +10,7 @@ import {
     getBalances,
     MAX_ALLOWANCE,
 } from "./utils.js";
-import { llamalend } from "./lending.js";
+import { llamalend } from "./llamalend.js";
 import { TAmount, TGas } from "./interfaces.js";
 
 // ---------------- UTILS ----------------

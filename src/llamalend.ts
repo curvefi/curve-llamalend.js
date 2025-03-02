@@ -3,7 +3,7 @@ import { ethers,
 import { Provider as MulticallProvider, Contract as MulticallContract, Call } from '@curvefi/ethcall';
 import {
     IChainId,
-    ILending,
+    ILlamalend,
     ILlamma,
     IDict,
     INetworkName,
@@ -168,7 +168,7 @@ export const NETWORK_CONSTANTS: { [index: number]: any } = {
 }
 
 
-class Lending implements ILending {
+class Llamalend implements ILlamalend {
     address: string;
     provider: ethers.BrowserProvider | ethers.JsonRpcProvider;
     multicallProvider: MulticallProvider;
@@ -782,4 +782,4 @@ class Lending implements ILending {
     }
 }
 
-export const llamalend = new Lending();
+export const llamalend = new Llamalend();

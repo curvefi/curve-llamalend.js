@@ -1,11 +1,11 @@
 import { assert } from "chai";
-import { crvusd } from "../src/crvusd";
-import { getLlamma, LlammaTemplate } from "../src/llammas";
-import { BN } from "../src/utils";
+import llamalend from "../src/index.js";
+import {getLlamma, LlammaTemplate} from "../src/llammas/index.js";
+import { BN } from "../src/utils.js";
 
 const LLAMMAS = ['sfrxeth'];
 
-const swapTest = (id: string) => {
+const swapCrvUSDTest = (id: string) => {
     let llamma: LlammaTemplate;
     let maxDebt: string;
 
@@ -47,10 +47,10 @@ describe('Swap test', async function () {
     this.timeout(120000);
 
     before(async function () {
-        await crvusd.init('JsonRpc', {},{ gasPrice: 0 });
+        await llamalend.init('JsonRpc', {},{ gasPrice: 0 });
     });
 
     for (const llammaId of LLAMMAS) {
-        swapTest(llammaId);
+        swapCrvUSDTest(llammaId);
     }
 })

@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import lending from "../src/index.js";
+import llamalend from "../src/index.js";
 import { getOneWayMarket, OneWayMarketTemplate } from "../src/markets/index.js";
 
 const ONE_WAY_MARKETS = ['one-way-market-0'];
@@ -47,8 +47,8 @@ describe('Self-liquidation test', async function () {
     this.timeout(120000);
 
     before(async function () {
-        await lending.init('JsonRpc', {},{ gasPrice: 0 });
-        await lending.oneWayfactory.fetchMarkets();
+        await llamalend.init('JsonRpc', {},{ gasPrice: 0 });
+        await llamalend.oneWayfactory.fetchMarkets();
     });
 
     for (const oneWayMarketId of ONE_WAY_MARKETS) {

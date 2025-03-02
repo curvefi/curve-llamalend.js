@@ -1,6 +1,6 @@
 import { assert } from "chai";
-import { crvusd } from "../src/crvusd";
-import { getLlamma, LlammaTemplate } from "../src/llammas";
+import llamalend from "../src/index.js";
+import {getLlamma, LlammaTemplate} from "../src/llammas/index.js";
 
 const LLAMMAS = ['sfrxeth'];
 
@@ -45,7 +45,7 @@ describe('Self-liquidation test', async function () {
     this.timeout(120000);
 
     before(async function () {
-        await crvusd.init('JsonRpc', {},{ gasPrice: 0 });
+        await llamalend.init('JsonRpc', {},{ gasPrice: 0 });
     });
 
     for (const llammaId of LLAMMAS) {

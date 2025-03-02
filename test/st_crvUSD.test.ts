@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import lending from "../src/index.js";
+import llamalend from "../src/index.js";
 import { BN } from "../src/utils.js";
 
 
@@ -7,17 +7,17 @@ describe('st-crvUSD test', async function () {
     this.timeout(120000);
 
     before(async function () {
-        await lending.init('JsonRpc', {},{ gasPrice: 0 });
+        await llamalend.init('JsonRpc', {},{ gasPrice: 0 });
     });
 
     it("deposit", async function () {
-        const initialBalances = await lending.st_crvUSD.userBalances();
-        const depositAmount = Number(await lending.st_crvUSD.maxDeposit()) / 2;
-        const expectedShares = await lending.st_crvUSD.previewDeposit(depositAmount);
+        const initialBalances = await llamalend.st_crvUSD.userBalances();
+        const depositAmount = Number(await llamalend.st_crvUSD.maxDeposit()) / 2;
+        const expectedShares = await llamalend.st_crvUSD.previewDeposit(depositAmount);
 
-        await lending.st_crvUSD.deposit(depositAmount);
+        await llamalend.st_crvUSD.deposit(depositAmount);
 
-        const balances = await lending.st_crvUSD.userBalances();
+        const balances = await llamalend.st_crvUSD.userBalances();
 
         assert.deepStrictEqual(BN(balances.crvUSD).toString(), BN(initialBalances.crvUSD).minus(depositAmount).toString(), 'assets');
         const delta = Number(balances.st_crvUSD) - (Number(initialBalances.st_crvUSD) + Number(expectedShares));
@@ -25,13 +25,13 @@ describe('st-crvUSD test', async function () {
     });
 
     it("mint", async function () {
-        const initialBalances = await lending.st_crvUSD.userBalances();
-        const mintAmount = Number(await lending.st_crvUSD.maxMint()) / 2;
-        const expectedAssets = await lending.st_crvUSD.previewMint(mintAmount);
+        const initialBalances = await llamalend.st_crvUSD.userBalances();
+        const mintAmount = Number(await llamalend.st_crvUSD.maxMint()) / 2;
+        const expectedAssets = await llamalend.st_crvUSD.previewMint(mintAmount);
 
-        await lending.st_crvUSD.mint(mintAmount);
+        await llamalend.st_crvUSD.mint(mintAmount);
 
-        const balances = await lending.st_crvUSD.userBalances();
+        const balances = await llamalend.st_crvUSD.userBalances();
 
         const delta = Number(balances.crvUSD) - (Number(initialBalances.crvUSD) - Number(expectedAssets));
         assert.isAtMost(Math.abs(delta) / Number(balances.crvUSD), 1e-10, 'assets');
@@ -39,13 +39,13 @@ describe('st-crvUSD test', async function () {
     });
 
     it("withdraw", async function () {
-        const initialBalances = await lending.st_crvUSD.userBalances();
-        const withdrawAmount = Number(await lending.st_crvUSD.maxWithdraw()) / 2;
-        const expectedShares = await lending.st_crvUSD.previewWithdraw(withdrawAmount);
+        const initialBalances = await llamalend.st_crvUSD.userBalances();
+        const withdrawAmount = Number(await llamalend.st_crvUSD.maxWithdraw()) / 2;
+        const expectedShares = await llamalend.st_crvUSD.previewWithdraw(withdrawAmount);
 
-        await lending.st_crvUSD.withdraw(withdrawAmount);
+        await llamalend.st_crvUSD.withdraw(withdrawAmount);
 
-        const balances = await lending.st_crvUSD.userBalances();
+        const balances = await llamalend.st_crvUSD.userBalances();
 
         assert.deepStrictEqual(BN(balances.crvUSD).toString(), BN(initialBalances.crvUSD).plus(BN(withdrawAmount)).toString(), 'assets');
         const delta = Number(balances.st_crvUSD) - (Number(initialBalances.st_crvUSD) - Number(expectedShares));
@@ -53,13 +53,13 @@ describe('st-crvUSD test', async function () {
     });
 
     it("redeem", async function () {
-        const initialBalances = await lending.st_crvUSD.userBalances();
-        const redeemAmount = await lending.st_crvUSD.maxRedeem();
-        const expectedAssets = await lending.st_crvUSD.previewRedeem(redeemAmount);
+        const initialBalances = await llamalend.st_crvUSD.userBalances();
+        const redeemAmount = await llamalend.st_crvUSD.maxRedeem();
+        const expectedAssets = await llamalend.st_crvUSD.previewRedeem(redeemAmount);
 
-        await lending.st_crvUSD.redeem(redeemAmount);
+        await llamalend.st_crvUSD.redeem(redeemAmount);
 
-        const balances = await lending.st_crvUSD.userBalances();
+        const balances = await llamalend.st_crvUSD.userBalances();
 
         const delta = Number(balances.crvUSD) - (Number(initialBalances.crvUSD) + Number(expectedAssets));
         assert.isAtMost(Math.abs(delta) / Number(balances.crvUSD), 1e-10, 'assets');

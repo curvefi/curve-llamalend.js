@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import lending from "../src/index.js";
+import llamalend from "../src/index.js";
 import {OneWayMarketTemplate} from "../src/markets";
 
 function cloneDeep<T>(obj: T): T {
@@ -106,15 +106,15 @@ describe('Fetch Markets Test', async function () {
     this.timeout(1200000);
 
     before(async function () {
-        await lending.init('JsonRpc', {}, { gasPrice: 0 });
+        await llamalend.init('JsonRpc', {}, { gasPrice: 0 });
     });
 
     it('should fetch and compare market lists with and without parameter', async function () {
-        await lending.oneWayfactory.fetchMarkets(true);
-        const marketsWithDefault = lending.oneWayfactory.getMarketList();
+        await llamalend.oneWayfactory.fetchMarkets(true);
+        const marketsWithDefault = llamalend.oneWayfactory.getMarketList();
 
-        await lending.oneWayfactory.fetchMarkets(false);
-        const marketsWithFalse = lending.oneWayfactory.getMarketList();
+        await llamalend.oneWayfactory.fetchMarkets(false);
+        const marketsWithFalse = llamalend.oneWayfactory.getMarketList();
 
         assert.deepEqual(
             marketsWithDefault,
@@ -124,20 +124,20 @@ describe('Fetch Markets Test', async function () {
     });
 
     it('should compare market objects from API and Blockchain', async function () {
-        await lending.oneWayfactory.fetchMarkets(true);
-        const marketListAPI = await lending.oneWayfactory.getMarketList();
+        await llamalend.oneWayfactory.fetchMarkets(true);
+        const marketListAPI = await llamalend.oneWayfactory.getMarketList();
 
         const marketsAPI: Record<string, any> = {};
         marketListAPI.forEach((item: string) => {
-            marketsAPI[item] = cloneDeep(lending.getOneWayMarket(item));
+            marketsAPI[item] = cloneDeep(llamalend.getOneWayMarket(item));
         });
 
-        await lending.oneWayfactory.fetchMarkets(false);
-        const marketListBlockchain = await lending.oneWayfactory.getMarketList();
+        await llamalend.oneWayfactory.fetchMarkets(false);
+        const marketListBlockchain = await llamalend.oneWayfactory.getMarketList();
 
         const marketsBlockchain: Record<string, any> = {};
         marketListBlockchain.forEach((item: string) => {
-            marketsBlockchain[item] = cloneDeep(lending.getOneWayMarket(item));
+            marketsBlockchain[item] = cloneDeep(llamalend.getOneWayMarket(item));
         });
         
         marketListAPI.forEach((item: string) => {

@@ -57,7 +57,7 @@ export interface IOneWayMarket {
     collateral_token: ICoin,
 }
 
-export interface ILending {
+export interface ILlamalend {
     provider: ethers.BrowserProvider | ethers.JsonRpcProvider,
     multicallProvider: MulticallProvider,
     signer: ethers.Signer | null,
