@@ -1,6 +1,6 @@
 {
-  "name": "@curvefi/lending-api",
-  "version": "2.4.5",
+  "name": "@curvefi/llamalend-api",
+  "version": "1.0.0",
   "description": "JavaScript library for Curve Lending",
   "main": "lib/index.js",
   "author": "Macket",
