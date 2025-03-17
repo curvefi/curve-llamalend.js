@@ -35,7 +35,7 @@
   "dependencies": {
     "axios": "^0.21.1",
     "bignumber.js": "^9.0.1",
-    "@curvefi/ethcall": "6.0.7",
+    "@curvefi/ethcall": "6.0.13",
     "ethers": "^6.10.0",
     "memoizee": "^0.4.15"
   }

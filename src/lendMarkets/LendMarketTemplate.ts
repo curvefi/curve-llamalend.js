@@ -32,7 +32,7 @@ const DAY = 86400;
 const WEEK = 7 * DAY;
 
 
-export class OneWayMarketTemplate {
+export class LendMarketTemplate {
     id: string;
     name: string
     addresses: {

@@ -512,9 +512,9 @@ class Llamalend implements ILlamalend {
         this.feeData = { ...this.feeData, ...customFeeData };
     }
 
-    getOneWayMarketList = () => Object.keys(this.constants.ONE_WAY_MARKETS);
+    getLendMarketList = () => Object.keys(this.constants.ONE_WAY_MARKETS);
 
-    getLlammaList = () => Object.keys(this.constants.LLAMMAS);
+    getMintMarketList = () => Object.keys(this.constants.LLAMMAS);
 
     getFactoryMarketData = async () => {
         const factory = this.contracts[this.constants.ALIASES['one_way_factory']];
@@ -652,7 +652,7 @@ class Llamalend implements ILlamalend {
     };
 
 
-    fetchOneWayMarkets = async (useAPI = true) => {
+    fetchLendMarkets = async (useAPI = true) => {
         if(useAPI) {
             await this._fetchOneWayMarketsByAPI()
         } else {

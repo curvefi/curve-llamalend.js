@@ -22,7 +22,7 @@ import {IDict, TGas} from "../interfaces";
 import {_getUserCollateralCrvUsd} from "../external-api.js";
 
 
-export class LlammaTemplate {
+export class MintMarketTemplate {
     id: string;
     address: string;
     controller: string;

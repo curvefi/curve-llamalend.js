@@ -1,6 +1,6 @@
 import { ethers, Networkish } from "ethers";
-import { OneWayMarketTemplate, getOneWayMarket } from "./markets/index.js";
-import { LlammaTemplate, getLlamma} from "./llammas";
+import { LendMarketTemplate, getLendMarket } from "./lendMarkets/index.js";
+import { MintMarketTemplate, getMintMarket} from "./mintMarkets/index.js";
 import { llamalend as _llamalend} from "./llamalend.js";
 import {
     getBalances,
@@ -67,10 +67,10 @@ const llamalend = {
     init,
     chainId: 0,
     signerAddress: '',
-    OneWayMarketTemplate,
-    getOneWayMarket,
-    LlammaTemplate,
-    getLlamma,
+    LendMarketTemplate,
+    getLendMarket,
+    MintMarketTemplate,
+    getMintMarket,
     totalSupply,
     getLsdApy,
     setCustomFeeData,
@@ -83,10 +83,10 @@ const llamalend = {
     getGasPriceFromL2,
     getGasInfoForL2,
     fetchStats: _llamalend.fetchStats,
-    getLlammaList: _llamalend.getLlammaList,
-    oneWayfactory: {
-        fetchMarkets:  _llamalend.fetchOneWayMarkets,
-        getMarketList: _llamalend.getOneWayMarketList,
+    getLlammaList: _llamalend.getMintMarketList,
+    lendMarkets: {
+        fetchMarkets:  _llamalend.fetchLendMarkets,
+        getMarketList: _llamalend.getLendMarketList,
     },
     estimateGas: {
         ensureAllowance: ensureAllowanceEstimateGas,
