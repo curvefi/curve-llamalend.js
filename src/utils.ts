@@ -429,7 +429,7 @@ export const getGasInfoForL2 = async (): Promise<Record<string, number>> => {
 
 export const totalSupply = async (): Promise<{ total: string, minted: string, pegKeepersDebt: string }> => {
     const calls = [];
-    for (const llammaId of llamalend.getLlammaList()) {
+    for (const llammaId of llamalend.getMintMarketList()) {
         const controllerAddress = llamalend.constants.LLAMMAS[llammaId].controller_address;
         const controllerContract = llamalend.contracts[controllerAddress].multicallContract;
         calls.push(controllerContract.minted(), controllerContract.redeemed());
@@ -440,7 +440,7 @@ export const totalSupply = async (): Promise<{ total: string, minted: string, pe
     const res: bigint[] = await llamalend.multicallProvider.all(calls);
 
     let mintedBN = BN(0);
-    for (let i = 0; i < llamalend.getLlammaList().length; i++) {
+    for (let i = 0; i < llamalend.getMintMarketList().length; i++) {
         const [_minted, _redeemed] = res.splice(0, 2);
         mintedBN = toBN(_minted).minus(toBN(_redeemed)).plus(mintedBN);
     }
