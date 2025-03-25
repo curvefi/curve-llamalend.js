@@ -1010,7 +1010,7 @@ export class LendMarketTemplate {
     private statsBandsInfo = memoize(async (): Promise<{ activeBand: number, maxBand: number, minBand: number, liquidationBand: number | null }> => {
         const ammContract = llamalend.contracts[this.addresses.amm].multicallContract;
         const calls = [
-            ammContract.active_band(),
+            ammContract.active_band_with_skip(),
             ammContract.max_band(),
             ammContract.min_band(),
         ]

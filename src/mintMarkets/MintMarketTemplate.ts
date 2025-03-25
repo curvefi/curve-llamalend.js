@@ -281,7 +281,7 @@ export class MintMarketTemplate {
     });
 
     private statsActiveBand = memoize(async (): Promise<number> => {
-        return (await llamalend.contracts[this.address].contract.active_band()).toNumber()
+        return (await llamalend.contracts[this.address].contract.active_band_with_skip()).toNumber()
     },
     {
         promise: true,
