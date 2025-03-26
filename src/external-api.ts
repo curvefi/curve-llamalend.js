@@ -1,24 +1,21 @@
-import axios from "axios";
-import { ethers } from "ethers";
+import {ethers} from "ethers";
 import memoize from "memoizee";
-import BigNumber from 'bignumber.js';
-import { llamalend } from "./llamalend.js";
+import {llamalend} from "./llamalend.js";
 import {
+    IDict,
     IExtendedPoolDataFromApi,
+    IMarketData,
     INetworkName,
     IPoolFactory,
-    I1inchSwapData,
-    IDict,
-    IMarketData,
     IQuoteOdos,
 } from "./interfaces";
 
 
 const _getPoolsFromApi = memoize(
     async (network: INetworkName, poolFactory: IPoolFactory ): Promise<IExtendedPoolDataFromApi> => {
-        const url = `https://api.curve.fi/api/getPools/${network}/${poolFactory}`;
-        const response = await axios.get(url, { validateStatus: () => true });
-        return response.data.data ?? { poolData: [], tvl: 0, tvlAll: 0 };
+        const response = await fetch(`https://api.curve.fi/api/getPools/${network}/${poolFactory}`);
+        const { data } = await response.json() as { data?: IExtendedPoolDataFromApi, success: boolean };
+        return data ?? { poolData: [], tvl: 0, tvlAll: 0 };
     },
     {
         promise: true,
@@ -117,14 +114,16 @@ export const _getUsdPricesFromApi = async (): Promise<IDict<number>> => {
     return priceDictByMaxTvl
 }
 
+type UserCollateral = { total_deposit_precise: string, total_deposit_from_user: number, total_deposit_usd_value: number }
 export const _getUserCollateral = memoize(
-    async (network: INetworkName, controller: string, user: string): Promise<Record<string, any>> => {
+    async (network: INetworkName, controller: string, user: string): Promise<UserCollateral> => {
         const url = `https://prices.curve.fi/v1/lending/collateral_events/${network}/${controller}/${user}`;
-        const response = await axios.get(url, { validateStatus: () => true });
+        const response = await fetch(url);
+        const data = await response.json() as UserCollateral;
         return {
-            total_deposit_precise: response.data.total_deposit_precise,
-            total_deposit_from_user: response.data.total_deposit_from_user,
-            total_deposit_usd_value: response.data.total_deposit_usd_value,
+            total_deposit_precise: data.total_deposit_precise,
+            total_deposit_from_user: data.total_deposit_from_user,
+            total_deposit_usd_value: data.total_deposit_usd_value,
         }
     },
     {
@@ -136,8 +135,9 @@ export const _getUserCollateral = memoize(
 export const _getUserCollateralCrvUsd = memoize(
     async (network: INetworkName, controller: string, user: string): Promise<string> => {
         const url = `https://prices.curve.fi/v1/crvusd/collateral_events/${network}/${controller}/${user}`;
-        const response = await axios.get(url, { validateStatus: () => true });
-        return response.data.total_deposit;
+        const response = await fetch(url);
+        const { total_deposit } = await response.json() as { total_deposit: string };
+        return total_deposit;
     },
     {
         promise: true,
@@ -148,16 +148,11 @@ export const _getUserCollateralCrvUsd = memoize(
 export const _getMarketsData = memoize(
     async (network: INetworkName): Promise<IMarketData> => {
         const url = `https://api.curve.fi/api/getLendingVaults/${network}/oneway`;
-        const response = await axios.get(
-            url,
-            {
-                headers: {"accept": "application/json"},
-                validateStatus: () => true,
-            });
+        const response = await fetch(url, { headers: {"accept": "application/json"} });
         if (response.status !== 200) {
             throw Error(`Fetch error: ${response.status} ${response.statusText}`);
         }
-        return response.data.data;
+        return await response.json() as IMarketData;
     },
     {
         promise: true,
@@ -177,17 +172,12 @@ export const _getQuoteOdos = async (fromToken: string, toToken: string, _amount:
         `&to_address=${ethers.getAddress(toToken)}&amount=${_amount.toString()}&slippage=${slippage}&pathVizImage=${pathVizImage}` +
         `&caller_address=${ethers.getAddress(llamalend.constants.ALIASES.leverage_zap)}&blacklist=${ethers.getAddress(blacklist)}`;
 
-    const response = await axios.get(
-        url,
-        {
-            headers: {"accept": "application/json"},
-            validateStatus: () => true,
-        });
+    const response = await fetch(url, {  headers: {"accept": "application/json"} });
     if (response.status !== 200) {
         throw Error(`Odos quote error - ${response.status} ${response.statusText}`);
     }
-
-    return { ...response.data, slippage };
+    const data = await response.json() as Omit<IQuoteOdos, 'slippage'>;
+    return { ...data, slippage };
 }
 
 export const _getExpectedOdos = async (fromToken: string, toToken: string, _amount: bigint, blacklist: string) => {
@@ -198,125 +188,12 @@ export const _assembleTxOdos = memoize(
     async (pathId: string): Promise<string> => {
         const url = `https://prices.curve.fi/odos/assemble?user=${ethers.getAddress(llamalend.constants.ALIASES.leverage_zap)}&path_id=${pathId}`;
 
-        const response = await axios.get(
-            url,
-            {
-                headers: {'Content-Type': 'application/json'},
-                validateStatus: () => true,
-            });
+        const response = await fetch(url, { headers: {'Content-Type': 'application/json'} });
         if (response.status !== 200) {
             throw Error(`Odos assemble error - ${response.status} ${response.statusText}`);
         }
-
-        return response.data['transaction']['data'];
-    },
-    {
-        promise: true,
-        maxAge: 10 * 1000, // 10s
-    }
-)
-
-export const _getSpotPriceOdos = memoize(
-    async (fromToken: string, toToken: string): Promise<string | undefined> => {
-        fromToken = ethers.getAddress(fromToken);
-        toToken = ethers.getAddress(toToken);
-        const url = `https://prices.curve.fi/odos/prices?chain_id=${llamalend.chainId}&tokens=${fromToken},${toToken}`;
-        const response = await axios.get(
-            url,
-            {
-                headers: {"accept": "application/json"},
-                validateStatus: () => true,
-            });
-        if (response.status !== 200) {
-            throw Error(`Odos spot prices error - ${response.status} ${response.statusText}`);
-        }
-
-        const pricesFromOdos = response.data.tokenPrices;
-        const pricesFromApi: IDict<string> = {};
-        for (const coin of [fromToken, toToken]) {
-            if (pricesFromOdos[coin] !== 0) continue;
-            const _pricesFromApi = await _getUsdPricesFromApi();
-            pricesFromApi[coin] = String(_pricesFromApi[coin] || 0);
-        }
-        const prices = { ...pricesFromOdos, ...pricesFromApi };
-        if (BigNumber(prices[fromToken]).eq(0) || BigNumber(prices[toToken]).eq( 0)) return undefined;
-
-        return (new BigNumber(prices[toToken])).div(prices[fromToken]).toString()
-    },
-    {
-        promise: true,
-        maxAge: 10 * 1000, // 10s
-    }
-)
-
-// --- 1INCH ---
-
-export const _getExpected1inch = memoize(
-    async (fromToken: string, toToken: string, _amount: bigint): Promise<string> => {
-        if (_amount === BigInt(0)) return "0.0";
-        const url = `https://prices.curve.fi/1inch/swap/v6.0/${llamalend.chainId}/quote?src=${fromToken}&dst=${toToken}&amount=${_amount}&excludedProtocols=${llamalend.constants.EXCLUDED_PROTOCOLS_1INCH}&includeTokensInfo=true&includeProtocols=true`;
-        const response = await axios.get(
-            url,
-            {
-                headers: {"accept": "application/json"},
-                validateStatus: () => true,
-            });
-        if (response.status !== 200) {
-            throw Error(`1inch error: ${response.status} ${response.statusText}`);
-        }
-        return response.data.dstAmount;
-
-    },
-    {
-        promise: true,
-        maxAge: 10 * 1000, // 10s
-    }
-)
-
-export const _getSwapData1inch = memoize(
-    async (fromToken: string, toToken: string, _amount: bigint, slippage: number): Promise<I1inchSwapData> => {
-        if (_amount === BigInt(0)) throw Error("Amount must be > 0");
-        const url = `https://prices.curve.fi/1inch/swap/v6.0/${llamalend.chainId}/swap?src=${fromToken}&dst=${toToken}&amount=${_amount}&from_=${llamalend.constants.ALIASES.leverage_zap}&slippage=${slippage}&excludedProtocols=${llamalend.constants.EXCLUDED_PROTOCOLS_1INCH}&includeTokensInfo=true&includeProtocols=true&disableEstimate=true`;
-        const response = await axios.get(
-            url,
-            {
-                headers: {"accept": "application/json"},
-                validateStatus: () => true,
-            });
-        if (response.status !== 200) {
-            throw Error(`1inch error: ${response.status} ${response.statusText}`);
-        }
-        return response.data;
-
-    },
-    {
-        promise: true,
-        maxAge: 10 * 1000, // 10s
-    }
-)
-
-export const _getSpotPrice1inch = memoize(
-    async (fromToken: string, toToken: string): Promise<string | undefined> => {
-        const url = `https://prices.curve.fi/1inch/price/v1.1/${llamalend.chainId}?tokens=${fromToken},${toToken}&currency=USD`;
-        const response = await axios.get(
-            url,
-            {
-                headers: {"accept": "application/json"},
-                validateStatus: () => true,
-            });
-        if (response.status !== 200) {
-            throw Error(`1inch error: ${response.status} ${response.statusText}`);
-        }
-        const pricesFromApi: IDict<string> = {};
-        for (const coin in response.data) {
-            if (response.data[coin] !== "0") continue;
-            const _pricesFromApi = await _getUsdPricesFromApi();
-            pricesFromApi[coin] = String(_pricesFromApi[coin] || 0);
-        }
-        const prices = { ...response.data, ...pricesFromApi };
-        if (prices[fromToken] === '0' || prices[toToken] === '0') return undefined;
-
-        return (new BigNumber(prices[toToken])).div(prices[fromToken]).toString()
+        const { transaction } = await response.json() as { transaction: { data: string } };
+        return transaction.data;
     },
     {
         promise: true,
