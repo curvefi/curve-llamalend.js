@@ -700,7 +700,7 @@ export class LendMarketTemplate {
         return [baseApyBN.times(100).toNumber(), boostedApyBN.times(100).toNumber()]
     }
 
-    private async vaultCrvApr(useApi = true): Promise<[baseApy: number, boostedApy: number]> {
+    private async vaultCrvApr(): Promise<[baseApy: number, boostedApy: number]> {
         if (this.vaultRewardsOnly()) throw Error(`${this.name} has Rewards-Only Gauge. Use stats.rewardsApy instead`);
 
         // const isDisabledChain = [1313161554].includes(llamalend.chainId); // Disable Aurora
@@ -765,7 +765,7 @@ export class LendMarketTemplate {
         return await this._vaultClaimCrv(false) as string;
     }
 
-    private vaultRewardTokens = memoize(async (useApi = true): Promise<{token: string, symbol: string, decimals: number}[]> => {
+    private vaultRewardTokens = memoize(async (): Promise<{token: string, symbol: string, decimals: number}[]> => {
         if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) return []
 
         // if (useApi) {
@@ -828,7 +828,7 @@ export class LendMarketTemplate {
             // }
 
             const apy: IReward[] = [];
-            const rewardTokens = await this.vaultRewardTokens(false);
+            const rewardTokens = await this.vaultRewardTokens();
             for (const rewardToken of rewardTokens) {
                 const gaugeContract = llamalend.contracts[this.addresses.gauge].multicallContract;
                 const lpTokenContract = llamalend.contracts[this.addresses.vault].multicallContract;
@@ -1863,7 +1863,7 @@ export class LendMarketTemplate {
 
         const _debt = parseUnits(debt);
         const contract = llamalend.contracts[this.addresses.controller].contract;
-        const [_, n1] = await this.userBands(address);
+        const [, n1] = await this.userBands(address);
         const { borrowed } = await this.userState(address);
         const n = (BN(borrowed).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;  // In liquidation mode it doesn't matter if active band moves
         const gas = await contract.repay.estimateGas(_debt, address, n, llamalend.constantOptions);
@@ -2859,7 +2859,7 @@ export class LendMarketTemplate {
         try {
             _n1 = await llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_stateCollateral - _stateRepayCollateral, _stateDebt - _repayExpected, _N);
             _n2 = _n1 + (_N - BigInt(1));
-        } catch (e) {
+        } catch {
             console.log("Full repayment");
         }
 

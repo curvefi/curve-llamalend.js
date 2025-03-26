@@ -1057,7 +1057,7 @@ export class MintMarketTemplate {
 
         const _debt = parseUnits(debt);
         const contract = llamalend.contracts[this.controller].contract;
-        const [_, n1] = await this.userBands(address);
+        const [, n1] = await this.userBands(address);
         const { stablecoin } = await this.userState(address);
         const n = (BN(stablecoin).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;  // In liquidation mode it doesn't matter if active band moves
         const gas = await contract.repay.estimateGas(_debt, address, n, isEth(this.collateral), llamalend.constantOptions);
@@ -1693,7 +1693,7 @@ export class MintMarketTemplate {
         try {
             _n1 = await llamalend.contracts[this.deleverageZap].contract.calculate_debt_n1(_collateral, routeIdx, address);
             _n2 = _n1 + BigInt(N - 1);
-        } catch (e) {
+        } catch {
             console.log("Full repayment");
         }
 
