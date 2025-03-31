@@ -1,4 +1,3 @@
-import axios from "axios";
 import { ethers,  BigNumberish, Numeric } from "ethers";
 import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
@@ -359,10 +358,11 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         const url = [nativeTokenName, 'ethereum', 'bitcoin', 'link', 'curve-dao-token', 'stasis-eurs'].includes(assetId.toLowerCase()) ?
             `https://api.coingecko.com/api/v3/simple/price?ids=${assetId}&vs_currencies=usd` :
             `https://api.coingecko.com/api/v3/simple/token_price/${chainName}?contract_addresses=${assetId}&vs_currencies=usd`
-        const response = await axios.get(url);
+        const response = await fetch(url);
+        const data = await response.json() as Record<string, { usd: number }>;
         try {
-            _usdRatesCache[assetId] = {'rate': response.data[assetId]['usd'] ?? 0, 'time': Date.now()};
-        } catch (err) { // TODO pay attention!
+            _usdRatesCache[assetId] = {'rate': data[assetId]['usd'] ?? 0, 'time': Date.now()};
+        } catch { // TODO pay attention!
             _usdRatesCache[assetId] = {'rate': 0, 'time': Date.now()};
         }
     }
@@ -457,8 +457,8 @@ export const getLsdApy = memoize(async(name: 'wstETH' | 'sfrxETH'): Promise<{
         baseApy: number,
         apyMean30d: number,
     }> => {
-    const response = await axios.get('https://yields.llama.fi/pools');
-    const {data} = response as { data: { chain: string, project: string, symbol: string, apy: number, apyBase: number, apyMean30d: number }[] };
+    const response = await fetch('https://yields.llama.fi/pools');
+    const {data} = await response.json() as { data: { chain: string, project: string, symbol: string, apy: number, apyBase: number, apyMean30d: number }[] };
 
     const params = {
         'wstETH': {

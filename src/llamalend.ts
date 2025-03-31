@@ -288,7 +288,7 @@ class Llamalend implements ILlamalend {
             } else if (!providerSettings.url?.startsWith("https://rpc.gnosischain.com")) {
                 try {
                     this.signer = await this.provider.getSigner();
-                } catch (e) {
+                } catch {
                     this.signer = null;
                 }
             }
@@ -335,7 +335,7 @@ class Llamalend implements ILlamalend {
         if (this.signer) {
             try {
                 this.signerAddress = await this.signer.getAddress();
-            } catch (err) {
+            } catch {
                 this.signer = null;
             }
         } else {

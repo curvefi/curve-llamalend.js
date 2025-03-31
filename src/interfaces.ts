@@ -123,25 +123,6 @@ export interface IReward {
     apy: number
 }
 
-export type T1inchRouteStep = {
-    name: string,
-    part: number,
-    fromTokenAddress: string,
-    toTokenAddress: string,
-}[]
-
-export interface I1inchRoute {
-    part: number,
-    hops: T1inchRouteStep[],
-}
-
-export interface I1inchSwapData {
-    tx: { data: string },
-    dstAmount: string,
-    protocols: I1inchRoute[],
-    slippage: number,
-}
-
 interface Rates {
     borrowApr: number;
     borrowApy: number;
