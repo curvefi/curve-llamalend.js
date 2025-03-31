@@ -125,17 +125,17 @@ export const ALIASES_FRAXTAL = lowerCaseValues({
     "crv": "0x331B9182088e2A7d6D3Fe4742AbA1fB231aEcc56",
     "one_way_factory": "0xf3c9bdAB17B7016fBE3B77D17b1602A7db93ac66",
     "gauge_controller": "0x0000000000000000000000000000000000000000", // <--- TODO CHANGE
-    "gauge_factory": "0xeF672bD94913CB6f1d2812a6e18c1fFdEd8eFf5c",
+    "gauge_factory_old": "0xeF672bD94913CB6f1d2812a6e18c1fFdEd8eFf5c",
+    "gauge_factory": "0x0b8d6b6cefc7aa1c2852442e518443b1b22e1c52",
     "leverage_zap": "0x37c5ab57AF7100Bdc9B668d766e193CCbF6614FD", // odos
     "leverage_markets_start_id": "0",
 });
 
 export const ALIASES_SONIC = lowerCaseValues({
-    "crv": "0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978",
-    "one_way_factory": "0xcaEC110C784c9DF37240a8Ce096D352A75922DeA",
+    "crv": "0x5Af79133999f7908953E94b7A5CF367740Ebee35",
+    "one_way_factory": "0x30d1859dad5a52ae03b6e259d1b48c4b12933993",
     "gauge_controller": "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
-    "gauge_factory": "0xabC000d88f23Bb45525E447528DBF656A9D55bf5",
-    // "leverage_zap": "0x0000000000000000000000000000000000000000", // 1inch
-    "leverage_zap": "0xb7b240CFa985306563A301bC417Bc9715059a117", // odos
-    "leverage_markets_start_id": "9",
+    "gauge_factory": "0xf3A431008396df8A8b2DF492C913706BDB0874ef",
+    "leverage_zap": "0x5552b631e2aD801fAa129Aacf4B701071cC9D1f7", // odos
+    "leverage_markets_start_id": "0",
 });
