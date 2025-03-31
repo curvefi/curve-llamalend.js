@@ -32,6 +32,7 @@ import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' as
 // crvUSD ABIs
 import llammaABI from "./constants/abis/crvUSD/llamma.json" assert { type: 'json'};
 import controllerABI from "./constants/abis/crvUSD/controller.json" assert { type: 'json'};
+import controllerV2ABI from "./constants/abis/crvUSD/controller_v2.json";
 import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" assert { type: 'json'};
 import FactoryABI from "./constants/abis/crvUSD/Factory.json" assert { type: 'json'};
 import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" assert { type: 'json'};
@@ -352,8 +353,18 @@ class Llamalend implements ILlamalend {
             this.setContract(this.constants.ALIASES.minter, MinterABI);
             this.setContract(this.constants.ALIASES.gauge_factory, GaugeFactoryMainnetABI);
         } else {
-            this.constants.ALIASES.minter = this.constants.ALIASES.gauge_factory;
-            this.setContract(this.constants.ALIASES.gauge_factory, GaugeFactorySidechainABI);
+            if(this.constants.ALIASES.gauge_factory_old && this.constants.ALIASES.gauge_factory_old !== this.constants.ZERO_ADDRESS) {
+                // set old gauge factory
+                this.constants.ALIASES.minter_old = this.constants.ALIASES.gauge_factory_old;
+                this.setContract(this.constants.ALIASES.gauge_factory_old, GaugeFactorySidechainABI);
+
+                // set new gauge factory
+                this.constants.ALIASES.minter = this.constants.ALIASES.gauge_factory;
+                this.setContract(this.constants.ALIASES.gauge_factory, GaugeFactorySidechainABI);
+            } else {
+                this.constants.ALIASES.minter = this.constants.ALIASES.gauge_factory;
+                this.setContract(this.constants.ALIASES.gauge_factory, GaugeFactorySidechainABI);
+            }
         }
 
         // crvUSD contracts
@@ -415,10 +426,29 @@ class Llamalend implements ILlamalend {
                 return x;
             });
 
+            calls = [];
+
+            for(const amm of amms) {
+                this.setContract(amm, llammaABI);
+                calls.push(
+                    this.contracts[amm].multicallContract.A()
+                )
+            }
+
+            const AParams = (await this.multicallProvider.all(calls)).map((x) => {
+                return Number(x)
+            });
+
             for (let i = 0; i < collaterals.length; i++) {
                 const is_eth = collaterals[i] === this.constants.WETH;
                 const [collateral_symbol, collateral_decimals] = res.splice(0, 2) as [string, number];
-                this.setContract(amms[i], llammaABI);
+
+                if (i >= collaterals.length - 3) {
+                    this.setContract(controllers[i], controllerV2ABI);
+                } else {
+                    this.setContract(controllers[i], controllerABI);
+                }
+
                 this.setContract(controllers[i], controllerABI);
                 const monetary_policy_address = (await this.contracts[controllers[i]].contract.monetary_policy(this.constantOptions)).toLowerCase();
                 this.setContract(monetary_policy_address, MonetaryPolicy2ABI);
@@ -438,7 +468,7 @@ class Llamalend implements ILlamalend {
                     min_bands: 4,
                     max_bands: 50,
                     default_bands: 10,
-                    A: 100,
+                    A: AParams[i],
                     monetary_policy_abi: MonetaryPolicy2ABI,
                 }
             }

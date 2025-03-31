@@ -723,7 +723,32 @@ export class LendMarketTemplate {
 
     private async _vaultClaimCrv(estimateGas: boolean): Promise<string | TGas> {
         if (this.vaultRewardsOnly()) throw Error(`${this.name} has Rewards-Only Gauge. Use claimRewards instead`);
-        const contract = llamalend.contracts[llamalend.constants.ALIASES.minter].contract;
+
+        let isOldFactory = false;
+        let contract;
+
+        if (llamalend.chainId !== 1) {
+            if (llamalend.constants.ALIASES.gauge_factory_old && llamalend.constants.ALIASES.gauge_factory_old !== llamalend.constants.ZERO_ADDRESS) {
+                const oldFactoryContract = llamalend.contracts[llamalend.constants.ALIASES.gauge_factory_old].contract;
+                const lpToken = await llamalend.contracts[this.addresses.gauge].contract.lp_token();
+                const gaugeAddress = await oldFactoryContract.get_gauge_from_lp_token(lpToken);
+
+                isOldFactory = gaugeAddress.toLowerCase() === this.addresses.gauge.toLowerCase();
+
+                if (isOldFactory) {
+                    contract = oldFactoryContract;
+                }
+            }
+        }
+
+        if (!isOldFactory) {
+            contract = llamalend.contracts[llamalend.constants.ALIASES.minter].contract
+        }
+
+        if(!contract) {
+            throw Error(`${this.name} couldn't match gauge factory`);
+        }
+
         const gas = await contract.mint.estimateGas(this.addresses.gauge, llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
