@@ -216,3 +216,7 @@ export interface ILlamma {
     A: number,
     monetary_policy_abi: any
 }
+
+export interface IResponseApi {
+    data: any
+}
