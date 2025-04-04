@@ -171,6 +171,7 @@ export const NETWORK_CONSTANTS: { [index: number]: any } = {
 
 class Llamalend implements ILlamalend {
     address: string;
+    crvUsdAddress: string;
     provider: ethers.BrowserProvider | ethers.JsonRpcProvider;
     multicallProvider: MulticallProvider;
     signer: ethers.Signer | null;
@@ -196,7 +197,8 @@ class Llamalend implements ILlamalend {
     };
 
     constructor() {
-        this.address = '00000'//COINS.lending.toLowerCase();
+        this.address = '00000'
+        this.crvUsdAddress = COINS_ETHEREUM.crvusd;
         // @ts-ignore
         this.provider = null;
         this.signer = null;
@@ -368,6 +370,7 @@ class Llamalend implements ILlamalend {
         }
 
         // crvUSD contracts
+        this.setContract(this.crvUsdAddress, ERC20ABI);
         if(this.chainId === 1) {
             this.setContract(this.constants.COINS.crvusd.toLowerCase(), ERC20ABI);
             for (const llamma of Object.values(this.constants.LLAMMAS)) {
@@ -475,7 +478,7 @@ class Llamalend implements ILlamalend {
         }
 
         this.constants.DECIMALS = extractDecimals(this.constants.LLAMMAS);
-        this.constants.DECIMALS[this.address] = 18;
+        this.constants.DECIMALS[this.crvUsdAddress] = 18;
 
         if(L2Networks.includes(this.chainId)) {
             // eslint-disable-next-line @typescript-eslint/no-this-alias

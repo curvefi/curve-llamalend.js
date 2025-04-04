@@ -131,7 +131,7 @@ export class MintMarketTemplate {
         this.collateralSymbol = llammaData.collateral_symbol;
         this.collateralDecimals = llammaData.collateral_decimals;
         this.coins = ["crvUSD", llammaData.collateral_symbol];
-        this.coinAddresses = [llamalend.address, llammaData.collateral_address];
+        this.coinAddresses = [llamalend.crvUsdAddress, llammaData.collateral_address];
         this.coinDecimals = [18, llammaData.collateral_decimals];
         this.minBands = llammaData.min_bands;
         this.maxBands = llammaData.max_bands;
@@ -248,7 +248,7 @@ export class MintMarketTemplate {
     });
 
     private async statsBalances(): Promise<[string, string]> {
-        const crvusdContract = llamalend.contracts[llamalend.address].multicallContract;
+        const crvusdContract = llamalend.contracts[llamalend.crvUsdAddress].multicallContract;
         const collateralContract = llamalend.contracts[isEth(this.collateral) ? llamalend.constants.WETH : this.collateral].multicallContract;
         const contract = llamalend.contracts[this.address].multicallContract;
         const calls = [
@@ -357,7 +357,7 @@ export class MintMarketTemplate {
     });
 
     private statsTotalStablecoin = memoize(async (): Promise<string> => {
-        const stablecoinContract = llamalend.contracts[llamalend.address].multicallContract;
+        const stablecoinContract = llamalend.contracts[llamalend.crvUsdAddress].multicallContract;
         const ammContract = llamalend.contracts[this.address].multicallContract;
 
         const [_balance, _fee]: bigint[] = await llamalend.multicallProvider.all([
@@ -390,7 +390,7 @@ export class MintMarketTemplate {
 
     private statsCapAndAvailable = memoize(async (): Promise<{ "cap": string, "available": string }> => {
         const factoryContract = llamalend.contracts[llamalend.constants.FACTORY].multicallContract;
-        const crvusdContract = llamalend.contracts[llamalend.address].multicallContract;
+        const crvusdContract = llamalend.contracts[llamalend.crvUsdAddress].multicallContract;
 
         const [_cap, _available]: bigint[] = await llamalend.multicallProvider.all([
             factoryContract.debt_ceiling(this.controller),
@@ -577,7 +577,7 @@ export class MintMarketTemplate {
     // ---------------- WALLET BALANCES ----------------
 
     private async walletBalances(address = ""): Promise<{ collateral: string, stablecoin: string }> {
-        const [collateral, stablecoin] = await getBalances([this.collateral, llamalend.address], address);
+        const [collateral, stablecoin] = await getBalances([this.collateral, llamalend.crvUsdAddress], address);
         return { stablecoin, collateral }
     }
 
@@ -1028,15 +1028,15 @@ export class MintMarketTemplate {
     }
 
     public async repayIsApproved(debt: number | string): Promise<boolean> {
-        return await hasAllowance([llamalend.address], [debt], llamalend.signerAddress, this.controller);
+        return await hasAllowance([llamalend.crvUsdAddress], [debt], llamalend.signerAddress, this.controller);
     }
 
     private async repayApproveEstimateGas (debt: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas([llamalend.address], [debt], this.controller);
+        return await ensureAllowanceEstimateGas([llamalend.crvUsdAddress], [debt], this.controller);
     }
 
     public async repayApprove(debt: number | string): Promise<string[]> {
-        return await ensureAllowance([llamalend.address], [debt], this.controller);
+        return await ensureAllowance([llamalend.crvUsdAddress], [debt], this.controller);
     }
 
     public async repayHealth(debt: number | string, full = true, address = ""): Promise<string> {
@@ -1241,17 +1241,17 @@ export class MintMarketTemplate {
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await hasAllowance([llamalend.address], [tokensToLiquidate], llamalend.signerAddress, this.controller);
+        return await hasAllowance([llamalend.crvUsdAddress], [tokensToLiquidate], llamalend.signerAddress, this.controller);
     }
 
     private async liquidateApproveEstimateGas (address = ""): Promise<TGas> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowanceEstimateGas([llamalend.address], [tokensToLiquidate], this.controller);
+        return await ensureAllowanceEstimateGas([llamalend.crvUsdAddress], [tokensToLiquidate], this.controller);
     }
 
     public async liquidateApprove(address = ""): Promise<string[]> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowance([llamalend.address], [tokensToLiquidate], this.controller);
+        return await ensureAllowance([llamalend.crvUsdAddress], [tokensToLiquidate], this.controller);
     }
 
     private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
