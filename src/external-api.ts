@@ -1,7 +1,9 @@
 import {ethers} from "ethers";
 import memoize from "memoizee";
+import BigNumber from 'bignumber.js';
 import {llamalend} from "./llamalend.js";
 import {
+    I1inchSwapData,
     IDict,
     IExtendedPoolDataFromApi,
     IMarketData,
@@ -194,6 +196,96 @@ export const _assembleTxOdos = memoize(
         }
         const { transaction } = await response.json() as { transaction: { data: string } };
         return transaction.data;
+    },
+    {
+        promise: true,
+        maxAge: 10 * 1000, // 10s
+    }
+)
+
+export const _getSpotPriceOdos = memoize(
+    async (fromToken: string, toToken: string): Promise<string | undefined> => {
+        fromToken = ethers.getAddress(fromToken);
+        toToken = ethers.getAddress(toToken);
+        const url = `https://prices.curve.fi/odos/prices?chain_id=${llamalend.chainId}&tokens=${fromToken},${toToken}`;
+        const response = await fetch(url, { headers: {"accept": "application/json"} });
+        if (response.status !== 200) {
+            throw Error(`Odos spot prices error - ${response.status} ${response.statusText}`);
+        }
+
+        const {tokenPrices} = await response.json() as { tokenPrices: IDict<number> };
+        const pricesFromApi: IDict<string> = {};
+        for (const coin of [fromToken, toToken]) {
+            if (tokenPrices[coin] !== 0) continue;
+            const _pricesFromApi = await _getUsdPricesFromApi();
+            pricesFromApi[coin] = String(_pricesFromApi[coin] || 0);
+        }
+        const prices = { ...(tokenPrices), ...pricesFromApi };
+        if (BigNumber(prices[fromToken]).eq(0) || BigNumber(prices[toToken]).eq( 0)) return undefined;
+
+        return (new BigNumber(prices[toToken])).div(prices[fromToken]).toString()
+    },
+    {
+        promise: true,
+        maxAge: 10 * 1000, // 10s
+    }
+)
+
+// --- 1INCH ---
+
+export const _getExpected1inch = memoize(
+    async (fromToken: string, toToken: string, _amount: bigint): Promise<string> => {
+        if (_amount === BigInt(0)) return "0.0";
+        const url = `https://prices.curve.fi/1inch/swap/v6.0/${llamalend.chainId}/quote?src=${fromToken}&dst=${toToken}&amount=${_amount}&excludedProtocols=${llamalend.constants.EXCLUDED_PROTOCOLS_1INCH}&includeTokensInfo=true&includeProtocols=true`;
+        const response = await fetch(url, { headers: {"accept": "application/json"} });
+        if (response.status !== 200) {
+            throw Error(`1inch error: ${response.status} ${response.statusText}`);
+        }
+        const { dstAmount } = await response.json() as { dstAmount: string };
+        return dstAmount;
+
+    },
+    {
+        promise: true,
+        maxAge: 10 * 1000, // 10s
+    }
+)
+
+export const _getSwapData1inch = memoize(
+    async (fromToken: string, toToken: string, _amount: bigint, slippage: number): Promise<I1inchSwapData> => {
+        if (_amount === BigInt(0)) throw Error("Amount must be > 0");
+        const url = `https://prices.curve.fi/1inch/swap/v6.0/${llamalend.chainId}/swap?src=${fromToken}&dst=${toToken}&amount=${_amount}&from_=${llamalend.constants.ALIASES.leverage_zap}&slippage=${slippage}&excludedProtocols=${llamalend.constants.EXCLUDED_PROTOCOLS_1INCH}&includeTokensInfo=true&includeProtocols=true&disableEstimate=true`;
+        const response = await fetch(url, { headers: {"accept": "application/json"} });
+        if (response.status !== 200) {
+            throw Error(`1inch error: ${response.status} ${response.statusText}`);
+        }
+        return await response.json() as I1inchSwapData;
+
+    },
+    {
+        promise: true,
+        maxAge: 10 * 1000, // 10s
+    }
+)
+
+export const _getSpotPrice1inch = memoize(
+    async (fromToken: string, toToken: string): Promise<string | undefined> => {
+        const url = `https://prices.curve.fi/1inch/price/v1.1/${llamalend.chainId}?tokens=${fromToken},${toToken}&currency=USD`;
+        const response = await fetch(url, { headers: {"accept": "application/json"} });
+        if (response.status !== 200) {
+            throw Error(`1inch error: ${response.status} ${response.statusText}`);
+        }
+        const pricesFromApi: IDict<string> = {};
+        const data = await response.json() as IDict<string>;
+        for (const coin in data) {
+            if (data[coin] !== "0") continue;
+            const _pricesFromApi = await _getUsdPricesFromApi();
+            pricesFromApi[coin] = String(_pricesFromApi[coin] || 0);
+        }
+        const prices = { ...data, ...pricesFromApi };
+        if (prices[fromToken] === '0' || prices[toToken] === '0') return undefined;
+
+        return (new BigNumber(prices[toToken])).div(prices[fromToken]).toString()
     },
     {
         promise: true,
