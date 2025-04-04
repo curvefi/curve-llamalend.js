@@ -8,6 +8,7 @@ import {
     INetworkName,
     IPoolFactory,
     IQuoteOdos,
+    IResponseApi,
 } from "./interfaces";
 
 
@@ -152,7 +153,8 @@ export const _getMarketsData = memoize(
         if (response.status !== 200) {
             throw Error(`Fetch error: ${response.status} ${response.statusText}`);
         }
-        return await response.json() as IMarketData;
+
+        return (await response.json() as IResponseApi).data as IMarketData;
     },
     {
         promise: true,

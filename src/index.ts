@@ -83,7 +83,9 @@ const llamalend = {
     getGasPriceFromL2,
     getGasInfoForL2,
     fetchStats: _llamalend.fetchStats,
-    getLlammaList: _llamalend.getMintMarketList,
+    mintMarkets: {
+        getMarketList :_llamalend.getMintMarketList,
+    },
     lendMarkets: {
         fetchMarkets:  _llamalend.fetchLendMarkets,
         getMarketList: _llamalend.getLendMarketList,

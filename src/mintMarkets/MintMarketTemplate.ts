@@ -237,8 +237,8 @@ export class MintMarketTemplate {
             .map((x) => formatUnits(x * BigInt(100)));
 
         // (1+rate)**(365*86400)-1 ~= (e**(rate*365*86400))-1
-        const rate = String(((2.718281828459 ** (toBN(_rate).times(365).times(86400)).toNumber()) - 1) * 100);
-        const future_rate = String(((2.718281828459 ** (toBN(_mp_rate).times(365).times(86400)).toNumber()) - 1) * 100);
+        const rate = String(((2.718281828459 ** Number((toBN(_rate).times(365).times(86400)))) - 1) * 100);
+        const future_rate = String(((2.718281828459 ** Number((toBN(_mp_rate).times(365).times(86400)))) - 1) * 100);
 
         return { fee, admin_fee, rate, future_rate, liquidation_discount, loan_discount }
     },
@@ -273,7 +273,7 @@ export class MintMarketTemplate {
             llammaContract.min_band(),
         ]
 
-        return (await llamalend.multicallProvider.all(calls1) as BigNumber[]).map((_b) => _b.toNumber()) as [number, number];
+        return (await llamalend.multicallProvider.all(calls1) as BigNumber[]).map((_b) => Number(_b)) as [number, number];
     },
     {
         promise: true,
@@ -281,7 +281,7 @@ export class MintMarketTemplate {
     });
 
     private statsActiveBand = memoize(async (): Promise<number> => {
-        return (await llamalend.contracts[this.address].contract.active_band_with_skip()).toNumber()
+        return Number((await llamalend.contracts[this.address].contract.active_band_with_skip()))
     },
     {
         promise: true,
@@ -430,7 +430,7 @@ export class MintMarketTemplate {
         address = _getAddress(address);
         const _bands = await llamalend.contracts[this.address].contract.read_user_tick_numbers(address, llamalend.constantOptions) as BigNumber[];
 
-        return _bands.map((_t) => _t.toNumber()).reverse();
+        return _bands.map((_t) => Number(_t)).reverse();
     }
 
     public async userRange(address = ""): Promise<number> {
