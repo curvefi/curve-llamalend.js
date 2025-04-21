@@ -395,84 +395,86 @@ class Llamalend implements ILlamalend {
 
         // TODO Put it in a separate method
         // Fetch new llammas
-        this.setContract(this.constants.FACTORY, FactoryABI);
-        const factoryContract = this.contracts[this.constants.FACTORY].contract;
-        const factoryMulticallContract = this.contracts[this.constants.FACTORY].multicallContract;
+        if(this.chainId === 1) {
+            this.setContract(this.constants.FACTORY, FactoryABI);
+            const factoryContract = this.contracts[this.constants.FACTORY].contract;
+            const factoryMulticallContract = this.contracts[this.constants.FACTORY].multicallContract;
 
-        const N1 = Object.keys(this.constants.LLAMMAS).length;
-        const N2 = await factoryContract.n_collaterals(this.constantOptions);
-        let calls = [];
-        for (let i = N1; i < N2; i++) {
-            calls.push(
-                factoryMulticallContract.collaterals(i),
-                factoryMulticallContract.amms(i),
-                factoryMulticallContract.controllers(i)
-            );
-        }
-        const res: string[] = (await this.multicallProvider.all(calls) as string[]).map((c) => c.toLowerCase());
-        const collaterals = res.filter((a, i) => i % 3 == 0) as string[];
-        const amms = res.filter((a, i) => i % 3 == 1) as string[];
-        const controllers = res.filter((a, i) => i % 3 == 2) as string[];
-
-        if (collaterals.length > 0) {
-            for (const collateral of collaterals) this.setContract(collateral, ERC20ABI);
-
-            calls = [];
-            for (const collateral of collaterals) {
+            const N1 = Object.keys(this.constants.LLAMMAS).length;
+            const N2 = await factoryContract.n_collaterals(this.constantOptions);
+            let calls = [];
+            for (let i = N1; i < N2; i++) {
                 calls.push(
-                    this.contracts[collateral].multicallContract.symbol(),
-                    this.contracts[collateral].multicallContract.decimals()
-                )
+                    factoryMulticallContract.collaterals(i),
+                    factoryMulticallContract.amms(i),
+                    factoryMulticallContract.controllers(i)
+                );
             }
-            const res = (await this.multicallProvider.all(calls)).map((x) => {
-                if (typeof x === "string") return x.toLowerCase();
-                return x;
-            });
+            const res: string[] = (await this.multicallProvider.all(calls) as string[]).map((c) => c.toLowerCase());
+            const collaterals = res.filter((a, i) => i % 3 == 0) as string[];
+            const amms = res.filter((a, i) => i % 3 == 1) as string[];
+            const controllers = res.filter((a, i) => i % 3 == 2) as string[];
 
-            calls = [];
+            if (collaterals.length > 0) {
+                for (const collateral of collaterals) this.setContract(collateral, ERC20ABI);
 
-            for(const amm of amms) {
-                this.setContract(amm, llammaABI);
-                calls.push(
-                    this.contracts[amm].multicallContract.A()
-                )
-            }
+                calls = [];
+                for (const collateral of collaterals) {
+                    calls.push(
+                        this.contracts[collateral].multicallContract.symbol(),
+                        this.contracts[collateral].multicallContract.decimals()
+                    )
+                }
+                const res = (await this.multicallProvider.all(calls)).map((x) => {
+                    if (typeof x === "string") return x.toLowerCase();
+                    return x;
+                });
 
-            const AParams = (await this.multicallProvider.all(calls)).map((x) => {
-                return Number(x)
-            });
+                calls = [];
 
-            for (let i = 0; i < collaterals.length; i++) {
-                const is_eth = collaterals[i] === this.constants.WETH;
-                const [collateral_symbol, collateral_decimals] = res.splice(0, 2) as [string, number];
-
-                if (i >= collaterals.length - 3) {
-                    this.setContract(controllers[i], controllerV2ABI);
-                } else {
-                    this.setContract(controllers[i], controllerABI);
+                for(const amm of amms) {
+                    this.setContract(amm, llammaABI);
+                    calls.push(
+                        this.contracts[amm].multicallContract.A()
+                    )
                 }
 
-                this.setContract(controllers[i], controllerABI);
-                const monetary_policy_address = (await this.contracts[controllers[i]].contract.monetary_policy(this.constantOptions)).toLowerCase();
-                this.setContract(monetary_policy_address, MonetaryPolicy2ABI);
-                const _llammaId: string = is_eth ? "eth" : collateral_symbol.toLowerCase();
-                let llammaId = _llammaId
-                let j = 2;
-                while (llammaId in this.constants.LLAMMAS) llammaId = _llammaId + j++;
-                this.constants.LLAMMAS[llammaId] = {
-                    amm_address: amms[i],
-                    controller_address: controllers[i],
-                    monetary_policy_address,
-                    collateral_address: is_eth ? "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" : collaterals[i],
-                    leverage_zap: "0x0000000000000000000000000000000000000000",
-                    deleverage_zap: "0x0000000000000000000000000000000000000000",
-                    collateral_symbol: is_eth ? "ETH" : collateral_symbol,
-                    collateral_decimals,
-                    min_bands: 4,
-                    max_bands: 50,
-                    default_bands: 10,
-                    A: AParams[i],
-                    monetary_policy_abi: MonetaryPolicy2ABI,
+                const AParams = (await this.multicallProvider.all(calls)).map((x) => {
+                    return Number(x)
+                });
+
+                for (let i = 0; i < collaterals.length; i++) {
+                    const is_eth = collaterals[i] === this.constants.WETH;
+                    const [collateral_symbol, collateral_decimals] = res.splice(0, 2) as [string, number];
+
+                    if (i >= collaterals.length - 3) {
+                        this.setContract(controllers[i], controllerV2ABI);
+                    } else {
+                        this.setContract(controllers[i], controllerABI);
+                    }
+
+                    this.setContract(controllers[i], controllerABI);
+                    const monetary_policy_address = (await this.contracts[controllers[i]].contract.monetary_policy(this.constantOptions)).toLowerCase();
+                    this.setContract(monetary_policy_address, MonetaryPolicy2ABI);
+                    const _llammaId: string = is_eth ? "eth" : collateral_symbol.toLowerCase();
+                    let llammaId = _llammaId
+                    let j = 2;
+                    while (llammaId in this.constants.LLAMMAS) llammaId = _llammaId + j++;
+                    this.constants.LLAMMAS[llammaId] = {
+                        amm_address: amms[i],
+                        controller_address: controllers[i],
+                        monetary_policy_address,
+                        collateral_address: is_eth ? "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" : collaterals[i],
+                        leverage_zap: "0x0000000000000000000000000000000000000000",
+                        deleverage_zap: "0x0000000000000000000000000000000000000000",
+                        collateral_symbol: is_eth ? "ETH" : collateral_symbol,
+                        collateral_decimals,
+                        min_bands: 4,
+                        max_bands: 50,
+                        default_bands: 10,
+                        A: AParams[i],
+                        monetary_policy_abi: MonetaryPolicy2ABI,
+                    }
                 }
             }
         }
