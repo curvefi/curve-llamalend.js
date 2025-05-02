@@ -129,10 +129,10 @@ export class MintMarketTemplate {
         this.deleverageZap = llammaData.deleverage_zap;
         this.healthCalculator = llammaData.health_calculator_zap;
         this.collateralSymbol = llammaData.collateral_symbol;
-        this.collateralDecimals = llammaData.collateral_decimals;
+        this.collateralDecimals = Number(llammaData.collateral_decimals);
         this.coins = ["crvUSD", llammaData.collateral_symbol];
         this.coinAddresses = [llamalend.crvUsdAddress, llammaData.collateral_address];
-        this.coinDecimals = [18, llammaData.collateral_decimals];
+        this.coinDecimals = [18, Number(llammaData.collateral_decimals)];
         this.minBands = llammaData.min_bands;
         this.maxBands = llammaData.max_bands;
         this.defaultBands = llammaData.default_bands;
@@ -324,7 +324,7 @@ export class MintMarketTemplate {
             const _i = i - min_band
             let collateral = formatUnits(_bands[(2 * _i) + 1]);
             collateral = collateral.split(".")[0] + "." +
-                (collateral.split(".")[1] || "0").slice(0, this.collateralDecimals);
+                (collateral.split(".")[1] || "0").slice(0, this.coinDecimals[1]);
             bands[i] = {
                 stablecoin: formatUnits(_bands[2 * _i]),
                 collateral,
