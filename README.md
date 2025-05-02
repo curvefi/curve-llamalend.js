@@ -1733,7 +1733,11 @@ import llamalend from "@curvefi/llamalend-api";
 })()
 ```
 
-### Leverage for mintMarket
+### Leverage for Legacy `mintMarket` (Deprecated)
+
+These methods apply only to the legacy `mintMarket`.  
+Use `mintMarket.isNewMarket` to check whether the market is new.  
+If `mintMarket.isNewMarket === false`, use the methods listed below.
 ```ts
 (async () => {
 
