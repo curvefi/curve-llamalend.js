@@ -465,7 +465,7 @@ class Llamalend implements ILlamalend {
                         controller_address: controllers[i],
                         monetary_policy_address,
                         collateral_address: is_eth ? "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" : collaterals[i],
-                        leverage_zap: "0x0000000000000000000000000000000000000000",
+                        leverage_zap: this.constants.ALIASES.leverage_zap,
                         deleverage_zap: "0x0000000000000000000000000000000000000000",
                         collateral_symbol: is_eth ? "ETH" : collateral_symbol,
                         collateral_decimals,
@@ -474,6 +474,8 @@ class Llamalend implements ILlamalend {
                         default_bands: 10,
                         A: AParams[i],
                         monetary_policy_abi: MonetaryPolicy2ABI,
+                        is_new_market: true,
+                        index: N1 + i,
                     }
                 }
             }
