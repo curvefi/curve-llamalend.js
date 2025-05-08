@@ -169,7 +169,7 @@ export const NETWORK_CONSTANTS: { [index: number]: any } = {
 }
 
 
-class Llamalend implements ILlamalend {
+export class Llamalend implements ILlamalend {
     address: string;
     crvUsdAddress: string;
     provider: ethers.BrowserProvider | ethers.JsonRpcProvider;
