@@ -453,7 +453,6 @@ class Llamalend implements ILlamalend {
                         this.setContract(controllers[i], controllerABI);
                     }
 
-                    this.setContract(controllers[i], controllerABI);
                     const monetary_policy_address = (await this.contracts[controllers[i]].contract.monetary_policy(this.constantOptions)).toLowerCase();
                     this.setContract(monetary_policy_address, MonetaryPolicy2ABI);
                     const _llammaId: string = is_eth ? "eth" : collateral_symbol.toLowerCase();
