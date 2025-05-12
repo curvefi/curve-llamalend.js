@@ -474,6 +474,8 @@ class Llamalend implements ILlamalend {
                         default_bands: 10,
                         A: AParams[i],
                         monetary_policy_abi: MonetaryPolicy2ABI,
+                        is_deleverage_supported: true,
+                        index: N1 + i,
                     }
                 }
             }

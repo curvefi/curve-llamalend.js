@@ -16,7 +16,9 @@ import {
     formatUnits,
     smartNumber,
     MAX_ALLOWANCE,
-    MAX_ACTIVE_BAND, _mulBy1_3, DIGas,
+    MAX_ACTIVE_BAND,
+    _mulBy1_3,
+    DIGas,
 } from "../utils";
 import {IDict, TGas} from "../interfaces";
 import {_getUserCollateralCrvUsd} from "../external-api.js";
@@ -41,6 +43,8 @@ export class MintMarketTemplate {
     defaultBands: number;
     A: number;
     tickSpace: number; // %
+    isDeleverageSupported: boolean;
+    index?: number;
     estimateGas: {
         createLoanApprove: (collateral: number | string) => Promise<TGas>,
         createLoan: (collateral: number | string, debt: number | string, range: number) => Promise<TGas>,
@@ -138,6 +142,8 @@ export class MintMarketTemplate {
         this.defaultBands = llammaData.default_bands;
         this.A = llammaData.A;
         this.tickSpace = 1 / llammaData.A * 100;
+        this.isDeleverageSupported = llammaData.is_deleverage_supported ?? false;
+        this.index = llammaData.index;
         this.estimateGas = {
             createLoanApprove: this.createLoanApproveEstimateGas.bind(this),
             createLoan: this.createLoanEstimateGas.bind(this),
@@ -985,12 +991,12 @@ export class MintMarketTemplate {
 
         const _collateral = parseUnits(collateral, this.collateralDecimals);
         const contract = llamalend.contracts[this.controller].contract;
-        const gas = await contract.remove_collateral.estimateGas(_collateral, isEth(this.collateral), llamalend.constantOptions);
+        const gas = this.isDeleverageSupported ? await contract.remove_collateral.estimateGas(_collateral, llamalend.constantOptions) : await contract.remove_collateral.estimateGas(_collateral, isEth(this.collateral), llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.remove_collateral(_collateral, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
+        return (this.isDeleverageSupported ? await contract.remove_collateral(_collateral, { ...llamalend.options, gasLimit }) : await contract.remove_collateral(_collateral, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
     }
 
     public async removeCollateralEstimateGas(collateral: number | string): Promise<number> {
@@ -1060,12 +1066,12 @@ export class MintMarketTemplate {
         const [, n1] = await this.userBands(address);
         const { stablecoin } = await this.userState(address);
         const n = (BN(stablecoin).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;  // In liquidation mode it doesn't matter if active band moves
-        const gas = await contract.repay.estimateGas(_debt, address, n, isEth(this.collateral), llamalend.constantOptions);
+        const gas = this.isDeleverageSupported ? await contract.repay.estimateGas(_debt, address, n, llamalend.constantOptions) : await contract.repay.estimateGas(_debt, address, n, isEth(this.collateral), llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.repay(_debt, address, n, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
+        return (this.isDeleverageSupported ? await contract.repay(_debt, address, n, { ...llamalend.options, gasLimit }) : await contract.repay(_debt, address, n, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
     }
 
     public async repayEstimateGas(debt: number | string, address = ""): Promise<number> {
@@ -1264,12 +1270,12 @@ export class MintMarketTemplate {
         const minAmountBN: BigNumber = BN(stablecoin).times(100 - slippage).div(100);
         const _minAmount = fromBN(minAmountBN);
         const contract = llamalend.contracts[this.controller].contract;
-        const gas = (await contract.liquidate.estimateGas(address, _minAmount, isEth(this.collateral), llamalend.constantOptions))
+        const gas = this.isDeleverageSupported ? (await contract.liquidate.estimateGas(address, _minAmount, llamalend.constantOptions)) : (await contract.liquidate.estimateGas(address, _minAmount, isEth(this.collateral), llamalend.constantOptions))
         if (estimateGas) return smartNumber(gas);
 
         await llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.liquidate(address, _minAmount, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
+        return (this.isDeleverageSupported ? await contract.liquidate(address, _minAmount, { ...llamalend.options, gasLimit }) : await contract.liquidate(address, _minAmount, isEth(this.collateral), { ...llamalend.options, gasLimit })).hash
     }
 
     public async liquidateEstimateGas(address: string, slippage = 0.1): Promise<number> {
