@@ -315,7 +315,7 @@ class Llamalend implements ILlamalend {
 
         const network = await this.provider.getNetwork();
         this.chainId = Number(network.chainId) === 133 || Number(network.chainId) === 31337 ? 1 : Number(network.chainId) as IChainId;
-        console.log("CURVE-LENDING-JS IS CONNECTED TO NETWORK:", { name: network.name.toUpperCase(), chainId: Number(this.chainId) });
+        console.log("CURVE-LLAMALEND-JS IS CONNECTED TO NETWORK:", { name: network.name.toUpperCase(), chainId: Number(this.chainId) });
 
         if(this.chainId === 42161) {
             this.constantOptions = { gasLimit: 1125899906842624 } // https://arbiscan.io/chart/gaslimit
