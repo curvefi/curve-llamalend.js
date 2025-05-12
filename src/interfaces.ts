@@ -33,7 +33,7 @@ export interface ILlamma {
     default_bands: number,
     A: number,
     monetary_policy_abi: any
-    is_new_market?: boolean
+    is_deleverage_supported?: boolean
     index?: number
 }
 

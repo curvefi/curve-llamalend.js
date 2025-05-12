@@ -44,7 +44,7 @@ export class MintMarketTemplate {
     defaultBands: number;
     A: number;
     tickSpace: number; // %
-    isNewMarket: boolean;
+    isDeleverageSupported: boolean;
     index?: number;
     swapDataCache: IDict<IQuoteOdos> = {}
     estimateGas: {
@@ -113,7 +113,7 @@ export class MintMarketTemplate {
         this.defaultBands = llammaData.default_bands;
         this.A = llammaData.A;
         this.tickSpace = 1 / llammaData.A * 100;
-        this.isNewMarket = llammaData.is_new_market ?? false;
+        this.isDeleverageSupported = llammaData.is_deleverage_supported ?? false;
         this.index = llammaData.index;
         this.estimateGas = {
             createLoanApprove: this.createLoanApproveEstimateGas.bind(this),
@@ -243,7 +243,7 @@ export class MintMarketTemplate {
     // ---------------- STATS ----------------
 
     private _getMarketId = (): number => {
-        if(!this.isNewMarket) {
+        if(!this.isDeleverageSupported) {
             throw Error('For old markets use deprecatedLeverage')
         }
 
@@ -1668,7 +1668,7 @@ export class MintMarketTemplate {
 
 
     private hasLeverage = (): boolean => {
-        return llamalend.constants.ALIASES.leverage_zap !== llamalend.constants.ZERO_ADDRESS && this.isNewMarket
+        return llamalend.constants.ALIASES.leverage_zap !== llamalend.constants.ZERO_ADDRESS && this.isDeleverageSupported
     }
 
     private _checkLeverageZap(): void {
