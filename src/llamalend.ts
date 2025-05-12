@@ -212,7 +212,7 @@ class Llamalend implements ILlamalend {
         this.options = {};
         this.constants = {
             ONE_WAY_MARKETS: {},
-            LLAMMAS,
+            LLAMMAS: {},
             COINS: {},
             DECIMALS: {},
             NETWORK_NAME: 'ethereum',
@@ -250,7 +250,7 @@ class Llamalend implements ILlamalend {
         this.options = {};
         this.constants = {
             ONE_WAY_MARKETS: {},
-            LLAMMAS,
+            LLAMMAS: {...LLAMMAS},
             COINS: {},
             DECIMALS: {},
             NETWORK_NAME: 'ethereum',
