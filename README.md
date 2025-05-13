@@ -829,13 +829,16 @@ import llamalend from "@curvefi/llamalend-api";
     
     await lendMarket.currentLeverage()
     //0.94083266399502623316
-    
-    await lendMarket.currentPosition()
-    // {
-    //      currentPosition: "95777.510614373750083"
-    //      deposited: "219533.5105208847"
-    //      percentage: "-56.372259347958530763"
-    // }
+
+    await lendMarket.currentPnL()
+    /*
+    {
+        currentPosition:"9.383656846426222260"
+        currentProfit:"0.007205653033021260"
+        deposited:"1.572195559253977"
+        percentage:"0.46"
+    }
+     */
     
     await lendMarket.tokensToLiquidate(addressToLiquidate);
     // 301.533523886491869218
