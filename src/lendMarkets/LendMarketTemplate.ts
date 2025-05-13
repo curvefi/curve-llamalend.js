@@ -2991,57 +2991,57 @@ export class LendMarketTemplate {
 
     public async currentLeverage(userAddress = ''): Promise<string> {
         userAddress = _getAddress(userAddress);
-        const [userCollateral, _current_collateral_estimation] = await Promise.all([
+        const [userCollateral, {collateral}] = await Promise.all([
             _getUserCollateral(llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            llamalend.contracts[this.addresses.amm].contract.get_y_up(userAddress),
+            this.userState(userAddress),
         ]);
 
-        const total_deposit_from_user = userCollateral.total_deposit_from_user;
-        const current_collateral_estimation = llamalend.formatUnits(_current_collateral_estimation, this.collateral_token.decimals);
+        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
 
-
-        return BN(current_collateral_estimation).div(total_deposit_from_user).toString();
+        return BN(collateral).div(total_deposit_from_user).toString();
     }
 
     public async currentPnL(userAddress = ''): Promise<Record<string, string>> {
         userAddress = _getAddress(userAddress);
 
         const calls = [
-            llamalend.contracts[this.addresses.amm].multicallContract.get_y_up(userAddress),
             llamalend.contracts[this.addresses.controller].multicallContract.user_state(userAddress, llamalend.constantOptions),
             llamalend.contracts[this.addresses.amm].multicallContract.price_oracle(userAddress),
         ];
 
-        const [currentCollateralEstimation, userState, oraclePrice] = await llamalend.multicallProvider.all(calls) as  [bigint, bigint[],bigint];
+        const [userState, oraclePrice] = await llamalend.multicallProvider.all(calls) as  [bigint[],bigint];
 
-        if(!(currentCollateralEstimation || userState || oraclePrice)) {
+        if(!(userState || oraclePrice)) {
             throw new Error('Multicall error')
         }
 
         const debt = userState[2];
 
         const userCollateral = await _getUserCollateral(llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress);
-        const totalDepositUsdValue = userCollateral.total_deposit_usd_value;
+        const totalDepositUsdValueFull = userCollateral.total_deposit_usd_value;
+        const totalDepositUsdValueUser = userCollateral.total_deposit_from_user_usd_value;
+        const totalBorrowed = userCollateral.total_borrowed;
 
-        const currentCollateralEstimationFormatted = llamalend.formatUnits(currentCollateralEstimation, this.collateral_token.decimals);
         const oraclePriceFormatted = llamalend.formatUnits(oraclePrice, 18);
         const debtFormatted = llamalend.formatUnits(debt, 18);
 
-        const currentPosition = BN(currentCollateralEstimationFormatted)
-            .times(oraclePriceFormatted)
-            .minus(debtFormatted)
-            .toFixed(this.collateral_token.decimals)
+        const {_collateral: AmmCollateral, _borrowed: AmmBorrowed} = await this._userState(userAddress)
+        const [AmmCollateralFormatted, AmmBorrowedFormatted] = [llamalend.formatUnits(AmmCollateral, this.collateral_token.decimals), llamalend.formatUnits(AmmBorrowed, this.borrowed_token.decimals)];
 
-        const percentage = BN(currentPosition)
-            .div(totalDepositUsdValue)
-            .minus(1)
-            .times(100)
-            .toString();
+        const a = BN(AmmCollateralFormatted).times(oraclePriceFormatted);
+        const b = BN(totalBorrowed).minus(debtFormatted)
+
+        const currentPosition = a.plus(AmmBorrowedFormatted).plus(b);
+
+        const currentProfit = currentPosition.minus(totalDepositUsdValueFull);
+
+        const percentage = currentProfit.div(totalDepositUsdValueUser).times(100);
 
         return {
-            currentPosition: currentPosition,
-            deposited: totalDepositUsdValue.toString(),
-            percentage: percentage,
+            currentPosition: currentPosition.toFixed(this.borrowed_token.decimals).toString(),
+            deposited: totalDepositUsdValueUser.toString(),
+            currentProfit: currentProfit.toFixed(this.borrowed_token.decimals).toString(),
+            percentage: percentage.toFixed(2).toString(),
         };
     }
 }
