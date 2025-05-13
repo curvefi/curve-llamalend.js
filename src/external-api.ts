@@ -14,7 +14,7 @@ import {
 
 const _getPoolsFromApi = memoize(
     async (network: INetworkName, poolFactory: IPoolFactory ): Promise<IExtendedPoolDataFromApi> => {
-        const response = await fetch(`https://api.curve.fi/api/getPools/${network}/${poolFactory}`);
+        const response = await fetch(`https://api.curve.finance/api/getPools/${network}/${poolFactory}`);
         const { data } = await response.json() as { data?: IExtendedPoolDataFromApi, success: boolean };
         return data ?? { poolData: [], tvl: 0, tvlAll: 0 };
     },
@@ -118,7 +118,7 @@ export const _getUsdPricesFromApi = async (): Promise<IDict<number>> => {
 type UserCollateral = { total_deposit_precise: string, total_deposit_from_user: number, total_deposit_usd_value: number }
 export const _getUserCollateral = memoize(
     async (network: INetworkName, controller: string, user: string): Promise<UserCollateral> => {
-        const url = `https://prices.curve.fi/v1/lending/collateral_events/${network}/${controller}/${user}`;
+        const url = `https://prices.curve.finance/v1/lending/collateral_events/${network}/${controller}/${user}`;
         const response = await fetch(url);
         const data = await response.json() as UserCollateral;
         return {
@@ -135,7 +135,7 @@ export const _getUserCollateral = memoize(
 
 export const _getUserCollateralCrvUsd = memoize(
     async (network: INetworkName, controller: string, user: string): Promise<string> => {
-        const url = `https://prices.curve.fi/v1/crvusd/collateral_events/${network}/${controller}/${user}`;
+        const url = `https://prices.curve.finance/v1/crvusd/collateral_events/${network}/${controller}/${user}`;
         const response = await fetch(url);
         const { total_deposit } = await response.json() as { total_deposit: string };
         return total_deposit;
@@ -148,7 +148,7 @@ export const _getUserCollateralCrvUsd = memoize(
 
 export const _getMarketsData = memoize(
     async (network: INetworkName): Promise<IMarketData> => {
-        const url = `https://api.curve.fi/api/getLendingVaults/${network}/oneway`;
+        const url = `https://api.curve.finance/api/getLendingVaults/${network}/oneway`;
         const response = await fetch(url, { headers: {"accept": "application/json"} });
         if (response.status !== 200) {
             throw Error(`Fetch error: ${response.status} ${response.statusText}`);
@@ -170,7 +170,7 @@ export const _getQuoteOdos = async (fromToken: string, toToken: string, _amount:
     if (ethers.getAddress(fromToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") fromToken = "0x0000000000000000000000000000000000000000";
     if (ethers.getAddress(toToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") toToken = "0x0000000000000000000000000000000000000000";
 
-    const url = `https://prices.curve.fi/odos/quote?chain_id=${llamalend.chainId}&from_address=${ethers.getAddress(fromToken)}` +
+    const url = `https://prices.curve.finance/odos/quote?chain_id=${llamalend.chainId}&from_address=${ethers.getAddress(fromToken)}` +
         `&to_address=${ethers.getAddress(toToken)}&amount=${_amount.toString()}&slippage=${slippage}&pathVizImage=${pathVizImage}` +
         `&caller_address=${ethers.getAddress(llamalend.constants.ALIASES.leverage_zap)}&blacklist=${ethers.getAddress(blacklist)}`;
 
@@ -188,7 +188,7 @@ export const _getExpectedOdos = async (fromToken: string, toToken: string, _amou
 
 export const _assembleTxOdos = memoize(
     async (pathId: string): Promise<string> => {
-        const url = `https://prices.curve.fi/odos/assemble?user=${ethers.getAddress(llamalend.constants.ALIASES.leverage_zap)}&path_id=${pathId}`;
+        const url = `https://prices.curve.finance/odos/assemble?user=${ethers.getAddress(llamalend.constants.ALIASES.leverage_zap)}&path_id=${pathId}`;
 
         const response = await fetch(url, { headers: {'Content-Type': 'application/json'} });
         if (response.status !== 200) {

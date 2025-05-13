@@ -718,7 +718,7 @@ class Llamalend implements ILlamalend {
             COIN_DATA[gauges[index]] = {
                 address: gauges[index],
                 decimals: 18,
-                name: "Curve.fi " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
+                name: "curve.finance " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
                 symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol + "-gauge",
             };
             this.constants.DECIMALS[vaults[index]] = 18;
@@ -766,7 +766,7 @@ class Llamalend implements ILlamalend {
             COIN_DATA[gauges[index]] = {
                 address: gauges[index],
                 decimals: 18,
-                name: "Curve.fi " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
+                name: "curve.finance " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
                 symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol + "-gauge",
             };
             this.constants.DECIMALS[vaults[index]] = 18;

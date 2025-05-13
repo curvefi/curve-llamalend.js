@@ -885,7 +885,7 @@ import llamalend from "@curvefi/llamalend-api";
     // {
     //     address: '0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5',
     //     decimals: 18,
-    //     name: 'Curve.Fi USD Stablecoin',
+    //     name: 'curve.finance USD Stablecoin',
     //     symbol: 'crvUSD'
     // }
     console.log(await lendMarket.wallet.balances());
