@@ -14,7 +14,7 @@ import {
 
 const _getPoolsFromApi = memoize(
     async (network: INetworkName, poolFactory: IPoolFactory ): Promise<IExtendedPoolDataFromApi> => {
-        const response = await fetch(`https://api.curve.finance/api/getPools/${network}/${poolFactory}`);
+        const response = await fetch(`https://d3dl9x5bpp6us7.cloudfront.net/api/getPools/${network}/${poolFactory}`);
         const { data } = await response.json() as { data?: IExtendedPoolDataFromApi, success: boolean };
         return data ?? { poolData: [], tvl: 0, tvlAll: 0 };
     },
@@ -148,7 +148,7 @@ export const _getUserCollateralCrvUsd = memoize(
 
 export const _getMarketsData = memoize(
     async (network: INetworkName): Promise<IMarketData> => {
-        const url = `https://api.curve.finance/api/getLendingVaults/${network}/oneway`;
+        const url = `https://d3dl9x5bpp6us7.cloudfront.net/api/getLendingVaults/${network}/oneway`;
         const response = await fetch(url, { headers: {"accept": "application/json"} });
         if (response.status !== 200) {
             throw Error(`Fetch error: ${response.status} ${response.statusText}`);
