@@ -226,7 +226,7 @@ export const getAllowance = async (coins: string[], address: string, spender: st
 // coins can be either addresses or symbols
 export const hasAllowance = async (coins: string[], amounts: (number | string)[], address: string, spender: string): Promise<boolean> => {
     const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses);
+    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
     const _allowance = await _getAllowance(coinAddresses, address, spender);
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
 
