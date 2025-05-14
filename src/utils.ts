@@ -180,7 +180,7 @@ export const _getBalances = async (coinAddresses: string[], address = ""): Promi
 
 export const getBalances = async (coins: string[], address = ""): Promise<string[]> => {
     const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses);
+    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
     const _balances = await _getBalances(coinAddresses, address);
 
     return _balances.map((_b, i: number ) => formatUnits(_b, decimals[i]));
@@ -217,7 +217,7 @@ export const _getAllowance = memoize(async (coins: string[], address: string, sp
 // coins can be either addresses or symbols
 export const getAllowance = async (coins: string[], address: string, spender: string): Promise<string[]> => {
     const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses);
+    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
     const _allowance = await _getAllowance(coinAddresses, address, spender);
 
     return _allowance.map((a, i) => llamalend.formatUnits(a, decimals[i]))
@@ -254,7 +254,7 @@ export const _ensureAllowance = async (coins: string[], _amounts: bigint[], spen
 // coins can be either addresses or symbols
 export const ensureAllowanceEstimateGas = async (coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<TGas> => {
     const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses);
+    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
     const _allowance: bigint[] = await _getAllowance(coinAddresses, llamalend.signerAddress, spender);
 
@@ -274,7 +274,7 @@ export const ensureAllowanceEstimateGas = async (coins: string[], amounts: (numb
 // coins can be either addresses or symbols
 export const ensureAllowance = async (coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<string[]> => {
     const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses);
+    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
 
     return await _ensureAllowance(coinAddresses, _amounts, spender, isMax)
