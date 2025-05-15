@@ -328,9 +328,6 @@ class Llamalend implements ILlamalend {
         this.setContract(this.constants.ALIASES.crv, ERC20ABI);
         this.setContract(this.constants.ALIASES.crvUSD, ERC20ABI);
         this.setContract(this.constants.ALIASES.st_crvUSD, ERC4626ABI);
-        this.constants.DECIMALS[this.constants.ALIASES.crv] = 18;
-        this.constants.DECIMALS[this.constants.ALIASES.crvUSD] = 18;
-        this.constants.DECIMALS[this.constants.ALIASES.st_crvUSD] = 18;
 
         this.multicallProvider = new MulticallProvider(this.chainId, this.provider);
 
@@ -480,8 +477,13 @@ class Llamalend implements ILlamalend {
             }
         }
 
-        this.constants.DECIMALS = extractDecimals(this.constants.LLAMMAS);
-        this.constants.DECIMALS[this.crvUsdAddress] = 18;
+        this.constants.DECIMALS = {
+            ...extractDecimals(this.constants.LLAMMAS),
+            [this.crvUsdAddress]: 18,
+            [this.constants.ALIASES.crv]: 18,
+            [this.constants.ALIASES.crvUSD]: 18,
+            [this.constants.ALIASES.st_crvUSD]: 18,
+        }
 
         if(L2Networks.includes(this.chainId)) {
             // eslint-disable-next-line @typescript-eslint/no-this-alias
