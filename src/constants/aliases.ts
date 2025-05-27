@@ -52,8 +52,10 @@ export const ALIASES_OPTIMISM = lowerCaseValues({
     "crv": "0x0994206dfE8De6Ec6920FF4D779B0d950605Fb53",
     "one_way_factory": "0x5EA8f3D674C70b020586933A0a5b250734798BeF",
     "gauge_controller": "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
-    "gauge_factory": "0xabC000d88f23Bb45525E447528DBF656A9D55bf5",
-    "leverage_zap": "0x0000000000000000000000000000000000000000",
+    "gauge_factory_old": "0xabC000d88f23Bb45525E447528DBF656A9D55bf5",
+    "gauge_factory": "0x871fBD4E01012e2E8457346059e8C189d664DbA4",
+    "leverage_zap": "0x273e44B9a1841857d9360e8792bB59f9e1FfE9Da",
+    "leverage_markets_start_id": "0",
     "gas_oracle": '0xc0d3C0d3C0d3c0D3C0D3C0d3C0d3C0D3C0D3000f',
     "gas_oracle_blob": '0x420000000000000000000000000000000000000f',
 });
