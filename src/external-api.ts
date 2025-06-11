@@ -1,6 +1,6 @@
 import {ethers} from "ethers";
 import memoize from "memoizee";
-import {llamalend} from "./llamalend.js";
+import type { Llamalend } from "./llamalend.js";
 import {
     IDict,
     IExtendedPoolDataFromApi,
@@ -37,8 +37,8 @@ const _getAllPoolsFromApi = async (network: INetworkName): Promise<IExtendedPool
     ]);
 }
 
-export const _getUsdPricesFromApi = async (): Promise<IDict<number>> => {
-    const network = llamalend.constants.NETWORK_NAME;
+export async function _getUsdPricesFromApi(this: Llamalend): Promise<IDict<number>> {
+    const network = this.constants.NETWORK_NAME;
     const allTypesExtendedPoolData = await _getAllPoolsFromApi(network);
     const priceDict: IDict<Record<string, number>[]> = {};
     const priceDictByMaxTvl: IDict<number> = {};
@@ -167,15 +167,15 @@ export const _getMarketsData = memoize(
 
 // --- ODOS ---
 
-export const _getQuoteOdos = async (fromToken: string, toToken: string, _amount: bigint, blacklist: string, pathVizImage: boolean, slippage = 0.5): Promise<IQuoteOdos> => {
+export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken: string, _amount: bigint, blacklist: string, pathVizImage: boolean, slippage = 0.5): Promise<IQuoteOdos> {
     if (_amount === BigInt(0)) return { outAmounts: ["0.0"], pathId: '', pathVizImage: '', priceImpact: 0, slippage };
 
     if (ethers.getAddress(fromToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") fromToken = "0x0000000000000000000000000000000000000000";
     if (ethers.getAddress(toToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") toToken = "0x0000000000000000000000000000000000000000";
 
-    const url = `https://prices.curve.finance/odos/quote?chain_id=${llamalend.chainId}&from_address=${ethers.getAddress(fromToken)}` +
+    const url = `https://prices.curve.finance/odos/quote?chain_id=${this.chainId}&from_address=${ethers.getAddress(fromToken)}` +
         `&to_address=${ethers.getAddress(toToken)}&amount=${_amount.toString()}&slippage=${slippage}&pathVizImage=${pathVizImage}` +
-        `&caller_address=${ethers.getAddress(llamalend.constants.ALIASES.leverage_zap)}&blacklist=${ethers.getAddress(blacklist)}`;
+        `&caller_address=${ethers.getAddress(this.constants.ALIASES.leverage_zap)}&blacklist=${ethers.getAddress(blacklist)}`;
 
     const response = await fetch(url, {  headers: {"accept": "application/json"} });
     if (response.status !== 200) {
@@ -185,13 +185,13 @@ export const _getQuoteOdos = async (fromToken: string, toToken: string, _amount:
     return { ...data, slippage };
 }
 
-export const _getExpectedOdos = async (fromToken: string, toToken: string, _amount: bigint, blacklist: string) => {
-    return (await _getQuoteOdos(fromToken, toToken, _amount, blacklist, false)).outAmounts[0]
+export async function _getExpectedOdos(this: Llamalend, fromToken: string, toToken: string, _amount: bigint, blacklist: string) {
+    return (await _getQuoteOdos.call(this, fromToken, toToken, _amount, blacklist, false)).outAmounts[0]
 }
 
-export const _assembleTxOdos = memoize(
-    async (pathId: string): Promise<string> => {
-        const url = `https://prices.curve.finance/odos/assemble?user=${ethers.getAddress(llamalend.constants.ALIASES.leverage_zap)}&path_id=${pathId}`;
+const _assembleTxOdosMemoized = memoize(
+    async function (leverageZapAddress: string, pathId: string): Promise<string> {
+        const url = `https://prices.curve.finance/odos/assemble?user=${ethers.getAddress(leverageZapAddress)}&path_id=${pathId}`;
 
         const response = await fetch(url, { headers: {'Content-Type': 'application/json'} });
         if (response.status !== 200) {
@@ -204,4 +204,8 @@ export const _assembleTxOdos = memoize(
         promise: true,
         maxAge: 10 * 1000, // 10s
     }
-)
+);
+
+export async function _assembleTxOdos(this: Llamalend, pathId: string): Promise<string> {
+    return _assembleTxOdosMemoized(this.constants.ALIASES.leverage_zap, pathId);
+}
