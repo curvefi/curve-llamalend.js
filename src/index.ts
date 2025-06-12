@@ -48,96 +48,92 @@ import {
 
 
 export function createLlamalend() {
-    const _llamalend = new Llamalend();
-
+    const llamalend = new Llamalend();
     return {
-        // Internal reference
-        _llamalend,
-
         // Init and config
         async init(
             providerType: 'JsonRpc' | 'Web3' | 'Infura' | 'Alchemy',
             providerSettings: { url?: string, privateKey?: string, batchMaxCount? : number } | { externalProvider: ethers.Eip1193Provider } | { network?: Networkish, apiKey?: string },
             options: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number, chainId?: number } = {}
         ): Promise<void> {
-            await _llamalend.init(providerType, providerSettings, options);
+            await llamalend.init(providerType, providerSettings, options);
         },
 
         setCustomFeeData(customFeeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number }): void {
-            _llamalend.setCustomFeeData(customFeeData);
+            llamalend.setCustomFeeData(customFeeData);
         },
 
-        get chainId(): number { return _llamalend.chainId; },
-        get signerAddress(): string { return _llamalend.signerAddress; },
+        get chainId(): number { return llamalend.chainId; },
+        get signerAddress(): string { return llamalend.signerAddress; },
 
         // Market templates
         LendMarketTemplate,
         MintMarketTemplate,
 
         // Market constructors
-        getLendMarket: getLendMarket.bind(_llamalend),
-        getMintMarket: getMintMarket.bind(_llamalend),
+        getLendMarket: getLendMarket.bind(llamalend),
+        getMintMarket: getMintMarket.bind(llamalend),
 
         // Utility functions
-        totalSupply: totalSupply.bind(_llamalend),
-        getLsdApy: getLsdApy.bind(_llamalend),
-        getBalances: getBalances.bind(_llamalend),
-        getAllowance: getAllowance.bind(_llamalend),
-        hasAllowance: hasAllowance.bind(_llamalend),
-        ensureAllowance: ensureAllowance.bind(_llamalend),
-        getUsdRate: getUsdRate.bind(_llamalend),
-        getGasPriceFromL1: getGasPriceFromL1.bind(_llamalend),
-        getGasPriceFromL2: getGasPriceFromL2.bind(_llamalend),
-        getGasInfoForL2: getGasInfoForL2.bind(_llamalend),
+        totalSupply: totalSupply.bind(llamalend),
+        getLsdApy: getLsdApy.bind(llamalend),
+        getBalances: getBalances.bind(llamalend),
+        getAllowance: getAllowance.bind(llamalend),
+        hasAllowance: hasAllowance.bind(llamalend),
+        ensureAllowance: ensureAllowance.bind(llamalend),
+        getUsdRate: getUsdRate.bind(llamalend),
+        getGasPriceFromL1: getGasPriceFromL1.bind(llamalend),
+        getGasPriceFromL2: getGasPriceFromL2.bind(llamalend),
+        getGasInfoForL2: getGasInfoForL2.bind(llamalend),
 
         // Core methods
-        fetchStats: _llamalend.fetchStats.bind(_llamalend),
+        fetchStats: llamalend.fetchStats.bind(llamalend),
 
         // Market lists
         mintMarkets: {
-            getMarketList: _llamalend.getMintMarketList.bind(_llamalend),
+            getMarketList: llamalend.getMintMarketList.bind(llamalend),
         },
         lendMarkets: {
-            fetchMarkets: _llamalend.fetchLendMarkets.bind(_llamalend),
-            getMarketList: _llamalend.getLendMarketList.bind(_llamalend),
+            fetchMarkets: llamalend.fetchLendMarkets.bind(llamalend),
+            getMarketList: llamalend.getLendMarketList.bind(llamalend),
         },
 
         // Gas estimation
         estimateGas: {
-            ensureAllowance: ensureAllowanceEstimateGas.bind(_llamalend),
+            ensureAllowance: ensureAllowanceEstimateGas.bind(llamalend),
         },
 
         // st-crvUSD methods
         st_crvUSD: {
-            convertToAssets: convertToAssets.bind(_llamalend),
-            convertToShares: convertToShares.bind(_llamalend),
-            userBalances: userBalances.bind(_llamalend),
-            totalSupplyAndCrvUSDLocked: totalSupplyAndCrvUSDLocked.bind(_llamalend),
-            maxDeposit: maxDeposit.bind(_llamalend),
-            previewDeposit: previewDeposit.bind(_llamalend),
-            depositIsApproved: depositIsApproved.bind(_llamalend),
-            depositAllowance: depositAllowance.bind(_llamalend),
-            depositApprove: depositApprove.bind(_llamalend),
-            deposit: deposit.bind(_llamalend),
-            maxMint: maxMint.bind(_llamalend),
-            previewMint: previewMint.bind(_llamalend),
-            mintIsApproved: mintIsApproved.bind(_llamalend),
-            mintAllowance: mintAllowance.bind(_llamalend),
-            mintApprove: mintApprove.bind(_llamalend),
-            mint: mint.bind(_llamalend),
-            maxWithdraw: maxWithdraw.bind(_llamalend),
-            previewWithdraw: previewWithdraw.bind(_llamalend),
-            withdraw: withdraw.bind(_llamalend),
-            maxRedeem: maxRedeem.bind(_llamalend),
-            previewRedeem: previewRedeem.bind(_llamalend),
-            redeem: redeem.bind(_llamalend),
+            convertToAssets: convertToAssets.bind(llamalend),
+            convertToShares: convertToShares.bind(llamalend),
+            userBalances: userBalances.bind(llamalend),
+            totalSupplyAndCrvUSDLocked: totalSupplyAndCrvUSDLocked.bind(llamalend),
+            maxDeposit: maxDeposit.bind(llamalend),
+            previewDeposit: previewDeposit.bind(llamalend),
+            depositIsApproved: depositIsApproved.bind(llamalend),
+            depositAllowance: depositAllowance.bind(llamalend),
+            depositApprove: depositApprove.bind(llamalend),
+            deposit: deposit.bind(llamalend),
+            maxMint: maxMint.bind(llamalend),
+            previewMint: previewMint.bind(llamalend),
+            mintIsApproved: mintIsApproved.bind(llamalend),
+            mintAllowance: mintAllowance.bind(llamalend),
+            mintApprove: mintApprove.bind(llamalend),
+            mint: mint.bind(llamalend),
+            maxWithdraw: maxWithdraw.bind(llamalend),
+            previewWithdraw: previewWithdraw.bind(llamalend),
+            withdraw: withdraw.bind(llamalend),
+            maxRedeem: maxRedeem.bind(llamalend),
+            previewRedeem: previewRedeem.bind(llamalend),
+            redeem: redeem.bind(llamalend),
             estimateGas: {
-                depositApprove: depositApproveEstimateGas.bind(_llamalend),
-                deposit: depositEstimateGas.bind(_llamalend),
-                mintApprove: mintApproveEstimateGas.bind(_llamalend),
-                mint: mintEstimateGas.bind(_llamalend),
-                withdraw: withdrawEstimateGas.bind(_llamalend),
-                redeem: redeemEstimateGas.bind(_llamalend),
+                depositApprove: depositApproveEstimateGas.bind(llamalend),
+                deposit: depositEstimateGas.bind(llamalend),
+                mintApprove: mintApproveEstimateGas.bind(llamalend),
+                mint: mintEstimateGas.bind(llamalend),
+                withdraw: withdrawEstimateGas.bind(llamalend),
+                redeem: redeemEstimateGas.bind(llamalend),
             },
         },
     };
