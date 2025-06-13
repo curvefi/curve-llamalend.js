@@ -1,6 +1,6 @@
 import memoize from "memoizee";
 import BigNumber from "bignumber.js";
-import { llamalend } from "../llamalend.js";
+import type { Llamalend } from "../llamalend.js";
 import {
     _getAddress,
     parseUnits,
@@ -33,6 +33,7 @@ const WEEK = 7 * DAY;
 
 
 export class LendMarketTemplate {
+    private llamalend: Llamalend;
     id: string;
     name: string
     addresses: {
@@ -234,7 +235,8 @@ export class LendMarketTemplate {
         }
     };
 
-    constructor(id: string, marketData: IOneWayMarket) {
+    constructor(id: string, marketData: IOneWayMarket, llamalend: Llamalend) {
+        this.llamalend = llamalend;
         this.id = id;
         this.name = marketData.name;
         this.addresses = marketData.addresses;
@@ -387,42 +389,42 @@ export class LendMarketTemplate {
     // ---------------- VAULT ----------------
 
     private async vaultMaxDeposit(address = ""): Promise<string> {
-        address = _getAddress(address);
-        // const _amount = await llamalend.contracts[this.addresses.vault].contract.maxDeposit(address);  TODO use maxDeposit
-        const _amount = await llamalend.contracts[this.addresses.borrowed_token].contract.balanceOf(address);
+        address = _getAddress.call(this.llamalend, address);
+        // const _amount = await this.llamalend.contracts[this.addresses.vault].contract.maxDeposit(address);  TODO use maxDeposit
+        const _amount = await this.llamalend.contracts[this.addresses.borrowed_token].contract.balanceOf(address);
 
         return formatUnits(_amount,  this.borrowed_token.decimals);
     }
 
     private async vaultPreviewDeposit(amount: TAmount): Promise<string> {
         const _amount = parseUnits(amount, this.borrowed_token.decimals);
-        const _shares = await llamalend.contracts[this.addresses.vault].contract.previewDeposit(_amount);
+        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.previewDeposit(_amount);
 
         return formatUnits(_shares, 18);
     }
 
     private async vaultDepositIsApproved(borrowed: TAmount): Promise<boolean> {
-        return await hasAllowance([this.borrowed_token.address], [borrowed], llamalend.signerAddress, this.addresses.vault);
+        return await hasAllowance.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.llamalend.signerAddress, this.addresses.vault);
     }
 
     private async vaultDepositApproveEstimateGas (borrowed: TAmount): Promise<TGas> {
-        return await ensureAllowanceEstimateGas([this.borrowed_token.address], [borrowed], this.addresses.vault);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.addresses.vault);
     }
 
     private async vaultDepositApprove(borrowed: TAmount): Promise<string[]> {
-        return await ensureAllowance([this.borrowed_token.address], [borrowed], this.addresses.vault);
+        return await ensureAllowance.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.addresses.vault);
     }
 
     private async _vaultDeposit(amount: TAmount, estimateGas = false): Promise<string | TGas> {
         const _amount = parseUnits(amount, this.borrowed_token.decimals);
-        const gas = await llamalend.contracts[this.addresses.vault].contract.deposit.estimateGas(_amount, { ...llamalend.constantOptions });
+        const gas = await this.llamalend.contracts[this.addresses.vault].contract.deposit.estimateGas(_amount, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
 
         const gasLimit = _mulBy1_3(DIGas(gas));
 
-        return (await llamalend.contracts[this.addresses.vault].contract.deposit(_amount, { ...llamalend.options, gasLimit })).hash;
+        return (await this.llamalend.contracts[this.addresses.vault].contract.deposit(_amount, { ...this.llamalend.options, gasLimit })).hash;
     }
 
     private async vaultDepositEstimateGas(amount: TAmount): Promise<TGas> {
@@ -437,43 +439,43 @@ export class LendMarketTemplate {
 
 
     private async vaultMaxMint(address = ""): Promise<string> {
-        address = _getAddress(address);
-        // const _shares = await llamalend.contracts[this.addresses.vault].contract.maxMint(address);  TODO use maxMint
-        const _assetBalance = await llamalend.contracts[this.addresses.borrowed_token].contract.balanceOf(address);
-        const _shares = await llamalend.contracts[this.addresses.vault].contract.convertToShares(_assetBalance);
+        address = _getAddress.call(this.llamalend, address);
+        // const _shares = await this.llamalend.contracts[this.addresses.vault].contract.maxMint(address);  TODO use maxMint
+        const _assetBalance = await this.llamalend.contracts[this.addresses.borrowed_token].contract.balanceOf(address);
+        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.convertToShares(_assetBalance);
 
         return formatUnits(_shares, 18);
     }
 
     private async vaultPreviewMint(amount: TAmount): Promise<string> {
         const _amount = parseUnits(amount, 18);
-        const _assets = await llamalend.contracts[this.addresses.vault].contract.previewMint(_amount);
+        const _assets = await this.llamalend.contracts[this.addresses.vault].contract.previewMint(_amount);
 
         return formatUnits(_assets, this.borrowed_token.decimals);
     }
 
     private async vaultMintIsApproved(borrowed: TAmount): Promise<boolean> {
-        return await hasAllowance([this.borrowed_token.address], [borrowed], llamalend.signerAddress, this.addresses.vault);
+        return await hasAllowance.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.llamalend.signerAddress, this.addresses.vault);
     }
 
     private async vaultMintApproveEstimateGas (borrowed: TAmount): Promise<TGas> {
-        return await ensureAllowanceEstimateGas([this.borrowed_token.address], [borrowed], this.addresses.vault);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.addresses.vault);
     }
 
     private async vaultMintApprove(borrowed: TAmount): Promise<string[]> {
-        return await ensureAllowance([this.borrowed_token.address], [borrowed], this.addresses.vault);
+        return await ensureAllowance.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.addresses.vault);
     }
 
     private async _vaultMint(amount: TAmount, estimateGas = false): Promise<string | TGas> {
         const _amount = parseUnits(amount, 18);
-        const gas = await llamalend.contracts[this.addresses.vault].contract.mint.estimateGas(_amount, { ...llamalend.constantOptions });
+        const gas = await this.llamalend.contracts[this.addresses.vault].contract.mint.estimateGas(_amount, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
 
         const gasLimit = _mulBy1_3(DIGas(gas));
 
-        return (await llamalend.contracts[this.addresses.vault].contract.mint(_amount, { ...llamalend.options, gasLimit })).hash;
+        return (await this.llamalend.contracts[this.addresses.vault].contract.mint(_amount, { ...this.llamalend.options, gasLimit })).hash;
     }
 
     private async vaultMintEstimateGas(amount: TAmount): Promise<TGas> {
@@ -488,29 +490,29 @@ export class LendMarketTemplate {
 
 
     private async vaultMaxWithdraw(address = ""): Promise<string> {
-        address = _getAddress(address);
-        const _assets = await llamalend.contracts[this.addresses.vault].contract.maxWithdraw(address);
+        address = _getAddress.call(this.llamalend, address);
+        const _assets = await this.llamalend.contracts[this.addresses.vault].contract.maxWithdraw(address);
 
         return formatUnits(_assets, this.borrowed_token.decimals);
     }
 
     private async vaultPreviewWithdraw(amount: TAmount): Promise<string> {
         const _amount = parseUnits(amount, this.borrowed_token.decimals);
-        const _shares = await llamalend.contracts[this.addresses.vault].contract.previewWithdraw(_amount);
+        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.previewWithdraw(_amount);
 
         return formatUnits(_shares, 18);
     }
 
     private async _vaultWithdraw(amount: TAmount, estimateGas = false): Promise<string | TGas> {
         const _amount = parseUnits(amount, this.borrowed_token.decimals);
-        const gas = await llamalend.contracts[this.addresses.vault].contract.withdraw.estimateGas(_amount, { ...llamalend.constantOptions });
+        const gas = await this.llamalend.contracts[this.addresses.vault].contract.withdraw.estimateGas(_amount, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
 
         const gasLimit = _mulBy1_3(DIGas(gas));
 
-        return (await llamalend.contracts[this.addresses.vault].contract.withdraw(_amount, { ...llamalend.options, gasLimit })).hash;
+        return (await this.llamalend.contracts[this.addresses.vault].contract.withdraw(_amount, { ...this.llamalend.options, gasLimit })).hash;
     }
 
     private async vaultWithdrawEstimateGas(amount: TAmount): Promise<TGas> {
@@ -523,29 +525,29 @@ export class LendMarketTemplate {
 
 
     private async vaultMaxRedeem(address = ""): Promise<string> {
-        address = _getAddress(address);
-        const _shares = await llamalend.contracts[this.addresses.vault].contract.maxRedeem(address)
+        address = _getAddress.call(this.llamalend, address);
+        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.maxRedeem(address)
 
         return formatUnits(_shares, 18);
     }
 
     private async vaultPreviewRedeem(amount: TAmount): Promise<string> {
         const _amount = parseUnits(amount, 18);
-        const _assets = await llamalend.contracts[this.addresses.vault].contract.previewRedeem(_amount);
+        const _assets = await this.llamalend.contracts[this.addresses.vault].contract.previewRedeem(_amount);
 
         return formatUnits(_assets, this.borrowed_token.decimals);
     }
 
     private async _vaultRedeem(amount: TAmount, estimateGas = false): Promise<string | TGas> {
         const _amount = parseUnits(amount, 18);
-        const gas = await llamalend.contracts[this.addresses.vault].contract.redeem.estimateGas(_amount, { ...llamalend.constantOptions });
+        const gas = await this.llamalend.contracts[this.addresses.vault].contract.redeem.estimateGas(_amount, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
 
         const gasLimit = _mulBy1_3(DIGas(gas));
 
-        return (await llamalend.contracts[this.addresses.vault].contract.redeem(_amount, { ...llamalend.options, gasLimit })).hash;
+        return (await this.llamalend.contracts[this.addresses.vault].contract.redeem(_amount, { ...this.llamalend.options, gasLimit })).hash;
     }
 
     private async vaultRedeemEstimateGas(amount: TAmount): Promise<TGas> {
@@ -560,93 +562,93 @@ export class LendMarketTemplate {
 
     private async vaultConvertToShares(assets: TAmount): Promise<string> {
         const _assets = parseUnits(assets, this.borrowed_token.decimals);
-        const _shares = await llamalend.contracts[this.addresses.vault].contract.convertToShares(_assets);
+        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.convertToShares(_assets);
 
-        return llamalend.formatUnits(_shares);
+        return this.llamalend.formatUnits(_shares);
     }
 
     private async vaultConvertToAssets(shares: TAmount): Promise<string> {
         const _shares = parseUnits(shares);
-        const _assets = await llamalend.contracts[this.addresses.vault].contract.convertToAssets(_shares);
+        const _assets = await this.llamalend.contracts[this.addresses.vault].contract.convertToAssets(_shares);
 
-        return llamalend.formatUnits(_assets, this.borrowed_token.decimals);
+        return this.llamalend.formatUnits(_assets, this.borrowed_token.decimals);
     }
 
     // ---------------- VAULT STAKING ----------------
 
     private async vaultStakeIsApproved(vaultShares: number | string): Promise<boolean> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`stakeIsApproved method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
-        return await hasAllowance([this.addresses.vault], [vaultShares], llamalend.signerAddress, this.addresses.gauge);
+        return await hasAllowance.call(this.llamalend, [this.addresses.vault], [vaultShares], this.llamalend.signerAddress, this.addresses.gauge);
     }
 
     private async vaultStakeApproveEstimateGas(vaultShares: number | string): Promise<TGas> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`stakeApproveEstimateGas method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
-        return await ensureAllowanceEstimateGas([this.addresses.vault], [vaultShares], this.addresses.gauge);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.vault], [vaultShares], this.addresses.gauge);
     }
 
     private async vaultStakeApprove(vaultShares: number | string): Promise<string[]> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`stakeApprove method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
-        return await ensureAllowance([this.addresses.vault], [vaultShares], this.addresses.gauge);
+        return await ensureAllowance.call(this.llamalend, [this.addresses.vault], [vaultShares], this.addresses.gauge);
     }
 
     private async vaultStakeEstimateGas(vaultShares: number | string): Promise<TGas> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`stakeEstimateGas method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
         const _vaultShares = parseUnits(vaultShares);
-        return smartNumber(await llamalend.contracts[this.addresses.gauge].contract.deposit.estimateGas(_vaultShares, llamalend.constantOptions));
+        return smartNumber(await this.llamalend.contracts[this.addresses.gauge].contract.deposit.estimateGas(_vaultShares, this.llamalend.constantOptions));
     }
 
     private async vaultStake(vaultShares: number | string): Promise<string> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`stake method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
         const _vaultShares = parseUnits(vaultShares);
-        await _ensureAllowance([this.addresses.vault], [_vaultShares], this.addresses.gauge)
+        await _ensureAllowance.call(this.llamalend, [this.addresses.vault], [_vaultShares], this.addresses.gauge)
 
-        await llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(await llamalend.contracts[this.addresses.gauge].contract.deposit.estimateGas(_vaultShares, llamalend.constantOptions)));
-        return (await llamalend.contracts[this.addresses.gauge].contract.deposit(_vaultShares, { ...llamalend.options, gasLimit })).hash;
+        await this.llamalend.updateFeeData();
+        const gasLimit = _mulBy1_3(DIGas(await this.llamalend.contracts[this.addresses.gauge].contract.deposit.estimateGas(_vaultShares, this.llamalend.constantOptions)));
+        return (await this.llamalend.contracts[this.addresses.gauge].contract.deposit(_vaultShares, { ...this.llamalend.options, gasLimit })).hash;
     }
 
     private async vaultUnstakeEstimateGas(vaultShares: number | string): Promise<TGas> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`unstakeEstimateGas method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
         const _vaultShares = parseUnits(vaultShares);
-        return smartNumber(await llamalend.contracts[this.addresses.gauge].contract.withdraw.estimateGas(_vaultShares, llamalend.constantOptions));
+        return smartNumber(await this.llamalend.contracts[this.addresses.gauge].contract.withdraw.estimateGas(_vaultShares, this.llamalend.constantOptions));
     }
 
     private async vaultUnstake(vaultShares: number | string): Promise<string> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`unstake method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
         const _vaultShares = parseUnits(vaultShares);
 
-        await llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas((await llamalend.contracts[this.addresses.gauge].contract.withdraw.estimateGas(_vaultShares, llamalend.constantOptions))));
-        return (await llamalend.contracts[this.addresses.gauge].contract.withdraw(_vaultShares, { ...llamalend.options, gasLimit })).hash;
+        await this.llamalend.updateFeeData();
+        const gasLimit = _mulBy1_3(DIGas((await this.llamalend.contracts[this.addresses.gauge].contract.withdraw.estimateGas(_vaultShares, this.llamalend.constantOptions))));
+        return (await this.llamalend.contracts[this.addresses.gauge].contract.withdraw(_vaultShares, { ...this.llamalend.options, gasLimit })).hash;
     }
 
     // ---------------- VAULT STAKING REWARDS ----------------
 
     private vaultRewardsOnly(): boolean {
-        if (llamalend.chainId === 2222 || llamalend.chainId === 324) return true;  // TODO remove this for Kava and ZkSync
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) throw Error(`${this.name} doesn't have gauge`);
-        const gaugeContract = llamalend.contracts[this.addresses.gauge].contract;
+        if (this.llamalend.chainId === 2222 || this.llamalend.chainId === 324) return true;  // TODO remove this for Kava and ZkSync
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) throw Error(`${this.name} doesn't have gauge`);
+        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
 
         return !('inflation_rate()' in gaugeContract || 'inflation_rate(uint256)' in gaugeContract);
     }
 
     private async vaultTotalLiquidity(useAPI = true): Promise<string> {
         const { cap } = await this.statsCapAndAvailable(true, useAPI);
-        const price = await _getUsdRate(this.addresses.borrowed_token);
+        const price = await _getUsdRate.call(this.llamalend, this.addresses.borrowed_token);
 
         return BN(cap).times(price).toFixed(6)
     }
@@ -656,28 +658,28 @@ export class LendMarketTemplate {
         if (Number(totalLiquidityUSD) === 0) return [0, 0];
 
         let inflationRateBN, workingSupplyBN, totalSupplyBN;
-        if (llamalend.chainId !== 1) {
-            const gaugeContract = llamalend.contracts[this.addresses.gauge].multicallContract;
-            const lpTokenContract = llamalend.contracts[this.addresses.vault].multicallContract;
-            const crvContract = llamalend.contracts[llamalend.constants.ALIASES.crv].contract;
+        if (this.llamalend.chainId !== 1) {
+            const gaugeContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
+            const lpTokenContract = this.llamalend.contracts[this.addresses.vault].multicallContract;
+            const crvContract = this.llamalend.contracts[this.llamalend.constants.ALIASES.crv].contract;
 
             const currentWeek = Math.floor(Date.now() / 1000 / WEEK);
-            [inflationRateBN, workingSupplyBN, totalSupplyBN] = (await llamalend.multicallProvider.all([
+            [inflationRateBN, workingSupplyBN, totalSupplyBN] = (await this.llamalend.multicallProvider.all([
                 gaugeContract.inflation_rate(currentWeek),
                 gaugeContract.working_supply(),
                 lpTokenContract.totalSupply(),
             ]) as bigint[]).map((value) => toBN(value));
 
             if (inflationRateBN.eq(0)) {
-                inflationRateBN = toBN(await crvContract.balanceOf(this.addresses.gauge, llamalend.constantOptions)).div(WEEK);
+                inflationRateBN = toBN(await crvContract.balanceOf(this.addresses.gauge, this.llamalend.constantOptions)).div(WEEK);
             }
         } else {
-            const gaugeContract = llamalend.contracts[this.addresses.gauge].multicallContract;
-            const lpTokenContract = llamalend.contracts[this.addresses.vault].multicallContract;
-            const gaugeControllerContract = llamalend.contracts[llamalend.constants.ALIASES.gauge_controller].multicallContract;
+            const gaugeContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
+            const lpTokenContract = this.llamalend.contracts[this.addresses.vault].multicallContract;
+            const gaugeControllerContract = this.llamalend.contracts[this.llamalend.constants.ALIASES.gauge_controller].multicallContract;
 
             let weightBN;
-            [inflationRateBN, weightBN, workingSupplyBN, totalSupplyBN] = (await llamalend.multicallProvider.all([
+            [inflationRateBN, weightBN, workingSupplyBN, totalSupplyBN] = (await this.llamalend.multicallProvider.all([
                 gaugeContract.inflation_rate(),
                 gaugeControllerContract.gauge_relative_weight(this.addresses.gauge),
                 gaugeContract.working_supply(),
@@ -693,7 +695,7 @@ export class LendMarketTemplate {
         // If you added 1$ value of LP it would be 0.4$ of working LP. So your annual reward per 1$ in USD is:
         // (annual reward per working liquidity in $) * (0.4$ of working LP)
         const rateBN = inflationRateBN.times(31536000).div(workingSupplyBN).times(totalSupplyBN).div(Number(totalLiquidityUSD)).times(0.4);
-        const crvPrice = await _getUsdRate(llamalend.constants.ALIASES.crv);
+        const crvPrice = await _getUsdRate.call(this.llamalend, this.llamalend.constants.ALIASES.crv);
         const baseApyBN = rateBN.times(crvPrice);
         const boostedApyBN = baseApyBN.times(2.5);
 
@@ -703,7 +705,7 @@ export class LendMarketTemplate {
     private async vaultCrvApr(): Promise<[baseApy: number, boostedApy: number]> {
         if (this.vaultRewardsOnly()) throw Error(`${this.name} has Rewards-Only Gauge. Use stats.rewardsApy instead`);
 
-        // const isDisabledChain = [1313161554].includes(llamalend.chainId); // Disable Aurora
+        // const isDisabledChain = [1313161554].includes(this.llamalend.chainId); // Disable Aurora
         // if (useApi && !isDisabledChain) {
         //     const crvAPYs = await _getCrvApyFromApi();
         //     const poolCrvApy = crvAPYs[this.addresses.gauge] ?? [0, 0];  // new pools might be missing
@@ -715,10 +717,10 @@ export class LendMarketTemplate {
 
     private async vaultClaimableCrv (address = ""): Promise<string> {
         if (this.vaultRewardsOnly()) throw Error(`${this.name} has Rewards-Only Gauge. Use claimableRewards instead`);
-        address = address || llamalend.signerAddress;
+        address = address || this.llamalend.signerAddress;
         if (!address) throw Error("Need to connect wallet or pass address into args");
 
-        return llamalend.formatUnits(await llamalend.contracts[this.addresses.gauge].contract.claimable_tokens(address, llamalend.constantOptions));
+        return this.llamalend.formatUnits(await this.llamalend.contracts[this.addresses.gauge].contract.claimable_tokens(address, this.llamalend.constantOptions));
     }
 
     private async _vaultClaimCrv(estimateGas: boolean): Promise<string | TGas> {
@@ -727,10 +729,10 @@ export class LendMarketTemplate {
         let isOldFactory = false;
         let contract;
 
-        if (llamalend.chainId !== 1) {
-            if (llamalend.constants.ALIASES.gauge_factory_old && llamalend.constants.ALIASES.gauge_factory_old !== llamalend.constants.ZERO_ADDRESS) {
-                const oldFactoryContract = llamalend.contracts[llamalend.constants.ALIASES.gauge_factory_old].contract;
-                const lpToken = await llamalend.contracts[this.addresses.gauge].contract.lp_token();
+        if (this.llamalend.chainId !== 1) {
+            if (this.llamalend.constants.ALIASES.gauge_factory_old && this.llamalend.constants.ALIASES.gauge_factory_old !== this.llamalend.constants.ZERO_ADDRESS) {
+                const oldFactoryContract = this.llamalend.contracts[this.llamalend.constants.ALIASES.gauge_factory_old].contract;
+                const lpToken = await this.llamalend.contracts[this.addresses.gauge].contract.lp_token();
                 const gaugeAddress = await oldFactoryContract.get_gauge_from_lp_token(lpToken);
 
                 isOldFactory = gaugeAddress.toLowerCase() === this.addresses.gauge.toLowerCase();
@@ -742,19 +744,19 @@ export class LendMarketTemplate {
         }
 
         if (!isOldFactory) {
-            contract = llamalend.contracts[llamalend.constants.ALIASES.minter].contract
+            contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.minter].contract
         }
 
         if(!contract) {
             throw Error(`${this.name} couldn't match gauge factory`);
         }
 
-        const gas = await contract.mint.estimateGas(this.addresses.gauge, llamalend.constantOptions);
+        const gas = await contract.mint.estimateGas(this.addresses.gauge, this.llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.mint(this.addresses.gauge, { ...llamalend.options, gasLimit })).hash
+        return (await contract.mint(this.addresses.gauge, { ...this.llamalend.options, gasLimit })).hash
     }
 
     private async vaultClaimCrvEstimateGas(): Promise<TGas> {
@@ -766,7 +768,7 @@ export class LendMarketTemplate {
     }
 
     private vaultRewardTokens = memoize(async (): Promise<{token: string, symbol: string, decimals: number}[]> => {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) return []
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) return []
 
         // if (useApi) {
         //     const rewards = await _getRewardsFromApi();
@@ -775,28 +777,28 @@ export class LendMarketTemplate {
         //     return rewards[this.addresses.gauge].map((r) => ({ token: r.tokenAddress, symbol: r.symbol, decimals: Number(r.decimals) }));
         // }
 
-        const gaugeContract = llamalend.contracts[this.addresses.gauge].contract;
-        const gaugeMulticallContract = llamalend.contracts[this.addresses.gauge].multicallContract;
-        const rewardCount = Number(llamalend.formatUnits(await gaugeContract.reward_count(llamalend.constantOptions), 0));
+        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
+        const gaugeMulticallContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
+        const rewardCount = Number(this.llamalend.formatUnits(await gaugeContract.reward_count(this.llamalend.constantOptions), 0));
 
         const tokenCalls = [];
         for (let i = 0; i < rewardCount; i++) {
             tokenCalls.push(gaugeMulticallContract.reward_tokens(i));
         }
-        const tokens = (await llamalend.multicallProvider.all(tokenCalls) as string[])
-            .filter((addr) => addr !== llamalend.constants.ZERO_ADDRESS)
+        const tokens = (await this.llamalend.multicallProvider.all(tokenCalls) as string[])
+            .filter((addr) => addr !== this.llamalend.constants.ZERO_ADDRESS)
             .map((addr) => addr.toLowerCase())
-            .filter((addr) => llamalend.chainId === 1 || addr !== llamalend.constants.COINS.crv);
+            .filter((addr) => this.llamalend.chainId === 1 || addr !== this.llamalend.constants.COINS.crv);
 
         const tokenInfoCalls = [];
         for (const token of tokens) {
-            llamalend.setContract(token, ERC20Abi);
-            const tokenMulticallContract = llamalend.contracts[token].multicallContract;
+            this.llamalend.setContract(token, ERC20Abi);
+            const tokenMulticallContract = this.llamalend.contracts[token].multicallContract;
             tokenInfoCalls.push(tokenMulticallContract.symbol(), tokenMulticallContract.decimals());
         }
-        const tokenInfo = await llamalend.multicallProvider.all(tokenInfoCalls);
+        const tokenInfo = await this.llamalend.multicallProvider.all(tokenInfoCalls);
         for (let i = 0; i < tokens.length; i++) {
-            llamalend.constants.DECIMALS[tokens[i]] = Number(tokenInfo[(i * 2) + 1]);
+            this.llamalend.constants.DECIMALS[tokens[i]] = Number(tokenInfo[(i * 2) + 1]);
         }
 
         return tokens.map((token, i) => ({ token, symbol: tokenInfo[i * 2] as string, decimals: Number(tokenInfo[(i * 2) + 1]) }));
@@ -808,7 +810,7 @@ export class LendMarketTemplate {
 
     private vaultRewardsApr = async (useApi = true): Promise<IReward[]> => {
         if(useApi) {
-            const response = await _getMarketsData(llamalend.constants.NETWORK_NAME);
+            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
 
             const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.addresses.vault.toLowerCase())
 
@@ -818,9 +820,9 @@ export class LendMarketTemplate {
                 throw new Error('Market not found in API')
             }
         } else {
-            if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) return [];
+            if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) return [];
 
-            // const isDisabledChain = [1313161554].includes(llamalend.chainId); // Disable Aurora
+            // const isDisabledChain = [1313161554].includes(this.llamalend.chainId); // Disable Aurora
             // if (useApi && !isDisabledChain) {
             //     const rewards = await _getRewardsFromApi();
             //     if (!rewards[this.addresses.gauge]) return [];
@@ -830,14 +832,14 @@ export class LendMarketTemplate {
             const apy: IReward[] = [];
             const rewardTokens = await this.vaultRewardTokens();
             for (const rewardToken of rewardTokens) {
-                const gaugeContract = llamalend.contracts[this.addresses.gauge].multicallContract;
-                const lpTokenContract = llamalend.contracts[this.addresses.vault].multicallContract;
-                const rewardContract = llamalend.contracts[this.addresses.gauge].multicallContract;
+                const gaugeContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
+                const lpTokenContract = this.llamalend.contracts[this.addresses.vault].multicallContract;
+                const rewardContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
 
                 const totalLiquidityUSD = await this.vaultTotalLiquidity();
-                const rewardRate = await _getUsdRate(rewardToken.token);
+                const rewardRate = await _getUsdRate.call(this.llamalend, rewardToken.token);
 
-                const [rewardData, _stakedSupply, _totalSupply] = (await llamalend.multicallProvider.all([
+                const [rewardData, _stakedSupply, _totalSupply] = (await this.llamalend.multicallProvider.all([
                     rewardContract.reward_data(rewardToken.token),
                     gaugeContract.totalSupply(),
                     lpTokenContract.totalSupply(),
@@ -845,7 +847,7 @@ export class LendMarketTemplate {
                 const stakedSupplyBN = toBN(_stakedSupply as bigint);
                 const totalSupplyBN = toBN(_totalSupply as bigint);
                 const inflationBN = toBN(rewardData.rate, rewardToken.decimals);
-                const periodFinish = Number(llamalend.formatUnits(rewardData.period_finish, 0)) * 1000;
+                const periodFinish = Number(this.llamalend.formatUnits(rewardData.period_finish, 0)) * 1000;
                 const baseApy = periodFinish > Date.now() ?
                     inflationBN.times(31536000).times(rewardRate).div(stakedSupplyBN).times(totalSupplyBN).div(Number(totalLiquidityUSD)) :
                     BN(0);
@@ -863,21 +865,21 @@ export class LendMarketTemplate {
     }
 
     private async vaultClaimableRewards(address = ""): Promise<{token: string, symbol: string, amount: string}[]> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`claimableRewards method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
-        address = address || llamalend.signerAddress;
+        address = address || this.llamalend.signerAddress;
         if (!address) throw Error("Need to connect wallet or pass address into args");
 
-        const gaugeContract = llamalend.contracts[this.addresses.gauge].contract;
+        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
         const rewardTokens = await this.vaultRewardTokens();
         const rewards = [];
         for (const rewardToken of rewardTokens) {
-            const _amount = await gaugeContract.claimable_reward(address, rewardToken.token, llamalend.constantOptions);
+            const _amount = await gaugeContract.claimable_reward(address, rewardToken.token, this.llamalend.constantOptions);
             rewards.push({
                 token: rewardToken.token,
                 symbol: rewardToken.symbol,
-                amount: llamalend.formatUnits(_amount, rewardToken.decimals),
+                amount: this.llamalend.formatUnits(_amount, rewardToken.decimals),
             });
         }
 
@@ -885,17 +887,17 @@ export class LendMarketTemplate {
     }
 
     private async _vaultClaimRewards(estimateGas: boolean): Promise<string | TGas> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`claimRewards method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
         }
-        const gaugeContract = llamalend.contracts[this.addresses.gauge].contract;
+        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
         if (!("claim_rewards()" in gaugeContract)) throw Error (`${this.name} pool doesn't have such method`);
-        const gas = await gaugeContract.claim_rewards.estimateGas(llamalend.constantOptions);
+        const gas = await gaugeContract.claim_rewards.estimateGas(this.llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await gaugeContract.claim_rewards({ ...llamalend.options, gasLimit })).hash;
+        return (await gaugeContract.claim_rewards({ ...this.llamalend.options, gasLimit })).hash;
     }
 
     private async vaultClaimRewardsEstimateGas(): Promise<TGas> {
@@ -916,8 +918,8 @@ export class LendMarketTemplate {
             base_price: string,
             A: string,
         }> => {
-        const llammaContract = llamalend.contracts[this.addresses.amm].multicallContract;
-        const controllerContract = llamalend.contracts[this.addresses.controller].multicallContract;
+        const llammaContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
+        const controllerContract = this.llamalend.contracts[this.addresses.controller].multicallContract;
 
         const calls = [
             llammaContract.fee(),
@@ -928,7 +930,7 @@ export class LendMarketTemplate {
             llammaContract.A(),
         ]
 
-        const [_fee, _admin_fee, _liquidation_discount, _loan_discount, _base_price, _A]: bigint[] = await llamalend.multicallProvider.all(calls) as bigint[];
+        const [_fee, _admin_fee, _liquidation_discount, _loan_discount, _base_price, _A]: bigint[] = await this.llamalend.multicallProvider.all(calls) as bigint[];
         const A = formatUnits(_A, 0)
         const base_price = formatUnits(_base_price)
         const [fee, admin_fee, liquidation_discount, loan_discount] = [_fee, _admin_fee, _liquidation_discount, _loan_discount]
@@ -946,20 +948,20 @@ export class LendMarketTemplate {
         if(isGetter) {
             _rate = cacheStats.get(cacheKey(this.addresses.amm, 'rate'));
         } else {
-            _rate = await llamalend.contracts[this.addresses.amm].contract.rate(llamalend.constantOptions);
+            _rate = await this.llamalend.contracts[this.addresses.amm].contract.rate(this.llamalend.constantOptions);
             cacheStats.set(cacheKey(this.addresses.controller, 'rate'), _rate);
         }
         return _rate;
     }
 
     private _getFutureRate = async (_dReserves: bigint, _dDebt: bigint): Promise<bigint> => {
-        const mpContract = llamalend.contracts[this.addresses.monetary_policy].contract;
+        const mpContract = this.llamalend.contracts[this.addresses.monetary_policy].contract;
         return await mpContract.future_rate(this.addresses.controller, _dReserves, _dDebt);
     }
 
     private async statsRates(isGetter = true, useAPI = false): Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}> {
         if(useAPI) {
-            const response = await _getMarketsData(llamalend.constants.NETWORK_NAME);
+            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
 
             const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.addresses.vault.toLowerCase())
 
@@ -1015,16 +1017,16 @@ export class LendMarketTemplate {
     }
 
     private async statsBalances(): Promise<[string, string]> {
-        const borrowedContract = llamalend.contracts[this.borrowed_token.address].multicallContract;
-        const collateralContract = llamalend.contracts[this.collateral_token.address].multicallContract;
-        const ammContract = llamalend.contracts[this.addresses.amm].multicallContract;
+        const borrowedContract = this.llamalend.contracts[this.borrowed_token.address].multicallContract;
+        const collateralContract = this.llamalend.contracts[this.collateral_token.address].multicallContract;
+        const ammContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
         const calls = [
             borrowedContract.balanceOf(this.addresses.amm),
             collateralContract.balanceOf(this.addresses.amm),
             ammContract.admin_fees_x(),
             ammContract.admin_fees_y(),
         ]
-        const [_borrowedBalance, _collateralBalance, _borrowedAdminFees, _collateralAdminFees]: bigint[] = await llamalend.multicallProvider.all(calls);
+        const [_borrowedBalance, _collateralBalance, _borrowedAdminFees, _collateralAdminFees]: bigint[] = await this.llamalend.multicallProvider.all(calls);
 
         return [
             formatUnits(_borrowedBalance - _borrowedAdminFees, this.borrowed_token.decimals),
@@ -1033,14 +1035,14 @@ export class LendMarketTemplate {
     }
 
     private statsBandsInfo = memoize(async (): Promise<{ activeBand: number, maxBand: number, minBand: number, liquidationBand: number | null }> => {
-        const ammContract = llamalend.contracts[this.addresses.amm].multicallContract;
+        const ammContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
         const calls = [
             ammContract.active_band_with_skip(),
             ammContract.max_band(),
             ammContract.min_band(),
         ]
 
-        const [activeBand, maxBand, minBand] = (await llamalend.multicallProvider.all(calls) as bigint[]).map((_b) => Number(_b));
+        const [activeBand, maxBand, minBand] = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_b) => Number(_b));
         const { borrowed, collateral } = await this.statsBandBalances(activeBand);
         let liquidationBand = null;
         if (Number(borrowed) > 0 && Number(collateral) > 0) liquidationBand = activeBand;
@@ -1052,10 +1054,10 @@ export class LendMarketTemplate {
     });
 
     private async statsBandBalances(n: number): Promise<{ borrowed: string, collateral: string }> {
-        const ammContract = llamalend.contracts[this.addresses.amm].multicallContract;
+        const ammContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
         const calls = [];
         calls.push(ammContract.bands_x(n), ammContract.bands_y(n));
-        const _balances: bigint[] = await llamalend.multicallProvider.all(calls);
+        const _balances: bigint[] = await this.llamalend.multicallProvider.all(calls);
 
         // bands_x and bands_y always return amounts with 18 decimals
         return {
@@ -1067,13 +1069,13 @@ export class LendMarketTemplate {
     private async statsBandsBalances(): Promise<{ [index: number]: { borrowed: string, collateral: string } }> {
         const { maxBand, minBand } = await this.statsBandsInfo();
 
-        const ammContract = llamalend.contracts[this.addresses.amm].multicallContract;
+        const ammContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
         const calls = [];
         for (let i = minBand; i <= maxBand; i++) {
             calls.push(ammContract.bands_x(i), ammContract.bands_y(i));
         }
 
-        const _bands: bigint[] = await llamalend.multicallProvider.all(calls);
+        const _bands: bigint[] = await this.llamalend.multicallProvider.all(calls);
 
         const bands: { [index: number]: { borrowed: string, collateral: string } } = {};
         for (let i = minBand; i <= maxBand; i++) {
@@ -1090,7 +1092,7 @@ export class LendMarketTemplate {
 
     private async statsTotalDebt(isGetter = true, useAPI = true): Promise<string> {
         if(useAPI) {
-            const response = await _getMarketsData(llamalend.constants.NETWORK_NAME);
+            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
 
             const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.addresses.vault.toLowerCase())
 
@@ -1104,7 +1106,7 @@ export class LendMarketTemplate {
             if(isGetter) {
                 _debt = cacheStats.get(cacheKey(this.addresses.controller, 'total_debt'));
             } else {
-                _debt = await llamalend.contracts[this.addresses.controller].contract.total_debt(llamalend.constantOptions);
+                _debt = await this.llamalend.contracts[this.addresses.controller].contract.total_debt(this.llamalend.constantOptions);
                 cacheStats.set(cacheKey(this.addresses.controller, 'total_debt'), _debt);
             }
 
@@ -1114,7 +1116,7 @@ export class LendMarketTemplate {
 
     private statsAmmBalances = async (isGetter = true, useAPI = false): Promise<{ borrowed: string, collateral: string }> => {
         if(useAPI) {
-            const response = await _getMarketsData(llamalend.constants.NETWORK_NAME);
+            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
 
             const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.addresses.vault.toLowerCase())
 
@@ -1127,9 +1129,9 @@ export class LendMarketTemplate {
                 throw new Error('Market not found in API')
             }
         } else {
-            const borrowedContract = llamalend.contracts[this.addresses.borrowed_token].multicallContract;
-            const collateralContract = llamalend.contracts[this.addresses.collateral_token].multicallContract;
-            const ammContract = llamalend.contracts[this.addresses.amm].multicallContract;
+            const borrowedContract = this.llamalend.contracts[this.addresses.borrowed_token].multicallContract;
+            const collateralContract = this.llamalend.contracts[this.addresses.collateral_token].multicallContract;
+            const ammContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
 
             let _balance_x, _fee_x, _balance_y, _fee_y;
             if(isGetter) {
@@ -1140,7 +1142,7 @@ export class LendMarketTemplate {
                     cacheStats.get(cacheKey(this.addresses.amm, 'admin_fees_y')),
                 ]
             } else {
-                [_balance_x, _fee_x, _balance_y, _fee_y] = await llamalend.multicallProvider.all([
+                [_balance_x, _fee_x, _balance_y, _fee_y] = await this.llamalend.multicallProvider.all([
                     borrowedContract.balanceOf(this.addresses.amm),
                     ammContract.admin_fees_x(),
                     collateralContract.balanceOf(this.addresses.amm),
@@ -1161,7 +1163,7 @@ export class LendMarketTemplate {
 
     private async statsCapAndAvailable(isGetter = true, useAPI = false): Promise<{ cap: string, available: string }> {
         if(useAPI) {
-            const response = await _getMarketsData(llamalend.constants.NETWORK_NAME);
+            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
 
             const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.addresses.vault.toLowerCase())
 
@@ -1174,15 +1176,15 @@ export class LendMarketTemplate {
                 throw new Error('Market not found in API')
             }
         } else {
-            const vaultContract = llamalend.contracts[this.addresses.vault].multicallContract;
-            const borrowedContract = llamalend.contracts[this.addresses.borrowed_token].multicallContract;
+            const vaultContract = this.llamalend.contracts[this.addresses.vault].multicallContract;
+            const borrowedContract = this.llamalend.contracts[this.addresses.borrowed_token].multicallContract;
 
             let _cap, _available;
             if(isGetter) {
                 _cap = cacheStats.get(cacheKey(this.addresses.vault, 'totalAssets', this.addresses.controller));
                 _available = cacheStats.get(cacheKey(this.addresses.borrowed_token, 'balanceOf', this.addresses.controller));
             } else {
-                [_cap, _available] =await llamalend.multicallProvider.all([
+                [_cap, _available] =await this.llamalend.multicallProvider.all([
                     vaultContract.totalAssets(this.addresses.controller),
                     borrowedContract.balanceOf(this.addresses.controller),
                 ]);
@@ -1191,8 +1193,8 @@ export class LendMarketTemplate {
             }
 
             return {
-                cap: llamalend.formatUnits(_cap, this.borrowed_token.decimals),
-                available: llamalend.formatUnits(_available, this.borrowed_token.decimals),
+                cap: this.llamalend.formatUnits(_cap, this.borrowed_token.decimals),
+                available: this.llamalend.formatUnits(_available, this.borrowed_token.decimals),
             }
         }
     }
@@ -1200,7 +1202,7 @@ export class LendMarketTemplate {
     // ---------------- PRICES ----------------
 
     public A = memoize(async(): Promise<string> => {
-        const _A = await llamalend.contracts[this.addresses.amm].contract.A(llamalend.constantOptions) as bigint;
+        const _A = await this.llamalend.contracts[this.addresses.amm].contract.A(this.llamalend.constantOptions) as bigint;
         return formatUnits(_A, 0);
     },
     {
@@ -1209,7 +1211,7 @@ export class LendMarketTemplate {
     });
 
     public basePrice = memoize(async(): Promise<string> => {
-        const _price = await llamalend.contracts[this.addresses.amm].contract.get_base_price(llamalend.constantOptions) as bigint;
+        const _price = await this.llamalend.contracts[this.addresses.amm].contract.get_base_price(this.llamalend.constantOptions) as bigint;
         return formatUnits(_price);
     },
     {
@@ -1218,7 +1220,7 @@ export class LendMarketTemplate {
     });
 
     public oraclePrice = memoize(async (): Promise<string> => {
-        const _price = await llamalend.contracts[this.addresses.amm].contract.price_oracle(llamalend.constantOptions) as bigint;
+        const _price = await this.llamalend.contracts[this.addresses.amm].contract.price_oracle(this.llamalend.constantOptions) as bigint;
         return formatUnits(_price);
     },
     {
@@ -1247,7 +1249,7 @@ export class LendMarketTemplate {
     }
 
     public async price(): Promise<string> {
-        const _price = await llamalend.contracts[this.addresses.amm].contract.get_p(llamalend.constantOptions) as bigint;
+        const _price = await this.llamalend.contracts[this.addresses.amm].contract.get_p(this.llamalend.constantOptions) as bigint;
         return formatUnits(_price);
     }
 
@@ -1274,13 +1276,13 @@ export class LendMarketTemplate {
     // ---------------- WALLET BALANCES ----------------
 
     private async walletBalances(address = ""): Promise<{ collateral: string, borrowed: string, vaultShares: string, gauge: string }> {
-        if (this.addresses.gauge === llamalend.constants.ZERO_ADDRESS) {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             const [collateral, borrowed, vaultShares] =
-                await getBalances([this.collateral_token.address, this.borrowed_token.address, this.addresses.vault], address);
+                await getBalances.call(this.llamalend, [this.collateral_token.address, this.borrowed_token.address, this.addresses.vault], address);
             return { collateral, borrowed, vaultShares, gauge: "0" }
         } else {
             const [collateral, borrowed, vaultShares, gauge] =
-                await getBalances([this.collateral_token.address, this.borrowed_token.address, this.addresses.vault, this.addresses.gauge], address);
+                await getBalances.call(this.llamalend, [this.collateral_token.address, this.borrowed_token.address, this.addresses.vault, this.addresses.gauge], address);
             return { collateral, borrowed, vaultShares, gauge }
         }
     }
@@ -1288,14 +1290,14 @@ export class LendMarketTemplate {
     // ---------------- USER POSITION ----------------
 
     public async userLoanExists(address = ""): Promise<boolean> {
-        address = _getAddress(address);
-        return  await llamalend.contracts[this.addresses.controller].contract.loan_exists(address, llamalend.constantOptions);
+        address = _getAddress.call(this.llamalend, address);
+        return  await this.llamalend.contracts[this.addresses.controller].contract.loan_exists(address, this.llamalend.constantOptions);
     }
 
     public _userState = memoize(async (address = ""): Promise<{ _collateral: bigint, _borrowed: bigint, _debt: bigint, _N: bigint }> => {
-        address = _getAddress(address);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        const [_collateral, _borrowed, _debt, _N] = await contract.user_state(address, llamalend.constantOptions) as bigint[];
+        address = _getAddress.call(this.llamalend, address);
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const [_collateral, _borrowed, _debt, _N] = await contract.user_state(address, this.llamalend.constantOptions) as bigint[];
 
         return { _collateral, _borrowed, _debt, _N }
     },
@@ -1316,16 +1318,16 @@ export class LendMarketTemplate {
     }
 
     public async userHealth(full = true, address = ""): Promise<string> {
-        address = _getAddress(address);
-        let _health = await llamalend.contracts[this.addresses.controller].contract.health(address, full, llamalend.constantOptions) as bigint;
+        address = _getAddress.call(this.llamalend, address);
+        let _health = await this.llamalend.contracts[this.addresses.controller].contract.health(address, full, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
         return formatUnits(_health);
     }
 
     private async _userBands(address: string): Promise<bigint[]> {
-        address = _getAddress(address);
-        const _bands = await llamalend.contracts[this.addresses.amm].contract.read_user_tick_numbers(address, llamalend.constantOptions) as bigint[];
+        address = _getAddress.call(this.llamalend, address);
+        const _bands = await this.llamalend.contracts[this.addresses.amm].contract.read_user_tick_numbers(address, this.llamalend.constantOptions) as bigint[];
 
         return Array.from(_bands).reverse();
     }
@@ -1341,22 +1343,22 @@ export class LendMarketTemplate {
     }
 
     public async userPrices(address = ""): Promise<string[]> {
-        address = _getAddress(address);
-        const _prices = await llamalend.contracts[this.addresses.controller].contract.user_prices(address, llamalend.constantOptions) as bigint[];
+        address = _getAddress.call(this.llamalend, address);
+        const _prices = await this.llamalend.contracts[this.addresses.controller].contract.user_prices(address, this.llamalend.constantOptions) as bigint[];
 
         return _prices.map((_p) => formatUnits(_p)).reverse();
     }
 
     public async userLoss(userAddress = ""): Promise<{ deposited_collateral: string, current_collateral_estimation: string, loss: string, loss_pct: string }> {
-        userAddress = _getAddress(userAddress);
+        userAddress = _getAddress.call(this.llamalend, userAddress);
         const [userCollateral, _current_collateral_estimation] = await Promise.all([
-            _getUserCollateral(llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            llamalend.contracts[this.addresses.amm].contract.get_y_up(userAddress),
+            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
+            this.llamalend.contracts[this.addresses.amm].contract.get_y_up(userAddress),
         ]);
 
         const deposited_collateral = userCollateral.total_deposit_precise;
 
-        const current_collateral_estimation = llamalend.formatUnits(_current_collateral_estimation, this.collateral_token.decimals);
+        const current_collateral_estimation = this.llamalend.formatUnits(_current_collateral_estimation, this.collateral_token.decimals);
         if (BN(deposited_collateral).lte(0)) {
             return {
                 deposited_collateral,
@@ -1380,9 +1382,9 @@ export class LendMarketTemplate {
         const [n2, n1] = await this.userBands(address);
         if (n1 == 0 && n2 == 0) return {};
 
-        address = _getAddress(address);
-        const contract = llamalend.contracts[this.addresses.amm].contract;
-        const [_borrowed, _collateral] = await contract.get_xy(address, llamalend.constantOptions) as [bigint[], bigint[]];
+        address = _getAddress.call(this.llamalend, address);
+        const contract = this.llamalend.contracts[this.addresses.amm].contract;
+        const [_borrowed, _collateral] = await contract.get_xy(address, this.llamalend.constantOptions) as [bigint[], bigint[]];
 
         const res: IDict<{ borrowed: string, collateral: string }> = {};
         for (let i = n1; i <= n2; i++) {
@@ -1405,9 +1407,9 @@ export class LendMarketTemplate {
     public async createLoanMaxRecv(collateral: number | string, range: number): Promise<string> {
         this._checkRange(range);
         const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
 
-        return formatUnits(await contract.max_borrowable(_collateral, range, 0, llamalend.constantOptions), this.borrowed_token.decimals);
+        return formatUnits(await contract.max_borrowable(_collateral, range, 0, this.llamalend.constantOptions), this.borrowed_token.decimals);
     }
 
     public createLoanMaxRecvAllRanges = memoize(async (collateral: number | string): Promise<{ [index: number]: string }> => {
@@ -1415,9 +1417,9 @@ export class LendMarketTemplate {
 
         const calls = [];
         for (let N = this.minBands; N <= this.maxBands; N++) {
-            calls.push(llamalend.contracts[this.addresses.controller].multicallContract.max_borrowable(_collateral, N, 0));
+            calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.max_borrowable(_collateral, N, 0));
         }
-        const _amounts = await llamalend.multicallProvider.all(calls) as bigint[];
+        const _amounts = await this.llamalend.multicallProvider.all(calls) as bigint[];
 
         const res: { [index: number]: string } = {};
         for (let N = this.minBands; N <= this.maxBands; N++) {
@@ -1442,20 +1444,20 @@ export class LendMarketTemplate {
 
     private async _calcN1(_collateral: bigint, _debt: bigint, range: number): Promise<bigint> {
         this._checkRange(range);
-        return await llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_collateral, _debt, range, llamalend.constantOptions);
+        return await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_collateral, _debt, range, this.llamalend.constantOptions);
     }
 
     private async _calcN1AllRanges(_collateral: bigint, _debt: bigint, maxN: number): Promise<bigint[]> {
         const calls = [];
         for (let N = this.minBands; N <= maxN; N++) {
-            calls.push(llamalend.contracts[this.addresses.controller].multicallContract.calculate_debt_n1(_collateral, _debt, N));
+            calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.calculate_debt_n1(_collateral, _debt, N));
         }
-        return await llamalend.multicallProvider.all(calls) as bigint[];
+        return await this.llamalend.multicallProvider.all(calls) as bigint[];
     }
 
     private async _getPrices(_n2: bigint, _n1: bigint): Promise<string[]> {
-        const contract = llamalend.contracts[this.addresses.amm].multicallContract;
-        return (await llamalend.multicallProvider.all([
+        const contract = this.llamalend.contracts[this.addresses.amm].multicallContract;
+        return (await this.llamalend.multicallProvider.all([
             contract.p_oracle_down(_n2),
             contract.p_oracle_up(_n1),
         ]) as bigint[]).map((_p) => formatUnits(_p));
@@ -1534,23 +1536,23 @@ export class LendMarketTemplate {
         const _collateral = parseUnits(collateral, this.collateral_token.decimals);
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
 
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        let _health = await contract.health_calculator(llamalend.constants.ZERO_ADDRESS, _collateral, _debt, full, range, llamalend.constantOptions) as bigint;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        let _health = await contract.health_calculator(this.llamalend.constants.ZERO_ADDRESS, _collateral, _debt, full, range, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
         return formatUnits(_health);
     }
 
     public async createLoanIsApproved(collateral: number | string): Promise<boolean> {
-        return await hasAllowance([this.collateral_token.address], [collateral], llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.collateral_token.address], [collateral], this.llamalend.signerAddress, this.addresses.controller);
     }
 
     private async createLoanApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas([this.collateral_token.address], [collateral], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.collateral_token.address], [collateral], this.addresses.controller);
     }
 
     public async createLoanApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance([this.collateral_token.address], [collateral], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.collateral_token.address], [collateral], this.addresses.controller);
     }
 
     private async _createLoan(collateral: number | string, debt: number | string, range: number, estimateGas: boolean): Promise<string | TGas> {
@@ -1559,13 +1561,13 @@ export class LendMarketTemplate {
 
         const _collateral = parseUnits(collateral, this.collateral_token.decimals);
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        const gas = await contract.create_loan.estimateGas(_collateral, _debt, range, { ...llamalend.constantOptions });
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const gas = await contract.create_loan.estimateGas(_collateral, _debt, range, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.create_loan(_collateral, _debt, range, { ...llamalend.options, gasLimit })).hash
+        return (await contract.create_loan(_collateral, _debt, range, { ...this.llamalend.options, gasLimit })).hash
     }
 
     public async createLoanEstimateGas(collateral: number | string, debt: number | string, range: number): Promise<TGas> {
@@ -1584,15 +1586,15 @@ export class LendMarketTemplate {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState();
         const _collateral = _currentCollateral + parseUnits(collateralAmount, this.collateral_token.decimals);
 
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        const _debt: bigint = await contract.max_borrowable(_collateral, _N, _currentDebt, llamalend.constantOptions);
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const _debt: bigint = await contract.max_borrowable(_collateral, _N, _currentDebt, this.llamalend.constantOptions);
 
         return formatUnits(_debt - _currentDebt, this.borrowed_token.decimals);
     }
 
     private async _borrowMoreBands(collateral: number | string, debt: number | string): Promise<[bigint, bigint]> {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState();
-        if (_currentDebt === BigInt(0)) throw Error(`Loan for ${llamalend.signerAddress} does not exist`);
+        if (_currentDebt === BigInt(0)) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
 
         const _collateral = _currentCollateral + parseUnits(collateral, this.collateral_token.decimals);
         const _debt = _currentDebt + parseUnits(debt, this.borrowed_token.decimals);
@@ -1616,43 +1618,43 @@ export class LendMarketTemplate {
     }
 
     public async borrowMoreHealth(collateral: number | string, debt: number | string, full = true, address = ""): Promise<string> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const _collateral = parseUnits(collateral, this.collateral_token.decimals);
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
 
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, _collateral, _debt, full, 0, llamalend.constantOptions) as bigint;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        let _health = await contract.health_calculator(address, _collateral, _debt, full, 0, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
         return formatUnits(_health);
     }
 
     public async borrowMoreIsApproved(collateral: number | string): Promise<boolean> {
-        return await hasAllowance([this.addresses.collateral_token], [collateral], llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.addresses.controller);
     }
 
     private async borrowMoreApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas([this.addresses.collateral_token], [collateral], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.addresses.controller);
     }
 
     public async borrowMoreApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance([this.addresses.collateral_token], [collateral], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.addresses.controller);
     }
 
     private async _borrowMore(collateral: number | string, debt: number | string, estimateGas: boolean): Promise<string | TGas> {
         const { borrowed, debt: currentDebt } = await this.userState();
-        if (Number(currentDebt) === 0) throw Error(`Loan for ${llamalend.signerAddress} does not exist`);
-        if (Number(borrowed) > 0) throw Error(`User ${llamalend.signerAddress} is already in liquidation mode`);
+        if (Number(currentDebt) === 0) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
+        if (Number(borrowed) > 0) throw Error(`User ${this.llamalend.signerAddress} is already in liquidation mode`);
 
         const _collateral = parseUnits(collateral, this.collateral_token.decimals);
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        const gas = await contract.borrow_more.estimateGas(_collateral, _debt, { ...llamalend.constantOptions });
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const gas = await contract.borrow_more.estimateGas(_collateral, _debt, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.borrow_more(_collateral, _debt, { ...llamalend.options, gasLimit })).hash
+        return (await contract.borrow_more(_collateral, _debt, { ...this.llamalend.options, gasLimit })).hash
     }
 
     public async borrowMoreEstimateGas(collateral: number | string, debt: number | string): Promise<TGas> {
@@ -1668,7 +1670,7 @@ export class LendMarketTemplate {
     // ---------------- ADD COLLATERAL ----------------
 
     private async _addCollateralBands(collateral: number | string, address = ""): Promise<[bigint, bigint]> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState(address);
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${address} does not exist`);
 
@@ -1692,26 +1694,26 @@ export class LendMarketTemplate {
     }
 
     public async addCollateralHealth(collateral: number | string, full = true, address = ""): Promise<string> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const _collateral = parseUnits(collateral, this.collateral_token.decimals);
 
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, _collateral, 0, full, 0, llamalend.constantOptions) as bigint;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        let _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
         return formatUnits(_health);
     }
 
     public async addCollateralIsApproved(collateral: number | string): Promise<boolean> {
-        return await hasAllowance([this.addresses.collateral_token], [collateral], llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.addresses.controller);
     }
 
     private async addCollateralApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas([this.addresses.collateral_token], [collateral], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.addresses.controller);
     }
 
     public async addCollateralApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance([this.addresses.collateral_token], [collateral], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.addresses.controller);
     }
 
     private async _addCollateral(collateral: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
@@ -1720,23 +1722,23 @@ export class LendMarketTemplate {
         if (Number(borrowed) > 0) throw Error(`User ${address} is already in liquidation mode`);
 
         const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        const gas = await contract.add_collateral.estimateGas(_collateral, address, { ...llamalend.constantOptions });
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const gas = await contract.add_collateral.estimateGas(_collateral, address, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.add_collateral(_collateral, address, { ...llamalend.options, gasLimit })).hash
+        return (await contract.add_collateral(_collateral, address, { ...this.llamalend.options, gasLimit })).hash
     }
 
     public async addCollateralEstimateGas(collateral: number | string, address = ""): Promise<TGas> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         if (!(await this.addCollateralIsApproved(collateral))) throw Error("Approval is needed for gas estimation");
         return await this._addCollateral(collateral, address, true) as TGas;
     }
 
     public async addCollateral(collateral: number | string, address = ""): Promise<string> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         await this.addCollateralApprove(collateral);
         return await this._addCollateral(collateral, address, false) as string;
     }
@@ -1745,14 +1747,14 @@ export class LendMarketTemplate {
 
     public async maxRemovable(): Promise<string> {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState();
-        const _requiredCollateral = await llamalend.contracts[this.addresses.controller].contract.min_collateral(_currentDebt, _N, llamalend.constantOptions)
+        const _requiredCollateral = await this.llamalend.contracts[this.addresses.controller].contract.min_collateral(_currentDebt, _N, this.llamalend.constantOptions)
 
         return formatUnits(_currentCollateral - _requiredCollateral, this.collateral_token.decimals);
     }
 
     private async _removeCollateralBands(collateral: number | string): Promise<[bigint, bigint]> {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState();
-        if (_currentDebt === BigInt(0)) throw Error(`Loan for ${llamalend.signerAddress} does not exist`);
+        if (_currentDebt === BigInt(0)) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
 
         const _collateral = _currentCollateral - parseUnits(collateral, this.collateral_token.decimals);
         const _n1 = await this._calcN1(_collateral, _currentDebt, Number(_N));
@@ -1774,11 +1776,11 @@ export class LendMarketTemplate {
     }
 
     public async removeCollateralHealth(collateral: number | string, full = true, address = ""): Promise<string> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const _collateral = parseUnits(collateral, this.collateral_token.decimals) * BigInt(-1);
 
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, _collateral, 0, full, 0, llamalend.constantOptions) as bigint;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        let _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
         return formatUnits(_health);
@@ -1786,17 +1788,17 @@ export class LendMarketTemplate {
 
     private async _removeCollateral(collateral: number | string, estimateGas: boolean): Promise<string | TGas> {
         const { borrowed, debt: currentDebt } = await this.userState();
-        if (Number(currentDebt) === 0) throw Error(`Loan for ${llamalend.signerAddress} does not exist`);
-        if (Number(borrowed) > 0) throw Error(`User ${llamalend.signerAddress} is already in liquidation mode`);
+        if (Number(currentDebt) === 0) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
+        if (Number(borrowed) > 0) throw Error(`User ${this.llamalend.signerAddress} is already in liquidation mode`);
 
         const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        const gas = await contract.remove_collateral.estimateGas(_collateral, llamalend.constantOptions);
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const gas = await contract.remove_collateral.estimateGas(_collateral, this.llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.remove_collateral(_collateral, { ...llamalend.options, gasLimit })).hash
+        return (await contract.remove_collateral(_collateral, { ...this.llamalend.options, gasLimit })).hash
     }
 
     public async removeCollateralEstimateGas(collateral: number | string): Promise<TGas> {
@@ -1834,44 +1836,44 @@ export class LendMarketTemplate {
     }
 
     public async repayIsApproved(debt: number | string): Promise<boolean> {
-        return await hasAllowance([this.borrowed_token.address], [debt], llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.borrowed_token.address], [debt], this.llamalend.signerAddress, this.addresses.controller);
     }
 
     private async repayApproveEstimateGas (debt: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas([this.borrowed_token.address], [debt], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.borrowed_token.address], [debt], this.addresses.controller);
     }
 
     public async repayApprove(debt: number | string): Promise<string[]> {
-        return await ensureAllowance([this.borrowed_token.address], [debt], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.borrowed_token.address], [debt], this.addresses.controller);
     }
 
     public async repayHealth(debt: number | string, full = true, address = ""): Promise<string> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const _debt = parseUnits(debt) * BigInt(-1);
 
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, 0, _debt, full, 0, llamalend.constantOptions) as bigint;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        let _health = await contract.health_calculator(address, 0, _debt, full, 0, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
         return formatUnits(_health);
     }
 
     private async _repay(debt: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const { debt: currentDebt } = await this.userState(address);
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
 
         const _debt = parseUnits(debt);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
         const [, n1] = await this.userBands(address);
         const { borrowed } = await this.userState(address);
         const n = (BN(borrowed).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;  // In liquidation mode it doesn't matter if active band moves
-        const gas = await contract.repay.estimateGas(_debt, address, n, llamalend.constantOptions);
+        const gas = await contract.repay.estimateGas(_debt, address, n, this.llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.repay(_debt, address, n, { ...llamalend.options, gasLimit })).hash
+        return (await contract.repay(_debt, address, n, { ...this.llamalend.options, gasLimit })).hash
     }
 
     public async repayEstimateGas(debt: number | string, address = ""): Promise<TGas> {
@@ -1887,38 +1889,38 @@ export class LendMarketTemplate {
     // ---------------- FULL REPAY ----------------
 
     private async _fullRepayAmount(address = ""): Promise<string> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const { debt } = await this.userState(address);
         return BN(debt).times(1.0001).toString();
     }
 
     public async fullRepayIsApproved(address = ""): Promise<boolean> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
         return await this.repayIsApproved(fullRepayAmount);
     }
 
     private async fullRepayApproveEstimateGas (address = ""): Promise<TGas> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
         return await this.repayApproveEstimateGas(fullRepayAmount);
     }
 
     public async fullRepayApprove(address = ""): Promise<string[]> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
         return await this.repayApprove(fullRepayAmount);
     }
 
     public async fullRepayEstimateGas(address = ""): Promise<TGas> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
         if (!(await this.repayIsApproved(fullRepayAmount))) throw Error("Approval is needed for gas estimation");
         return await this._repay(fullRepayAmount, address, true) as TGas;
     }
 
     public async fullRepay(address = ""): Promise<string> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
         await this.repayApprove(fullRepayAmount);
         return await this._repay(fullRepayAmount, address, false) as string;
@@ -1929,15 +1931,15 @@ export class LendMarketTemplate {
     public async maxSwappable(i: number, j: number): Promise<string> {
         if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
         const inDecimals = this.coinDecimals[i];
-        const contract = llamalend.contracts[this.addresses.amm].contract;
-        const [_inAmount, _outAmount] = await contract.get_dxdy(i, j, MAX_ALLOWANCE, llamalend.constantOptions) as bigint[];
+        const contract = this.llamalend.contracts[this.addresses.amm].contract;
+        const [_inAmount, _outAmount] = await contract.get_dxdy(i, j, MAX_ALLOWANCE, this.llamalend.constantOptions) as bigint[];
         if (_outAmount === BigInt(0)) return "0";
 
         return formatUnits(_inAmount, inDecimals)
     }
 
     private async _swapExpected(i: number, j: number, _amount: bigint): Promise<bigint> {
-        return await llamalend.contracts[this.addresses.amm].contract.get_dy(i, j, _amount, llamalend.constantOptions) as bigint;
+        return await this.llamalend.contracts[this.addresses.amm].contract.get_dy(i, j, _amount, this.llamalend.constantOptions) as bigint;
     }
 
     public async swapExpected(i: number, j: number, amount: number | string): Promise<string> {
@@ -1953,7 +1955,7 @@ export class LendMarketTemplate {
         if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
         const [inDecimals, outDecimals] = this.coinDecimals;
         const _amount = parseUnits(outAmount, outDecimals);
-        const _expected = await llamalend.contracts[this.addresses.amm].contract.get_dx(i, j, _amount, llamalend.constantOptions) as bigint;
+        const _expected = await this.llamalend.contracts[this.addresses.amm].contract.get_dx(i, j, _amount, this.llamalend.constantOptions) as bigint;
 
         return formatUnits(_expected, inDecimals)
     }
@@ -1994,19 +1996,19 @@ export class LendMarketTemplate {
     public async swapIsApproved(i: number, amount: number | string): Promise<boolean> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await hasAllowance([this.coinAddresses[i]], [amount], llamalend.signerAddress, this.addresses.amm);
+        return await hasAllowance.call(this.llamalend, [this.coinAddresses[i]], [amount], this.llamalend.signerAddress, this.addresses.amm);
     }
 
     private async swapApproveEstimateGas (i: number, amount: number | string): Promise<TGas> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await ensureAllowanceEstimateGas([this.coinAddresses[i]], [amount], this.addresses.amm);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.coinAddresses[i]], [amount], this.addresses.amm);
     }
 
     public async swapApprove(i: number, amount: number | string): Promise<string[]> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await ensureAllowance([this.coinAddresses[i]], [amount], this.addresses.amm);
+        return await ensureAllowance.call(this.llamalend, [this.coinAddresses[i]], [amount], this.addresses.amm);
     }
 
     private async _swap(i: number, j: number, amount: number | string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
@@ -2017,13 +2019,13 @@ export class LendMarketTemplate {
         const _expected = await this._swapExpected(i, j, _amount);
         const minRecvAmountBN: BigNumber = toBN(_expected, outDecimals).times(100 - slippage).div(100);
         const _minRecvAmount = fromBN(minRecvAmountBN, outDecimals);
-        const contract = llamalend.contracts[this.addresses.amm].contract;
-        const gas = await contract.exchange.estimateGas(i, j, _amount, _minRecvAmount, llamalend.constantOptions);
+        const contract = this.llamalend.contracts[this.addresses.amm].contract;
+        const gas = await contract.exchange.estimateGas(i, j, _amount, _minRecvAmount, this.llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.exchange(i, j, _amount, _minRecvAmount, { ...llamalend.options, gasLimit })).hash
+        return (await contract.exchange(i, j, _amount, _minRecvAmount, { ...this.llamalend.options, gasLimit })).hash
     }
 
     public async swapEstimateGas(i: number, j: number, amount: number | string, slippage = 0.1): Promise<TGas> {
@@ -2039,25 +2041,25 @@ export class LendMarketTemplate {
     // ---------------- LIQUIDATE ----------------
 
     public async tokensToLiquidate(address = ""): Promise<string> {
-        address = _getAddress(address);
-        const _tokens = await llamalend.contracts[this.addresses.controller].contract.tokens_to_liquidate(address, llamalend.constantOptions) as bigint;
+        address = _getAddress.call(this.llamalend, address);
+        const _tokens = await this.llamalend.contracts[this.addresses.controller].contract.tokens_to_liquidate(address, this.llamalend.constantOptions) as bigint;
 
         return formatUnits(_tokens, this.borrowed_token.decimals)
     }
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await hasAllowance([this.addresses.borrowed_token], [tokensToLiquidate], llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.addresses.borrowed_token], [tokensToLiquidate], this.llamalend.signerAddress, this.addresses.controller);
     }
 
     private async liquidateApproveEstimateGas (address = ""): Promise<TGas> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowanceEstimateGas([this.addresses.borrowed_token], [tokensToLiquidate], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.borrowed_token], [tokensToLiquidate], this.addresses.controller);
     }
 
     public async liquidateApprove(address = ""): Promise<string[]> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowance([this.addresses.borrowed_token], [tokensToLiquidate], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.addresses.borrowed_token], [tokensToLiquidate], this.addresses.controller);
     }
 
     private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
@@ -2069,13 +2071,13 @@ export class LendMarketTemplate {
 
         const minAmountBN: BigNumber = BN(borrowed).times(100 - slippage).div(100);
         const _minAmount = fromBN(minAmountBN);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        const gas = (await contract.liquidate.estimateGas(address, _minAmount, llamalend.constantOptions))
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const gas = (await contract.liquidate.estimateGas(address, _minAmount, this.llamalend.constantOptions))
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.liquidate(address, _minAmount, { ...llamalend.options, gasLimit })).hash
+        return (await contract.liquidate(address, _minAmount, { ...this.llamalend.options, gasLimit })).hash
     }
 
     public async liquidateEstimateGas(address: string, slippage = 0.1): Promise<TGas> {
@@ -2104,19 +2106,19 @@ export class LendMarketTemplate {
 
     public async selfLiquidateEstimateGas(slippage = 0.1): Promise<TGas> {
         if (!(await this.selfLiquidateIsApproved())) throw Error("Approval is needed for gas estimation");
-        return await this._liquidate(llamalend.signerAddress, slippage, true) as TGas;
+        return await this._liquidate(this.llamalend.signerAddress, slippage, true) as TGas;
     }
 
     public async selfLiquidate(slippage = 0.1): Promise<string> {
         await this.selfLiquidateApprove();
-        return await this._liquidate(llamalend.signerAddress, slippage, false) as string;
+        return await this._liquidate(this.llamalend.signerAddress, slippage, false) as string;
     }
 
     // ---------------- LEVERAGE CREATE LOAN ----------------
 
     private hasLeverage = (): boolean => {
-        return llamalend.constants.ALIASES.leverage_zap !== llamalend.constants.ZERO_ADDRESS &&
-            this._getMarketId() >= Number(llamalend.constants.ALIASES["leverage_markets_start_id"]);
+        return this.llamalend.constants.ALIASES.leverage_zap !== this.llamalend.constants.ZERO_ADDRESS &&
+            this._getMarketId() >= Number(this.llamalend.constants.ALIASES["leverage_markets_start_id"]);
     }
 
     private _checkLeverageZap(): void {
@@ -2171,7 +2173,7 @@ export class LendMarketTemplate {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = llamalend.contracts[llamalend.constants.ALIASES.leverage_zap].contract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.collateral_token.decimals);
@@ -2186,7 +2188,7 @@ export class LendMarketTemplate {
             }
 
             // additionalCollateral = (userBorrowed / p) + leverageCollateral
-            const _maxAdditionalCollateral = BigInt(await _getExpectedOdos(
+            const _maxAdditionalCollateral = BigInt(await _getExpectedOdos.call(this.llamalend,
                 this.addresses.borrowed_token, this.addresses.collateral_token, _maxBorrowable + _userBorrowed, this.addresses.amm));
             pAvgBN = maxBorrowableBN.plus(userBorrowed).div(toBN(_maxAdditionalCollateral, this.collateral_token.decimals));
             _maxLeverageCollateral = _maxAdditionalCollateral - fromBN(BN(userBorrowed).div(pAvgBN), this.collateral_token.decimals);
@@ -2218,7 +2220,7 @@ export class LendMarketTemplate {
         }>> => {
         this._checkLeverageZap();
         const _userCollateral = parseUnits(userCollateral, this.collateral_token.decimals);
-        const contract = llamalend.contracts[llamalend.constants.ALIASES.leverage_zap].multicallContract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].multicallContract;
 
         const oraclePriceBand = await this.oraclePriceBand();
         const pAvgApproxBN = BN(await this.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
@@ -2239,7 +2241,7 @@ export class LendMarketTemplate {
                 const j = N - this.minBands;
                 calls.push(contract.max_borrowable(this.addresses.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
             }
-            _maxBorrowable = (await llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(998) / BigInt(1000));
+            _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(998) / BigInt(1000));
             maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.borrowed_token.decimals));
 
             const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
@@ -2249,7 +2251,7 @@ export class LendMarketTemplate {
             }
 
             if (pAvgBN === null){
-                const _y = BigInt(await _getExpectedOdos(this.addresses.borrowed_token, this.addresses.collateral_token, _maxBorrowable[0], this.addresses.amm));
+                const _y = BigInt(await _getExpectedOdos.call(this.llamalend, this.addresses.borrowed_token, this.addresses.collateral_token, _maxBorrowable[0], this.addresses.amm));
                 const yBN = toBN(_y, this.collateral_token.decimals);
                 pAvgBN = maxBorrowableBN[0].div(yBN);
             }
@@ -2290,9 +2292,9 @@ export class LendMarketTemplate {
     });
 
     private _setSwapDataToCache = async (inputCoinAddress: string, outputCoinAddress: string, _amount: bigint, slippage: number) => {
-        let swapData = await _getQuoteOdos(inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, true, slippage);
+        let swapData = await _getQuoteOdos.call(this.llamalend, inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, true, slippage);
         while (swapData.pathId == null) {
-            swapData = await _getQuoteOdos(inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, true, slippage);
+            swapData = await _getQuoteOdos.call(this.llamalend, inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, true, slippage);
         }
         const key = `${inputCoinAddress}-${_amount}`;
         this.swapDataCache[key] = { ...swapData, slippage };
@@ -2374,11 +2376,11 @@ export class LendMarketTemplate {
             const { _debt, _borrowed, _N } = await this._userState(user);
             if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
             _stateDebt = _debt;
-            if (range < 0) range = Number(llamalend.formatUnits(_N, 0));
+            if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
         }
         const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, user);
         const _debt = _stateDebt + parseUnits(debt, this.borrowed_token.decimals);
-        return await llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_futureStateCollateral, _debt, range, llamalend.constantOptions);
+        return await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_futureStateCollateral, _debt, range, this.llamalend.constantOptions);
     },
     {
         promise: true,
@@ -2390,9 +2392,9 @@ export class LendMarketTemplate {
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
         const calls = [];
         for (let N = this.minBands; N <= maxN; N++) {
-            calls.push(llamalend.contracts[this.addresses.controller].multicallContract.calculate_debt_n1(_futureStateCollateral, _debt, N));
+            calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.calculate_debt_n1(_futureStateCollateral, _debt, N));
         }
-        return await llamalend.multicallProvider.all(calls) as bigint[];
+        return await this.llamalend.multicallProvider.all(calls) as bigint[];
     },
     {
         promise: true,
@@ -2478,17 +2480,17 @@ export class LendMarketTemplate {
         dDebt: TAmount,
         range: number,
         full: boolean,
-        user = llamalend.constants.ZERO_ADDRESS
+        user = this.llamalend.constants.ZERO_ADDRESS
     ): Promise<string> {
         if (range > 0) this._checkRange(range);
         const { _totalCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, dDebt, user);
         const { _borrowed, _N } = await this._userState(user);
         if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
-        if (range < 0) range = Number(llamalend.formatUnits(_N, 0));
+        if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
         const _dDebt = parseUnits(dDebt, this.borrowed_token.decimals);
 
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        let _health = await contract.health_calculator(user, _totalCollateral, _dDebt, full, range, llamalend.constantOptions) as bigint;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        let _health = await contract.health_calculator(user, _totalCollateral, _dDebt, full, range, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
         return formatUnits(_health);
@@ -2501,20 +2503,20 @@ export class LendMarketTemplate {
 
     private async leverageCreateLoanIsApproved(userCollateral: TAmount, userBorrowed: TAmount): Promise<boolean> {
         this._checkLeverageZap();
-        const collateralAllowance = await hasAllowance(
-            [this.collateral_token.address], [userCollateral], llamalend.signerAddress, this.addresses.controller);
-        const borrowedAllowance = await hasAllowance(
-            [this.borrowed_token.address], [userBorrowed], llamalend.signerAddress, llamalend.constants.ALIASES.leverage_zap);
+        const collateralAllowance = await hasAllowance.call(this.llamalend,
+            [this.collateral_token.address], [userCollateral], this.llamalend.signerAddress, this.addresses.controller);
+        const borrowedAllowance = await hasAllowance.call(this.llamalend,
+            [this.borrowed_token.address], [userBorrowed], this.llamalend.signerAddress, this.llamalend.constants.ALIASES.leverage_zap);
 
         return collateralAllowance && borrowedAllowance
     }
 
     private async leverageCreateLoanApproveEstimateGas (userCollateral: TAmount, userBorrowed: TAmount): Promise<TGas> {
         this._checkLeverageZap();
-        const collateralGas = await ensureAllowanceEstimateGas(
+        const collateralGas = await ensureAllowanceEstimateGas.call(this.llamalend,
             [this.collateral_token.address], [userCollateral], this.addresses.controller);
-        const borrowedGas = await ensureAllowanceEstimateGas(
-            [this.borrowed_token.address], [userBorrowed], llamalend.constants.ALIASES.leverage_zap);
+        const borrowedGas = await ensureAllowanceEstimateGas.call(this.llamalend,
+            [this.borrowed_token.address], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap);
 
         if(Array.isArray(collateralGas) && Array.isArray(borrowedGas)) {
             return [collateralGas[0] + borrowedGas[0], collateralGas[1] + borrowedGas[1]]
@@ -2525,10 +2527,10 @@ export class LendMarketTemplate {
 
     private async leverageCreateLoanApprove(userCollateral: TAmount, userBorrowed: TAmount): Promise<string[]> {
         this._checkLeverageZap();
-        const collateralApproveTx = await ensureAllowance(
+        const collateralApproveTx = await ensureAllowance.call(this.llamalend,
             [this.collateral_token.address], [userCollateral], this.addresses.controller);
-        const borrowedApproveTx = await ensureAllowance(
-            [this.borrowed_token.address], [userBorrowed], llamalend.constants.ALIASES.leverage_zap);
+        const borrowedApproveTx = await ensureAllowance.call(this.llamalend,
+            [this.borrowed_token.address], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap);
 
         return [...collateralApproveTx, ...borrowedApproveTx]
     }
@@ -2557,29 +2559,29 @@ export class LendMarketTemplate {
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
         const swapData = this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed);
         if (slippage !== swapData.slippage) throw Error(`You must call leverage.createLoanExpectedCollateral() with slippage=${slippage} first`);
-        const calldata = await _assembleTxOdos(swapData.pathId as string);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
+        const calldata = await _assembleTxOdos.call(this.llamalend, swapData.pathId as string);
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
         const gas = await contract.create_loan_extended.estimateGas(
             _userCollateral,
             _debt,
             range,
-            llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap,
             [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
             calldata,
-            { ...llamalend.constantOptions }
+            { ...this.llamalend.constantOptions }
         );
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.create_loan_extended(
             _userCollateral,
             _debt,
             range,
-            llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap,
             [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
             calldata,
-            { ...llamalend.options, gasLimit }
+            { ...this.llamalend.options, gasLimit }
         )).hash
     }
 
@@ -2608,12 +2610,12 @@ export class LendMarketTemplate {
         }> {
         // max_borrowable = userCollateral / (1 / (k_effective * max_p_base) - 1 / p_avg)
         this._checkLeverageZap();
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const { _collateral: _stateCollateral, _borrowed: _stateBorrowed, _debt: _stateDebt, _N } = await this._userState(address);
         if (_stateBorrowed > BigInt(0)) throw Error(`User ${address} is already in liquidation mode`);
         const _userCollateral = parseUnits(userCollateral, this.collateral_token.decimals);
-        const controllerContract = llamalend.contracts[this.addresses.controller].contract;
-        const _borrowedFromStateCollateral = await controllerContract.max_borrowable(_stateCollateral, _N, _stateDebt, llamalend.constantOptions) - _stateDebt;
+        const controllerContract = this.llamalend.contracts[this.addresses.controller].contract;
+        const _borrowedFromStateCollateral = await controllerContract.max_borrowable(_stateCollateral, _N, _stateDebt, this.llamalend.constantOptions) - _stateDebt;
         const _userBorrowed = _borrowedFromStateCollateral + parseUnits(userBorrowed, this.borrowed_token.decimals);
         userBorrowed = formatUnits(_userBorrowed, this.borrowed_token.decimals);
 
@@ -2624,7 +2626,7 @@ export class LendMarketTemplate {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = llamalend.contracts[llamalend.constants.ALIASES.leverage_zap].contract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.collateral_token.decimals);
@@ -2639,7 +2641,7 @@ export class LendMarketTemplate {
             }
 
             // additionalCollateral = (userBorrowed / p) + leverageCollateral
-            const _maxAdditionalCollateral = BigInt(await _getExpectedOdos(
+            const _maxAdditionalCollateral = BigInt(await _getExpectedOdos.call(this.llamalend,
                 this.addresses.borrowed_token, this.addresses.collateral_token, _maxBorrowable + _userBorrowed, this.addresses.amm));
             pAvgBN = maxBorrowableBN.plus(userBorrowed).div(toBN(_maxAdditionalCollateral, this.collateral_token.decimals));
             _maxLeverageCollateral = _maxAdditionalCollateral - fromBN(BN(userBorrowed).div(pAvgBN), this.collateral_token.decimals);
@@ -2647,7 +2649,7 @@ export class LendMarketTemplate {
 
         if (maxBorrowableBN.eq(0)) _userEffectiveCollateral = BigInt(0);
         const _maxTotalCollateral = _userEffectiveCollateral + _maxLeverageCollateral
-        let _maxBorrowable = await controllerContract.max_borrowable(_stateCollateral + _maxTotalCollateral, _N, _stateDebt, llamalend.constantOptions) - _stateDebt;
+        let _maxBorrowable = await controllerContract.max_borrowable(_stateCollateral + _maxTotalCollateral, _N, _stateDebt, this.llamalend.constantOptions) - _stateDebt;
         _maxBorrowable = _maxBorrowable * BigInt(998) / BigInt(1000);
 
         return {
@@ -2663,7 +2665,7 @@ export class LendMarketTemplate {
     private async leverageBorrowMoreExpectedCollateral(userCollateral: TAmount, userBorrowed: TAmount, dDebt: TAmount, slippage = 0.1, address = ""):
         Promise<{ totalCollateral: string, userCollateral: string, collateralFromUserBorrowed: string, collateralFromDebt: string, avgPrice: string }> {
         this._checkLeverageZap();
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const _dDebt = parseUnits(dDebt, this.borrowed_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.borrowed_token.decimals);
         await this._setSwapDataToCache(this.addresses.borrowed_token, this.addresses.collateral_token, _dDebt + _userBorrowed, slippage);
@@ -2686,7 +2688,7 @@ export class LendMarketTemplate {
     }
 
     private async leverageBorrowMoreBands(userCollateral: TAmount, userBorrowed: TAmount, dDebt: TAmount, address = ""): Promise<[number, number]> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         this._checkLeverageZap();
         const [_n2, _n1] = await this._leverageBands(userCollateral, userBorrowed, dDebt, -1, address);
 
@@ -2694,7 +2696,7 @@ export class LendMarketTemplate {
     }
 
     private async leverageBorrowMorePrices(userCollateral: TAmount, userBorrowed: TAmount, dDebt: TAmount, address = ""): Promise<string[]> {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         this._checkLeverageZap();
         const [_n2, _n1] = await this._leverageBands(userCollateral, userBorrowed, dDebt, -1, address);
 
@@ -2703,7 +2705,7 @@ export class LendMarketTemplate {
 
     private async leverageBorrowMoreHealth(userCollateral: TAmount, userBorrowed: TAmount, dDebt: TAmount, full = true, address = ""): Promise<string> {
         this._checkLeverageZap();
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         return await this._leverageHealth(userCollateral, userBorrowed, dDebt, -1, full, address);
     }
 
@@ -2728,28 +2730,28 @@ export class LendMarketTemplate {
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
         const swapData = this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed);
         if (slippage !== swapData.slippage) throw Error(`You must call leverage.borrowMoreExpectedCollateral() with slippage=${slippage} first`)
-        const calldata = await _assembleTxOdos(swapData.pathId as string);
-        const contract = llamalend.contracts[this.addresses.controller].contract;
+        const calldata = await _assembleTxOdos.call(this.llamalend, swapData.pathId as string);
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
         const gas = await contract.borrow_more_extended.estimateGas(
             _userCollateral,
             _debt,
-            llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap,
             [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
             calldata,
-            { ...llamalend.constantOptions }
+            { ...this.llamalend.constantOptions }
         );
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
 
         return (await contract.borrow_more_extended(
             _userCollateral,
             _debt,
-            llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap,
             [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
             calldata,
-            { ...llamalend.options, gasLimit }
+            { ...this.llamalend.options, gasLimit }
         )).hash
     }
 
@@ -2819,7 +2821,7 @@ export class LendMarketTemplate {
 
     private async leverageRepayIsFull(stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, address = ""): Promise<boolean> {
         this._checkLeverageZap();
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const { _borrowed: _stateBorrowed, _debt } = await this._userState(address);
         const { _totalBorrowed } = this._leverageRepayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed);
 
@@ -2832,7 +2834,7 @@ export class LendMarketTemplate {
         // 2. If user is underwater (stablecoin > 0), only full repayment is available:
         //    await this.deleverageRepayStablecoins(deleverageCollateral) + stablecoin > debt
         this._checkLeverageZap();
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const { collateral, borrowed, debt } = await this.userState(address);
         // Loan does not exist
         if (BN(debt).eq(0)) return false;
@@ -2845,7 +2847,7 @@ export class LendMarketTemplate {
     }
 
     private _leverageRepayBands = memoize( async (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, address: string): Promise<[bigint, bigint]> => {
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         if (!(await this.leverageRepayIsAvailable(stateCollateral, userCollateral, userBorrowed, address))) return [parseUnits(0, 0), parseUnits(0, 0)];
 
         const _stateRepayCollateral = parseUnits(stateCollateral, this.collateral_token.decimals);
@@ -2857,7 +2859,7 @@ export class LendMarketTemplate {
         let _n2 = parseUnits(0, 0);
         const { _totalBorrowed: _repayExpected } = this._leverageRepayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed);
         try {
-            _n1 = await llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_stateCollateral - _stateRepayCollateral, _stateDebt - _repayExpected, _N);
+            _n1 = await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_stateCollateral - _stateRepayCollateral, _stateDebt - _repayExpected, _N);
             _n2 = _n1 + (_N - BigInt(1));
         } catch {
             console.log("Full repayment");
@@ -2886,7 +2888,7 @@ export class LendMarketTemplate {
 
     private async leverageRepayHealth(stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, full = true, address = ""): Promise<string> {
         this._checkLeverageZap();
-        address = _getAddress(address);
+        address = _getAddress.call(this.llamalend, address);
         const { _borrowed: _stateBorrowed, _debt, _N } = await this._userState(address);
         if (_stateBorrowed > BigInt(0)) return "0.0";
         if (!(await this.leverageRepayIsAvailable(stateCollateral, userCollateral, userBorrowed, address))) return "0.0";
@@ -2896,38 +2898,38 @@ export class LendMarketTemplate {
         const _dDebt = _totalBorrowed * BigInt(-1);
 
         if (_debt + _dDebt <= BigInt(0)) return "0.0";
-        const contract = llamalend.contracts[this.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, _dCollateral, _dDebt, full, _N, llamalend.constantOptions) as bigint;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        let _health = await contract.health_calculator(address, _dCollateral, _dDebt, full, _N, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
-        return llamalend.formatUnits(_health);
+        return this.llamalend.formatUnits(_health);
     }
 
     private async leverageRepayIsApproved(userCollateral: TAmount, userBorrowed: TAmount): Promise<boolean> {
         this._checkLeverageZap();
-        return await hasAllowance(
+        return await hasAllowance.call(this.llamalend,
             [this.collateral_token.address, this.borrowed_token.address],
             [userCollateral, userBorrowed],
-            llamalend.signerAddress,
-            llamalend.constants.ALIASES.leverage_zap
+            this.llamalend.signerAddress,
+            this.llamalend.constants.ALIASES.leverage_zap
         );
     }
 
     private async leverageRepayApproveEstimateGas (userCollateral: TAmount, userBorrowed: TAmount): Promise<TGas> {
         this._checkLeverageZap();
-        return await ensureAllowanceEstimateGas(
+        return await ensureAllowanceEstimateGas.call(this.llamalend,
             [this.collateral_token.address, this.borrowed_token.address],
             [userCollateral, userBorrowed],
-            llamalend.constants.ALIASES.leverage_zap
+            this.llamalend.constants.ALIASES.leverage_zap
         );
     }
 
     private async leverageRepayApprove(userCollateral: TAmount, userBorrowed: TAmount): Promise<string[]> {
         this._checkLeverageZap();
-        return await ensureAllowance(
+        return await ensureAllowance.call(this.llamalend,
             [this.collateral_token.address, this.borrowed_token.address],
             [userCollateral, userBorrowed],
-            llamalend.constants.ALIASES.leverage_zap
+            this.llamalend.constants.ALIASES.leverage_zap
         );
     }
 
@@ -2954,26 +2956,26 @@ export class LendMarketTemplate {
         if (_stateCollateral + _userCollateral > BigInt(0)) {
             const swapData = this._getSwapDataFromCache(this.addresses.collateral_token, _stateCollateral + _userCollateral);
             if (slippage !== swapData.slippage) throw Error(`You must call leverage.repayExpectedBorrowed() with slippage=${slippage} first`)
-            calldata = await _assembleTxOdos(swapData.pathId as string);
+            calldata = await _assembleTxOdos.call(this.llamalend, swapData.pathId as string);
         }
 
         console.log('params', [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed], calldata)
-        const contract = llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
         const gas = await contract.repay_extended.estimateGas(
-            llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap,
             [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed],
             calldata
         );
         if (estimateGas) return smartNumber(gas);
 
-        await llamalend.updateFeeData();
+        await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
 
         return (await contract.repay_extended(
-            llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap,
             [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed],
             calldata,
-            { ...llamalend.options, gasLimit }
+            { ...this.llamalend.options, gasLimit }
         )).hash
     }
 
@@ -2990,9 +2992,9 @@ export class LendMarketTemplate {
     }
 
     public async currentLeverage(userAddress = ''): Promise<string> {
-        userAddress = _getAddress(userAddress);
+        userAddress = _getAddress.call(this.llamalend, userAddress);
         const [userCollateral, {collateral}] = await Promise.all([
-            _getUserCollateral(llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
+            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
             this.userState(userAddress),
         ]);
 
@@ -3002,14 +3004,14 @@ export class LendMarketTemplate {
     }
 
     public async currentPnL(userAddress = ''): Promise<Record<string, string>> {
-        userAddress = _getAddress(userAddress);
+        userAddress = _getAddress.call(this.llamalend, userAddress);
 
         const calls = [
-            llamalend.contracts[this.addresses.controller].multicallContract.user_state(userAddress, llamalend.constantOptions),
-            llamalend.contracts[this.addresses.amm].multicallContract.price_oracle(userAddress),
+            this.llamalend.contracts[this.addresses.controller].multicallContract.user_state(userAddress, this.llamalend.constantOptions),
+            this.llamalend.contracts[this.addresses.amm].multicallContract.price_oracle(userAddress),
         ];
 
-        const [userState, oraclePrice] = await llamalend.multicallProvider.all(calls) as  [bigint[],bigint];
+        const [userState, oraclePrice] = await this.llamalend.multicallProvider.all(calls) as  [bigint[],bigint];
 
         if(!(userState || oraclePrice)) {
             throw new Error('Multicall error')
@@ -3017,16 +3019,16 @@ export class LendMarketTemplate {
 
         const debt = userState[2];
 
-        const userCollateral = await _getUserCollateral(llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress);
+        const userCollateral = await _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress);
         const totalDepositUsdValueFull = userCollateral.total_deposit_usd_value;
         const totalDepositUsdValueUser = userCollateral.total_deposit_from_user_usd_value;
         const totalBorrowed = userCollateral.total_borrowed;
 
-        const oraclePriceFormatted = llamalend.formatUnits(oraclePrice, 18);
-        const debtFormatted = llamalend.formatUnits(debt, 18);
+        const oraclePriceFormatted = this.llamalend.formatUnits(oraclePrice, 18);
+        const debtFormatted = this.llamalend.formatUnits(debt, 18);
 
         const {_collateral: AmmCollateral, _borrowed: AmmBorrowed} = await this._userState(userAddress)
-        const [AmmCollateralFormatted, AmmBorrowedFormatted] = [llamalend.formatUnits(AmmCollateral, this.collateral_token.decimals), llamalend.formatUnits(AmmBorrowed, this.borrowed_token.decimals)];
+        const [AmmCollateralFormatted, AmmBorrowedFormatted] = [this.llamalend.formatUnits(AmmCollateral, this.collateral_token.decimals), this.llamalend.formatUnits(AmmBorrowed, this.borrowed_token.decimals)];
 
         const a = BN(AmmCollateralFormatted).times(oraclePriceFormatted);
         const b = BN(totalBorrowed).minus(debtFormatted)

@@ -3,7 +3,7 @@ import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
 import { ICurveContract, IDict, TGas } from "./interfaces.js";
 import { _getUsdPricesFromApi } from "./external-api.js";
-import { llamalend } from "./llamalend.js";
+import type { Llamalend } from "./llamalend.js";
 import { JsonFragment } from "ethers/lib.esm";
 import { L2Networks } from "./constants/L2Networks.js";
 import memoize from "memoizee";
@@ -116,8 +116,8 @@ export const gasSum = (gas: number[], currentGas: number | number[]): number[] =
     return gas;
 }
 
-export const _getAddress = (address: string): string => {
-    address = address || llamalend.signerAddress;
+export const _getAddress = function (this: Llamalend, address: string): string {
+    address = address || this.signerAddress;
     if (!address) throw Error("Need to connect wallet or pass address into args");
 
     return address
@@ -133,15 +133,15 @@ export const handleMultiCallResponse = (callsMap: string[], response: any[]) => 
 }
 
 // coins can be either addresses or symbols
-export const _getCoinAddressesNoCheck = (...coins: string[] | string[][]): string[] => {
+export const _getCoinAddressesNoCheck = function (this: Llamalend, ...coins: string[] | string[][]): string[] {
     if (coins.length == 1 && Array.isArray(coins[0])) coins = coins[0];
     coins = coins as string[];
-    return coins.map((c) => c.toLowerCase()).map((c) => llamalend.constants.COINS[c] || c);
+    return coins.map((c) => c.toLowerCase()).map((c) => this.constants.COINS[c] || c);
 }
 
-export const _getCoinAddresses = (coins: string[]): string[] => {
-    const coinAddresses = _getCoinAddressesNoCheck(coins);
-    const availableAddresses = Object.keys(llamalend.constants.DECIMALS);
+export const _getCoinAddresses = function (this: Llamalend, coins: string[]): string[] {
+    const coinAddresses = _getCoinAddressesNoCheck.call(this, coins);
+    const availableAddresses = Object.keys(this.constants.DECIMALS);
     for (const coinAddr of coinAddresses) {
         if (!availableAddresses.includes(coinAddr)) throw Error(`Coin with address '${coinAddr}' is not available`);
     }
@@ -149,15 +149,15 @@ export const _getCoinAddresses = (coins: string[]): string[] => {
     return coinAddresses
 }
 
-export const _getCoinDecimals = (coinAddresses: string[]): number[] => {
-    return coinAddresses.map((coinAddr) => llamalend.constants.DECIMALS[coinAddr.toLowerCase()] ?? 18);
+export const _getCoinDecimals = function (this: Llamalend, coinAddresses: string[]): number[] {
+    return coinAddresses.map((coinAddr) => this.constants.DECIMALS[coinAddr.toLowerCase()] ?? 18);
 }
 
 
 // --- BALANCES ---
 
-export const _getBalances = async (coinAddresses: string[], address = ""): Promise<bigint[]> => {
-    address = _getAddress(address);
+export const _getBalances = async function (this: Llamalend, coinAddresses: string[], address = ""): Promise<bigint[]> {
+    address = _getAddress.call(this, address);
     const _coinAddresses = [...coinAddresses];
     const ethIndex = getEthIndex(_coinAddresses);
     if (ethIndex !== -1) {
@@ -166,27 +166,27 @@ export const _getBalances = async (coinAddresses: string[], address = ""): Promi
 
     const contractCalls = [];
     for (const coinAddr of _coinAddresses) {
-        contractCalls.push(llamalend.contracts[coinAddr].multicallContract.balanceOf(address));
+        contractCalls.push(this.contracts[coinAddr].multicallContract.balanceOf(address));
     }
-    const _balances: bigint[] = await llamalend.multicallProvider.all(contractCalls);
+    const _balances: bigint[] = await this.multicallProvider.all(contractCalls);
 
     if (ethIndex !== -1) {
-        const ethBalance: bigint = await llamalend.provider.getBalance(address);
+        const ethBalance: bigint = await this.provider.getBalance(address);
         _balances.splice(ethIndex, 0, ethBalance);
     }
 
     return _balances
 }
 
-export const getBalances = async (coins: string[], address = ""): Promise<string[]> => {
-    const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
-    const _balances = await _getBalances(coinAddresses, address);
+export const getBalances = async function (this: Llamalend, coins: string[], address = ""): Promise<string[]> {
+    const coinAddresses = _getCoinAddresses.call(this, coins);
+    const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
+    const _balances = await _getBalances.call(this, coinAddresses, address);
 
     return _balances.map((_b, i: number ) => formatUnits(_b, decimals[i]));
 }
 
-export const _getAllowance = memoize(async (coins: string[], address: string, spender: string): Promise<bigint[]> => {
+const _getAllowanceMemoized = memoize(async function (coins: string[], address: string, spender: string, contracts: any, multicallProvider: any, constantOptions: any): Promise<bigint[]> {
     const _coins = [...coins]
     const ethIndex = getEthIndex(_coins);
     if (ethIndex !== -1) {
@@ -195,10 +195,10 @@ export const _getAllowance = memoize(async (coins: string[], address: string, sp
 
     let allowance: bigint[];
     if (_coins.length === 1) {
-        allowance = [await llamalend.contracts[_coins[0]].contract.allowance(address, spender, llamalend.constantOptions)];
+        allowance = [await contracts[_coins[0]].contract.allowance(address, spender, constantOptions)];
     } else {
-        const contractCalls = _coins.map((coinAddr) => llamalend.contracts[coinAddr].multicallContract.allowance(address, spender));
-        allowance = await llamalend.multicallProvider.all(contractCalls);
+        const contractCalls = _coins.map((coinAddr) => contracts[coinAddr].multicallContract.allowance(address, spender));
+        allowance = await multicallProvider.all(contractCalls);
     }
 
     if (ethIndex !== -1) {
@@ -206,45 +206,48 @@ export const _getAllowance = memoize(async (coins: string[], address: string, sp
     }
 
     return allowance;
-},
-{
+}, {
     promise: true,
     maxAge: 5 * 1000, // 5s
     primitive: true,
-    length: 3,
+    length: 6,
 });
 
-// coins can be either addresses or symbols
-export const getAllowance = async (coins: string[], address: string, spender: string): Promise<string[]> => {
-    const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
-    const _allowance = await _getAllowance(coinAddresses, address, spender);
-
-    return _allowance.map((a, i) => llamalend.formatUnits(a, decimals[i]))
+export async function _getAllowance(this: Llamalend, coins: string[], address: string, spender: string): Promise<bigint[]> {
+    return _getAllowanceMemoized(coins, address, spender, this.contracts, this.multicallProvider, this.constantOptions);
 }
 
 // coins can be either addresses or symbols
-export const hasAllowance = async (coins: string[], amounts: (number | string)[], address: string, spender: string): Promise<boolean> => {
-    const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
-    const _allowance = await _getAllowance(coinAddresses, address, spender);
+export const getAllowance = async function (this: Llamalend, coins: string[], address: string, spender: string): Promise<string[]> {
+    const coinAddresses = _getCoinAddresses.call(this, coins);
+    const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
+    const _allowance = await _getAllowance.call(this, coinAddresses, address, spender);
+
+    return _allowance.map((a, i) => this.formatUnits(a, decimals[i]))
+}
+
+// coins can be either addresses or symbols
+export const hasAllowance = async function (this: Llamalend, coins: string[], amounts: (number | string)[], address: string, spender: string): Promise<boolean> {
+    const coinAddresses = _getCoinAddresses.call(this, coins);
+    const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
+    const _allowance = await _getAllowance.call(this, coinAddresses, address, spender);
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
 
     return _allowance.map((a, i) => a >= _amounts[i]).reduce((a, b) => a && b);
 }
 
-export const _ensureAllowance = async (coins: string[], _amounts: bigint[], spender: string, isMax = true): Promise<string[]> => {
-    const address = llamalend.signerAddress;
-    const _allowance: bigint[] = await _getAllowance(coins, address, spender);
+export const _ensureAllowance = async function (this: Llamalend, coins: string[], _amounts: bigint[], spender: string, isMax = true): Promise<string[]> {
+    const address = this.signerAddress;
+    const _allowance: bigint[] = await _getAllowance.call(this, coins, address, spender);
 
     const txHashes: string[] = []
     for (let i = 0; i < _allowance.length; i++) {
         if (_allowance[i] < _amounts[i]) {
-            const contract = llamalend.contracts[coins[i]].contract;
+            const contract = this.contracts[coins[i]].contract;
             const _approveAmount = isMax ? MAX_ALLOWANCE : _amounts[i];
-            await llamalend.updateFeeData();
-            const gasLimit = _mulBy1_3(DIGas(await contract.approve.estimateGas(spender, _approveAmount, llamalend.constantOptions)));
-            txHashes.push((await contract.approve(spender, _approveAmount, { ...llamalend.options, gasLimit })).hash);
+            await this.updateFeeData();
+            const gasLimit = _mulBy1_3(DIGas(await contract.approve.estimateGas(spender, _approveAmount, this.constantOptions)));
+            txHashes.push((await contract.approve(spender, _approveAmount, { ...this.options, gasLimit })).hash);
         }
     }
 
@@ -252,18 +255,18 @@ export const _ensureAllowance = async (coins: string[], _amounts: bigint[], spen
 }
 
 // coins can be either addresses or symbols
-export const ensureAllowanceEstimateGas = async (coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<TGas> => {
-    const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
+export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<TGas> {
+    const coinAddresses = _getCoinAddresses.call(this, coins);
+    const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
-    const _allowance: bigint[] = await _getAllowance(coinAddresses, llamalend.signerAddress, spender);
+    const _allowance: bigint[] = await _getAllowance.call(this, coinAddresses, this.signerAddress, spender);
 
     let gas = [0,0];
     for (let i = 0; i < _allowance.length; i++) {
         if (_allowance[i] < _amounts[i]) {
-            const contract = llamalend.contracts[coinAddresses[i]].contract;
+            const contract = this.contracts[coinAddresses[i]].contract;
             const _approveAmount = isMax ? MAX_ALLOWANCE : _amounts[i];
-            const currentGas = smartNumber(await contract.approve.estimateGas(spender, _approveAmount, llamalend.constantOptions));
+            const currentGas = smartNumber(await contract.approve.estimateGas(spender, _approveAmount, this.constantOptions));
             gas = gasSum(gas, currentGas);
         }
     }
@@ -272,21 +275,21 @@ export const ensureAllowanceEstimateGas = async (coins: string[], amounts: (numb
 }
 
 // coins can be either addresses or symbols
-export const ensureAllowance = async (coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<string[]> => {
-    const coinAddresses = _getCoinAddresses(coins);
-    const decimals = _getCoinDecimals(coinAddresses).map((item) => Number(item));
+export const ensureAllowance = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<string[]> {
+    const coinAddresses = _getCoinAddresses.call(this, coins);
+    const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
 
-    return await _ensureAllowance(coinAddresses, _amounts, spender, isMax)
+    return await _ensureAllowance.call(this, coinAddresses, _amounts, spender, isMax)
 }
 
 const _usdRatesCache: IDict<{ rate: number, time: number }> = {}
-export const _getUsdRate = async (assetId: string): Promise<number> => {
-    if (llamalend.chainId === 1 && assetId.toLowerCase() === '0x8762db106b2c2a0bccb3a80d1ed41273552616e8') return 0; // RSR
-    const pricesFromApi = await _getUsdPricesFromApi();
+export const _getUsdRate = async function (this: Llamalend, assetId: string): Promise<number> {
+    if (this.chainId === 1 && assetId.toLowerCase() === '0x8762db106b2c2a0bccb3a80d1ed41273552616e8') return 0; // RSR
+    const pricesFromApi = await _getUsdPricesFromApi.call(this);
     if (assetId.toLowerCase() in pricesFromApi) return pricesFromApi[assetId.toLowerCase()];
 
-    if (assetId === 'USD' || (llamalend.chainId === 137 && (assetId.toLowerCase() === llamalend.constants.COINS.am3crv.toLowerCase()))) return 1
+    if (assetId === 'USD' || (this.chainId === 137 && (assetId.toLowerCase() === this.constants.COINS.am3crv.toLowerCase()))) return 1
 
     let chainName = {
         1: 'ethereum',
@@ -307,7 +310,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         43114: 'avalanche',
         42161: 'arbitrum-one',
         1313161554: 'aurora',
-    }[llamalend.chainId];
+    }[this.chainId];
 
     const nativeTokenName = {
         1: 'ethereum',
@@ -328,7 +331,7 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
         43114: 'avalanche-2',
         42161: 'ethereum',
         1313161554: 'ethereum',
-    }[llamalend.chainId] as string;
+    }[this.chainId] as string;
 
     if (chainName === undefined) {
         throw Error('curve object is not initialized')
@@ -344,13 +347,13 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
     assetId = isEth(assetId) ? nativeTokenName : assetId.toLowerCase();
 
     // No EURT on Coingecko Polygon
-    if (llamalend.chainId === 137 && assetId.toLowerCase() === llamalend.constants.COINS.eurt) {
+    if (this.chainId === 137 && assetId.toLowerCase() === this.constants.COINS.eurt) {
         chainName = 'ethereum';
         assetId = '0xC581b735A1688071A1746c968e0798D642EDE491'.toLowerCase(); // EURT Ethereum
     }
 
     // CRV
-    if (assetId.toLowerCase() === llamalend.constants.ALIASES.crv) {
+    if (assetId.toLowerCase() === this.constants.ALIASES.crv) {
         assetId = 'curve-dao-token';
     }
 
@@ -370,13 +373,13 @@ export const _getUsdRate = async (assetId: string): Promise<number> => {
     return _usdRatesCache[assetId]['rate']
 }
 
-export const getUsdRate = async (coin: string): Promise<number> => {
-    const [coinAddress] = _getCoinAddressesNoCheck(coin);
-    return await _getUsdRate(coinAddress);
+export const getUsdRate = async function (this: Llamalend, coin: string): Promise<number> {
+    const [coinAddress] = _getCoinAddressesNoCheck.call(this, coin);
+    return await _getUsdRate.call(this, coinAddress);
 }
 
-export const getBaseFeeByLastBlock = async ()  => {
-    const provider = llamalend.provider;
+export const getBaseFeeByLastBlock = async function (this: Llamalend): Promise<number> {
+    const provider = this.provider;
 
     try {
         const block = await provider.getBlock('latest');
@@ -390,18 +393,18 @@ export const getBaseFeeByLastBlock = async ()  => {
     }
 }
 
-export const getGasPriceFromL1 = async (): Promise<number> => {
-    if(L2Networks.includes(llamalend.chainId) && llamalend.L1WeightedGasPrice) {
-        return llamalend.L1WeightedGasPrice + 1e9; // + 1 gwei
+export const getGasPriceFromL1 = async function (this: Llamalend): Promise<number> {
+    if(L2Networks.includes(this.chainId) && this.L1WeightedGasPrice) {
+        return this.L1WeightedGasPrice + 1e9; // + 1 gwei
     } else {
         throw Error("This method exists only for L2 networks");
     }
 }
 
-export const getGasPriceFromL2 = async (): Promise<number> => {
-    if(llamalend.chainId === 42161) {
+export async function getGasPriceFromL2(this: Llamalend): Promise<number> {
+    if(this.chainId === 42161) {
         try {
-            return await getBaseFeeByLastBlock()
+            return await getBaseFeeByLastBlock.call(this)
         } catch (e: any) {
             throw Error(e)
         }
@@ -410,10 +413,10 @@ export const getGasPriceFromL2 = async (): Promise<number> => {
     }
 }
 
-export const getGasInfoForL2 = async (): Promise<Record<string, number>> => {
-    if(llamalend.chainId === 42161) {
+export const getGasInfoForL2 = async function (this: Llamalend): Promise<Record<string, number>> {
+    if(this.chainId === 42161) {
         try {
-            const baseFee = await getBaseFeeByLastBlock()
+            const baseFee = await getBaseFeeByLastBlock.call(this)
 
             return  {
                 maxFeePerGas: Number(((baseFee * 1.1) + 0.01).toFixed(2)),
@@ -427,20 +430,20 @@ export const getGasInfoForL2 = async (): Promise<Record<string, number>> => {
     }
 }
 
-export const totalSupply = async (): Promise<{ total: string, minted: string, pegKeepersDebt: string }> => {
+export const totalSupply = async function (this: Llamalend): Promise<{ total: string, minted: string, pegKeepersDebt: string }> {
     const calls = [];
-    for (const llammaId of llamalend.getMintMarketList()) {
-        const controllerAddress = llamalend.constants.LLAMMAS[llammaId].controller_address;
-        const controllerContract = llamalend.contracts[controllerAddress].multicallContract;
+    for (const llammaId of this.getMintMarketList()) {
+        const controllerAddress = this.constants.LLAMMAS[llammaId].controller_address;
+        const controllerContract = this.contracts[controllerAddress].multicallContract;
         calls.push(controllerContract.minted(), controllerContract.redeemed());
     }
-    for (const pegKeeper of llamalend.constants.PEG_KEEPERS) {
-        calls.push(llamalend.contracts[pegKeeper].multicallContract.debt());
+    for (const pegKeeper of this.constants.PEG_KEEPERS) {
+        calls.push(this.contracts[pegKeeper].multicallContract.debt());
     }
-    const res: bigint[] = await llamalend.multicallProvider.all(calls);
+    const res: bigint[] = await this.multicallProvider.all(calls);
 
     let mintedBN = BN(0);
-    for (let i = 0; i < llamalend.getMintMarketList().length; i++) {
+    for (let i = 0; i < this.getMintMarketList().length; i++) {
         const [_minted, _redeemed] = res.splice(0, 2);
         mintedBN = toBN(_minted).minus(toBN(_redeemed)).plus(mintedBN);
     }
