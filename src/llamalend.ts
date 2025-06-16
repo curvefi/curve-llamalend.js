@@ -1,5 +1,4 @@
-import { ethers,
-    Contract, Networkish, BigNumberish, Numeric, AbstractProvider } from "ethers";
+import { type TransactionRequest, ethers, Contract, Networkish, BigNumberish, Numeric, AbstractProvider } from "ethers";
 import { Provider as MulticallProvider, Contract as MulticallContract, Call } from '@curvefi/ethcall';
 import {
     IChainId,
@@ -14,21 +13,21 @@ import {
 } from "./interfaces.js";
 // OneWayMarket ABIs
 import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" assert { type: 'json' };
-import ERC20ABI from './constants/abis/ERC20.json' assert { type: 'json' };
-import ERC4626ABI from './constants/abis/ERC4626.json' assert { type: 'json' };
-import LlammaABI from './constants/abis/Llamma.json' assert { type: 'json' };
-import ControllerABI from './constants/abis/Controller.json' assert { type: 'json' };
-import MonetaryPolicyABI from './constants/abis/MonetaryPolicy.json' assert { type: 'json' };
-import VaultABI from './constants/abis/Vault.json' assert { type: 'json' };
-import GaugeABI from './constants/abis/GaugeV5.json' assert { type: 'json' };
-import SidechainGaugeABI from './constants/abis/SidechainGauge.json' assert { type: 'json' };
-import GaugeControllerABI from './constants/abis/GaugeController.json' assert { type: 'json' };
-import GaugeFactoryMainnetABI from './constants/abis/GaugeFactoryMainnet.json' assert { type: 'json' };
-import GaugeFactorySidechainABI from './constants/abis/GaugeFactorySidechain.json' assert { type: 'json' };
-import MinterABI from './constants/abis/Minter.json' assert { type: 'json' };
-import LeverageZapABI from './constants/abis/LeverageZap.json' assert { type: 'json' };
-import gasOracleABI from './constants/abis/gas_oracle_optimism.json' assert { type: 'json'};
-import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' assert { type: 'json'};
+import ERC20ABI from './constants/abis/ERC20.json' assert {type: 'json'};
+import ERC4626ABI from './constants/abis/ERC4626.json' assert {type: 'json'};
+import LlammaABI from './constants/abis/Llamma.json' assert {type: 'json'};
+import ControllerABI from './constants/abis/Controller.json' assert {type: 'json'};
+import MonetaryPolicyABI from './constants/abis/MonetaryPolicy.json' assert {type: 'json'};
+import VaultABI from './constants/abis/Vault.json' assert {type: 'json'};
+import GaugeABI from './constants/abis/GaugeV5.json' assert {type: 'json'};
+import SidechainGaugeABI from './constants/abis/SidechainGauge.json' assert {type: 'json'};
+import GaugeControllerABI from './constants/abis/GaugeController.json' assert {type: 'json'};
+import GaugeFactoryMainnetABI from './constants/abis/GaugeFactoryMainnet.json' assert {type: 'json'};
+import GaugeFactorySidechainABI from './constants/abis/GaugeFactorySidechain.json' assert {type: 'json'};
+import MinterABI from './constants/abis/Minter.json' assert {type: 'json'};
+import LeverageZapABI from './constants/abis/LeverageZap.json' assert {type: 'json'};
+import gasOracleABI from './constants/abis/gas_oracle_optimism.json' assert {type: 'json'};
+import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' assert {type: 'json'};
 // crvUSD ABIs
 import llammaABI from "./constants/abis/crvUSD/llamma.json" assert { type: 'json'};
 import controllerABI from "./constants/abis/crvUSD/controller.json" assert { type: 'json'};
@@ -76,12 +75,12 @@ import {
     COINS_FRAXTAL,
     COINS_SONIC,
 } from "./constants/coins.js";
-import { LLAMMAS } from "./constants/llammas";
-import { L2Networks } from "./constants/L2Networks.js";
-import { createCall, handleMultiCallResponse} from "./utils.js";
+import {LLAMMAS} from "./constants/llammas";
+import {L2Networks} from "./constants/L2Networks.js";
+import {createCall, handleMultiCallResponse} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
 import {_getMarketsData} from "./external-api.js";
-import { extractDecimals } from "./constants/utils.js";
+import {extractDecimals} from "./constants/utils.js";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
@@ -199,13 +198,11 @@ class Llamalend implements ILlamalend {
     constructor() {
         this.address = '00000'
         this.crvUsdAddress = COINS_ETHEREUM.crvusd;
-        // @ts-ignore
-        this.provider = null;
+        this.provider = null as unknown as ethers.BrowserProvider | ethers.JsonRpcProvider;
         this.signer = null;
         this.signerAddress = "";
         this.chainId = 1;
-        // @ts-ignore
-        this.multicallProvider = null;
+        this.multicallProvider = null as unknown as MulticallProvider;
         this.contracts = {};
         this.feeData = {}
         this.constantOptions = { gasLimit: 12000000 }
@@ -236,14 +233,11 @@ class Llamalend implements ILlamalend {
         providerSettings: { url?: string, privateKey?: string, batchMaxCount? : number } | { externalProvider: ethers.Eip1193Provider } | { network?: Networkish, apiKey?: string },
         options: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number, chainId?: number } = {} // gasPrice in Gwei
     ): Promise<void> {
-        // @ts-ignore
-        this.provider = null;
-        // @ts-ignore
-        this.signer = null;
+        this.provider = null as unknown as ethers.BrowserProvider | ethers.JsonRpcProvider;
+        this.signer = null as unknown as ethers.Signer;
         this.signerAddress = "";
         this.chainId = 1;
-        // @ts-ignore
-        this.multicallProvider = null;
+        this.multicallProvider = null as unknown as MulticallProvider;
         this.contracts = {};
         this.feeData = {}
         this.constantOptions = { gasLimit: 12000000 }
@@ -491,47 +485,32 @@ class Llamalend implements ILlamalend {
             lendingInstance.setContract(lendingInstance.constants.ALIASES.gas_oracle, gasOracleABI);
             lendingInstance.setContract(lendingInstance.constants.ALIASES.gas_oracle_blob, gasOracleBlobABI);
 
-            // @ts-ignore
-            if(AbstractProvider.prototype.originalEstimate) {
-                // @ts-ignore
-                AbstractProvider.prototype.estimateGas = AbstractProvider.prototype.originalEstimate;
+            if('originalEstimate' in AbstractProvider.prototype) {
+                AbstractProvider.prototype.estimateGas = AbstractProvider.prototype.originalEstimate as (_tx: TransactionRequest) => Promise<bigint>;
             }
 
             const originalEstimate = AbstractProvider.prototype.estimateGas;
 
-            const oldEstimate = async function(arg: any) {
-                // @ts-ignore
+            const oldEstimate = async function(this: any, arg: any) {
                 const originalEstimateFunc = originalEstimate.bind(this);
-
-                const gas = await originalEstimateFunc(arg);
-
-                return gas;
+                return await originalEstimateFunc(arg);
             }
 
             //Override
-            const newEstimate = async function(arg: any) {
-                // @ts-ignore
+            const newEstimate = async function(this: any, arg: any) {
                 const L2EstimateGas = originalEstimate.bind(this);
-
                 const L1GasUsed = await lendingInstance.contracts[lendingInstance.constants.ALIASES.gas_oracle_blob].contract.getL1GasUsed(arg.data);
                 const L1Fee = await lendingInstance.contracts[lendingInstance.constants.ALIASES.gas_oracle_blob].contract.getL1Fee(arg.data);
-
                 lendingInstance.L1WeightedGasPrice = Number(L1Fee)/Number(L1GasUsed);
-
                 const L2GasUsed = await L2EstimateGas(arg);
-
                 return [L2GasUsed,L1GasUsed];
             }
 
-            // @ts-ignore
-            AbstractProvider.prototype.estimateGas = newEstimate;
-            // @ts-ignore
-            AbstractProvider.prototype.originalEstimate = oldEstimate;
+            AbstractProvider.prototype.estimateGas = newEstimate as any;
+            (AbstractProvider.prototype as any).originalEstimate = oldEstimate;
         } else {
-            // @ts-ignore
-            if(AbstractProvider.prototype.originalEstimate) {
-                // @ts-ignore
-                AbstractProvider.prototype.estimateGas = AbstractProvider.prototype.originalEstimate;
+            if('originalEstimate' in AbstractProvider.prototype) {
+                AbstractProvider.prototype.estimateGas = AbstractProvider.prototype.originalEstimate as (_tx: TransactionRequest) => Promise<bigint>;
             }
         }
     }
@@ -820,4 +799,4 @@ class Llamalend implements ILlamalend {
     }
 }
 
-export const llamalend = new Llamalend();
+export { Llamalend };
