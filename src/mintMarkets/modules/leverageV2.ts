@@ -152,51 +152,51 @@ export class LeverageV2Module {
             maxLeverage: string,
             avgPrice: string,
         }>> => {
-            this._checkLeverageZap();
-            const _userCollateral = parseUnits(userCollateral, this.market.coinDecimals[1]);
-            const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].multicallContract;
+        this._checkLeverageZap();
+        const _userCollateral = parseUnits(userCollateral, this.market.coinDecimals[1]);
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].multicallContract;
 
-            const oraclePriceBand = await this.market.oraclePriceBand();
-            const pAvgApproxBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
-            let pAvgBN: BigNumber | null = null;
-            const arrLength = this.market.maxBands - this.market.minBands + 1;
-            let maxLeverageCollateralBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let _maxLeverageCollateral: bigint[] = new Array(arrLength).fill(BigInt(0));
-            let maxBorrowablePrevBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let maxBorrowableBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let _maxBorrowable: bigint[] = new Array(arrLength).fill(BigInt(0));
+        const oraclePriceBand = await this.market.oraclePriceBand();
+        const pAvgApproxBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
+        let pAvgBN: BigNumber | null = null;
+        const arrLength = this.market.maxBands - this.market.minBands + 1;
+        let maxLeverageCollateralBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let _maxLeverageCollateral: bigint[] = new Array(arrLength).fill(BigInt(0));
+        let maxBorrowablePrevBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let maxBorrowableBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let _maxBorrowable: bigint[] = new Array(arrLength).fill(BigInt(0));
 
-            for (let i = 0; i < 5; i++) {
-                const pBN = pAvgBN ?? pAvgApproxBN;
-                maxBorrowablePrevBN = maxBorrowableBN;
-                const _userEffectiveCollateral: bigint = _userCollateral + fromBN(BN(userBorrowed).div(pBN), this.market.coinDecimals[1]);
-                const calls = [];
-                for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
-                    const j = N - this.market.minBands;
-                    calls.push(contract.max_borrowable(this.market.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
-                }
-                _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(998) / BigInt(1000));
-                maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.market.coinDecimals[0]));
+        for (let i = 0; i < 5; i++) {
+            const pBN = pAvgBN ?? pAvgApproxBN;
+            maxBorrowablePrevBN = maxBorrowableBN;
+            const _userEffectiveCollateral: bigint = _userCollateral + fromBN(BN(userBorrowed).div(pBN), this.market.coinDecimals[1]);
+            const calls = [];
+            for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
+                const j = N - this.market.minBands;
+                calls.push(contract.max_borrowable(this.market.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
+            }
+            _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(998) / BigInt(1000));
+            maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.market.coinDecimals[0]));
 
-                const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
-                if (BigNumber.max(...deltaBN).lt(0.0005)) {
-                    maxBorrowableBN = maxBorrowablePrevBN;
-                    break;
-                }
-
-                if (pAvgBN === null){
-                    const _y = BigInt(await _getExpectedOdos.call(this.llamalend, this.market.coinAddresses[0], this.market.coinAddresses[1], _maxBorrowable[0], this.market.address));
-                    const yBN = toBN(_y, this.market.coinDecimals[1]);
-                    pAvgBN = maxBorrowableBN[0].div(yBN);
-                }
-
-                maxLeverageCollateralBN = maxBorrowableBN.map((mb) => mb.div(pAvgBN as BigNumber));
-                _maxLeverageCollateral = maxLeverageCollateralBN.map((mlc) => fromBN(mlc, this.market.coinDecimals[1]));
+            const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
+            if (BigNumber.max(...deltaBN).lt(0.0005)) {
+                maxBorrowableBN = maxBorrowablePrevBN;
+                break;
             }
 
-            const userEffectiveCollateralBN = BN(userCollateral).plus(BN(userBorrowed).div(pAvgBN as BigNumber));
+            if (pAvgBN === null){
+                const _y = BigInt(await _getExpectedOdos.call(this.llamalend, this.market.coinAddresses[0], this.market.coinAddresses[1], _maxBorrowable[0], this.market.address));
+                const yBN = toBN(_y, this.market.coinDecimals[1]);
+                pAvgBN = maxBorrowableBN[0].div(yBN);
+            }
 
-            const res: IDict<{
+            maxLeverageCollateralBN = maxBorrowableBN.map((mb) => mb.div(pAvgBN as BigNumber));
+            _maxLeverageCollateral = maxLeverageCollateralBN.map((mlc) => fromBN(mlc, this.market.coinDecimals[1]));
+        }
+
+        const userEffectiveCollateralBN = BN(userCollateral).plus(BN(userBorrowed).div(pAvgBN as BigNumber));
+
+        const res: IDict<{
                 maxDebt: string,
                 maxTotalCollateral: string,
                 userCollateral: string,
@@ -205,25 +205,25 @@ export class LeverageV2Module {
                 maxLeverage: string,
                 avgPrice: string,
             }> = {};
-            for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
-                const j = N - this.market.minBands;
-                res[N] = {
-                    maxDebt: formatNumber(maxBorrowableBN[j].toString(), this.market.coinDecimals[0]),
-                    maxTotalCollateral: formatNumber(maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).toString(), this.market.coinDecimals[1]),
-                    userCollateral: formatNumber(userCollateral, this.market.coinDecimals[1]),
-                    collateralFromUserBorrowed: formatNumber(BN(userBorrowed).div(pAvgBN as BigNumber).toString(), this.market.coinDecimals[1]),
-                    collateralFromMaxDebt: formatNumber(maxLeverageCollateralBN[j].toString(), this.market.coinDecimals[1]),
-                    maxLeverage: maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).div(userEffectiveCollateralBN).toString(),
-                    avgPrice: (pAvgBN as BigNumber).toString(),
-                };
-            }
+        for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
+            const j = N - this.market.minBands;
+            res[N] = {
+                maxDebt: formatNumber(maxBorrowableBN[j].toString(), this.market.coinDecimals[0]),
+                maxTotalCollateral: formatNumber(maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).toString(), this.market.coinDecimals[1]),
+                userCollateral: formatNumber(userCollateral, this.market.coinDecimals[1]),
+                collateralFromUserBorrowed: formatNumber(BN(userBorrowed).div(pAvgBN as BigNumber).toString(), this.market.coinDecimals[1]),
+                collateralFromMaxDebt: formatNumber(maxLeverageCollateralBN[j].toString(), this.market.coinDecimals[1]),
+                maxLeverage: maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).div(userEffectiveCollateralBN).toString(),
+                avgPrice: (pAvgBN as BigNumber).toString(),
+            };
+        }
 
-            return res;
-        },
-        {
-            promise: true,
-            maxAge: 60 * 1000, // 1m
-        });
+        return res;
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000, // 1m
+    });
 
     public _setSwapDataToCache = async (inputCoinAddress: string, outputCoinAddress: string, _amount: bigint, slippage: number) => {
         let swapData = await _getQuoteOdos.call(this.llamalend, inputCoinAddress, outputCoinAddress, _amount, this.market.address, true, slippage);
@@ -304,37 +304,37 @@ export class LeverageV2Module {
     }
 
     public _leverageCalcN1 = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, user?: string): Promise<bigint> => {
-            if (range > 0) this.market._checkRange(range);
-            let _stateDebt = BigInt(0);
-            if (user) {
-                const { _debt, _stablecoin: _borrowed } = await this.market._userState(user);
-                const _N = await this.market.userRange()
-                if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
-                _stateDebt = _debt;
-                if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
-            }
-            const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, user);
-            const _debt = _stateDebt + parseUnits(debt, this.market.coinDecimals[0]);
-            return await this.llamalend.contracts[this.market.controller].contract.calculate_debt_n1(_futureStateCollateral, _debt, range, this.llamalend.constantOptions);
-        },
-        {
-            promise: true,
-            maxAge: 60 * 1000, // 1m
-        });
+        if (range > 0) this.market._checkRange(range);
+        let _stateDebt = BigInt(0);
+        if (user) {
+            const { _debt, _stablecoin: _borrowed } = await this.market._userState(user);
+            const _N = await this.market.userRange()
+            if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
+            _stateDebt = _debt;
+            if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
+        }
+        const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, user);
+        const _debt = _stateDebt + parseUnits(debt, this.market.coinDecimals[0]);
+        return await this.llamalend.contracts[this.market.controller].contract.calculate_debt_n1(_futureStateCollateral, _debt, range, this.llamalend.constantOptions);
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000, // 1m
+    });
 
     public _leverageCalcN1AllRanges = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, maxN: number): Promise<bigint[]> => {
-            const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt);
-            const _debt = parseUnits(debt, this.market.coinDecimals[0]);
-            const calls = [];
-            for (let N = this.market.minBands; N <= maxN; N++) {
-                calls.push(this.llamalend.contracts[this.market.controller].multicallContract.calculate_debt_n1(_futureStateCollateral, _debt, N));
-            }
-            return await this.llamalend.multicallProvider.all(calls) as bigint[];
-        },
-        {
-            promise: true,
-            maxAge: 60 * 1000, // 1m
-        });
+        const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt);
+        const _debt = parseUnits(debt, this.market.coinDecimals[0]);
+        const calls = [];
+        for (let N = this.market.minBands; N <= maxN; N++) {
+            calls.push(this.llamalend.contracts[this.market.controller].multicallContract.calculate_debt_n1(_futureStateCollateral, _debt, N));
+        }
+        return await this.llamalend.multicallProvider.all(calls) as bigint[];
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000, // 1m
+    });
 
     public async _leverageBands(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, user?: string): Promise<[bigint, bigint]> {
         const _n1 = await this._leverageCalcN1(userCollateral, userBorrowed, debt, range, user);
@@ -784,31 +784,31 @@ export class LeverageV2Module {
     }
 
     public _leverageRepayBands = memoize( async (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, address: string): Promise<[bigint, bigint]> => {
-            address = _getAddress.call(this.llamalend, address);
-            if (!(await this.leverageRepayIsAvailable(stateCollateral, userCollateral, userBorrowed, address))) return [parseUnits(0, 0), parseUnits(0, 0)];
+        address = _getAddress.call(this.llamalend, address);
+        if (!(await this.leverageRepayIsAvailable(stateCollateral, userCollateral, userBorrowed, address))) return [parseUnits(0, 0), parseUnits(0, 0)];
 
-            const _stateRepayCollateral = parseUnits(stateCollateral, this.market.coinDecimals[1]);
-            const { _collateral: _stateCollateral, _debt: _stateDebt } = await this.market._userState(address);
-            const _N = await this.market.userRange()
-            if (_stateDebt == BigInt(0)) throw Error(`Loan for ${address} does not exist`);
-            if (_stateCollateral < _stateRepayCollateral) throw Error(`Can't use more collateral than user's position has (${_stateRepayCollateral}) > ${_stateCollateral})`);
+        const _stateRepayCollateral = parseUnits(stateCollateral, this.market.coinDecimals[1]);
+        const { _collateral: _stateCollateral, _debt: _stateDebt } = await this.market._userState(address);
+        const _N = await this.market.userRange()
+        if (_stateDebt == BigInt(0)) throw Error(`Loan for ${address} does not exist`);
+        if (_stateCollateral < _stateRepayCollateral) throw Error(`Can't use more collateral than user's position has (${_stateRepayCollateral}) > ${_stateCollateral})`);
 
-            let _n1 = parseUnits(0, 0);
-            let _n2 = parseUnits(0, 0);
-            const { _totalBorrowed: _repayExpected } = this._leverageRepayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed);
-            try {
-                _n1 = await this.llamalend.contracts[this.market.controller].contract.calculate_debt_n1(_stateCollateral - _stateRepayCollateral, _stateDebt - _repayExpected, _N);
-                _n2 = _n1 + (BigInt(_N) - BigInt(1));
-            } catch {
-                console.log("Full repayment");
-            }
+        let _n1 = parseUnits(0, 0);
+        let _n2 = parseUnits(0, 0);
+        const { _totalBorrowed: _repayExpected } = this._leverageRepayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed);
+        try {
+            _n1 = await this.llamalend.contracts[this.market.controller].contract.calculate_debt_n1(_stateCollateral - _stateRepayCollateral, _stateDebt - _repayExpected, _N);
+            _n2 = _n1 + (BigInt(_N) - BigInt(1));
+        } catch {
+            console.log("Full repayment");
+        }
 
-            return [_n2, _n1];
-        },
-        {
-            promise: true,
-            maxAge: 5 * 60 * 1000, // 5m
-        });
+        return [_n2, _n1];
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    });
 
     public async leverageRepayBands(stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, address = ""): Promise<[number, number]> {
         this._checkLeverageZap();

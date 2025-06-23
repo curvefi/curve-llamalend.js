@@ -23,7 +23,7 @@ import {
 import {IDict, TGas} from "../interfaces";
 import {_getUserCollateralCrvUsd} from "../external-api.js";
 import { ILeverageV2 } from "./interfaces/leverage.js";
-import { LeverageV2Module } from "./modules/leverageV2.js";
+import { LeverageV2Module } from "./modules";
 
 
 export class MintMarketTemplate {
