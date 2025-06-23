@@ -21,7 +21,7 @@ import {
     DIGas,
 } from "../utils";
 import {IDict, TGas} from "../interfaces";
-import {_getUserCollateralCrvUsd} from "../external-api.js";
+import { _getUserCollateralCrvUsd} from "../external-api.js";
 
 
 export class MintMarketTemplate {
@@ -474,25 +474,25 @@ export class MintMarketTemplate {
 
     public async userLoss(userAddress = ""): Promise<{ deposited_collateral: string, current_collateral_estimation: string, loss: string, loss_pct: string }> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
-        const [deposited_collateral, _current_collateral_estimation] = await Promise.all([
+        const [{total_deposit}, _current_collateral_estimation] = await Promise.all([
             _getUserCollateralCrvUsd(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
             this.llamalend.contracts[this.address].contract.get_y_up(userAddress),
         ]);
         const current_collateral_estimation = this.llamalend.formatUnits(_current_collateral_estimation, this.collateralDecimals);
 
-        if (BN(deposited_collateral).lte(0)) {
+        if (BN(total_deposit.toString()).lte(0)) {
             return {
-                deposited_collateral,
+                deposited_collateral: total_deposit.toString(),
                 current_collateral_estimation,
                 loss: "0.0",
                 loss_pct: "0.0",
             };
         }
-        const loss = BN(deposited_collateral).minus(current_collateral_estimation).toString()
-        const loss_pct = BN(loss).div(deposited_collateral).times(100).toString();
+        const loss = BN(total_deposit.toString()).minus(current_collateral_estimation).toString()
+        const loss_pct = BN(loss).div(total_deposit.toString()).times(100).toString();
 
         return {
-            deposited_collateral,
+            deposited_collateral: total_deposit.toString(),
             current_collateral_estimation,
             loss,
             loss_pct,
@@ -1785,5 +1785,64 @@ export class MintMarketTemplate {
     private async deleverageRepay(collateral: number | string, slippage = 0.1): Promise<string> {
         this._checkDeleverageZap();
         return await this._deleverageRepay(collateral, slippage, false) as string;
+    }
+
+    public async currentLeverage(userAddress = ''): Promise<string> {
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const [userCollateral, {collateral}] = await Promise.all([
+            _getUserCollateralCrvUsd(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        console.log(userCollateral)
+
+        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
+
+        return BN(collateral).div(total_deposit_from_user).toString();
+    }
+
+    public async currentPnL(userAddress = ''): Promise<Record<string, string>> {
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+
+        const calls = [
+            this.llamalend.contracts[this.controller].multicallContract.user_state(userAddress, this.llamalend.constantOptions),
+            this.llamalend.contracts[this.address].multicallContract.price_oracle(userAddress),
+        ];
+
+        const [userState, oraclePrice] = await this.llamalend.multicallProvider.all(calls) as  [bigint[],bigint];
+
+        if(!(userState || oraclePrice)) {
+            throw new Error('Multicall error')
+        }
+
+        const debt = userState[2];
+
+        const userCollateral = await _getUserCollateralCrvUsd(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress);
+        console.log(userCollateral)
+        const totalDepositUsdValueFull = userCollateral.total_deposit_usd_value;
+        const totalDepositUsdValueUser = '0'//userCollateral.total_deposit_from_user_usd_value;
+        const totalBorrowed = userCollateral.total_borrowed;
+
+        const oraclePriceFormatted = this.llamalend.formatUnits(oraclePrice, 18);
+        const debtFormatted = this.llamalend.formatUnits(debt, 18);
+
+        const {_collateral: AmmCollateral, _stablecoin: AmmBorrowed} = await this._userState(userAddress)
+         const [AmmCollateralFormatted, AmmBorrowedFormatted] = [this.llamalend.formatUnits(AmmCollateral, this.collateralDecimals), this.llamalend.formatUnits(AmmBorrowed, 18)];
+
+        const a = BN(AmmCollateralFormatted).times(oraclePriceFormatted);
+        const b = BN(totalBorrowed).minus(debtFormatted)
+
+        const currentPosition = a.plus(AmmBorrowedFormatted).plus(b);
+
+        const currentProfit = currentPosition.minus(totalDepositUsdValueFull);
+
+        const percentage = currentProfit.div(totalDepositUsdValueUser).times(100);
+
+        return {
+            currentPosition: currentPosition.toFixed(18).toString(),
+            deposited: totalDepositUsdValueUser.toString(),
+            currentProfit: currentProfit.toFixed(18).toString(),
+            percentage: percentage.toFixed(2).toString(),
+        };
     }
 }

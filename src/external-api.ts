@@ -115,13 +115,22 @@ export async function _getUsdPricesFromApi(this: Llamalend): Promise<IDict<numbe
     return priceDictByMaxTvl
 }
 
-type UserCollateral = { total_deposit_precise: string, total_deposit_from_user: number, total_deposit_usd_value: number , total_borrowed: number, total_deposit_from_user_precise: number, total_deposit_from_user_usd_value: number}
+type UserCollateral = {
+    total_deposit: number;
+    total_deposit_precise: string;
+    total_deposit_from_user: number;
+    total_deposit_usd_value: number;
+    total_borrowed: number;
+    total_deposit_from_user_precise: number;
+    total_deposit_from_user_usd_value: number;
+};
 export const _getUserCollateral = memoize(
     async (network: INetworkName, controller: string, user: string): Promise<UserCollateral> => {
         const url = `https://prices.curve.finance/v1/lending/collateral_events/${network}/${controller}/${user}`;
         const response = await fetch(url);
         const data = await response.json() as UserCollateral;
         return {
+            total_deposit: data.total_deposit,
             total_borrowed: data.total_borrowed,
             total_deposit_from_user_precise: data.total_deposit_from_user_precise, // Total deposit
             total_deposit_precise: data.total_deposit_precise,
@@ -137,11 +146,20 @@ export const _getUserCollateral = memoize(
 )
 
 export const _getUserCollateralCrvUsd = memoize(
-    async (network: INetworkName, controller: string, user: string): Promise<string> => {
+    async (network: INetworkName, controller: string, user: string): Promise<UserCollateral> => {
         const url = `https://prices.curve.finance/v1/crvusd/collateral_events/${network}/${controller}/${user}`;
         const response = await fetch(url);
-        const { total_deposit } = await response.json() as { total_deposit: string };
-        return total_deposit;
+        const data = await response.json() as UserCollateral;
+
+        return {
+            total_deposit: data.total_deposit,
+            total_borrowed: data.total_borrowed,
+            total_deposit_from_user_precise: data.total_deposit_from_user_precise, // Total deposit
+            total_deposit_precise: data.total_deposit_precise,
+            total_deposit_from_user: data.total_deposit_from_user,
+            total_deposit_usd_value: data.total_deposit_usd_value,
+            total_deposit_from_user_usd_value: data.total_deposit_from_user_usd_value,
+        };
     },
     {
         promise: true,
