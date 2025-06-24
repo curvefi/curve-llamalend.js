@@ -2,7 +2,7 @@ import { ethers,  BigNumberish, Numeric } from "ethers";
 import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
 import { ICurveContract, IDict, TGas } from "./interfaces.js";
-import { _getUsdPricesFromApi } from "./external-api.js";
+import { _getUsdPricesFromApi, _getOraclePricesFromApi } from "./external-api.js";
 import type { Llamalend } from "./llamalend.js";
 import { JsonFragment } from "ethers/lib.esm";
 import { L2Networks } from "./constants/L2Networks.js";
@@ -367,6 +367,23 @@ export const _getUsdRate = async function (this: Llamalend, assetId: string): Pr
             _usdRatesCache[assetId] = {'rate': data[assetId]['usd'] ?? 0, 'time': Date.now()};
         } catch { // TODO pay attention!
             _usdRatesCache[assetId] = {'rate': 0, 'time': Date.now()};
+        }
+    }
+
+    if (_usdRatesCache[assetId]['rate'] === 0) {
+        const originalAssetId = arguments[0];
+        const oraclePrices = await _getOraclePricesFromApi.call(this, this.constants.NETWORK_NAME);
+        
+        if (originalAssetId.toLowerCase() in oraclePrices) {
+            const oraclePriceInCrvUsd = oraclePrices[originalAssetId.toLowerCase()];
+            
+            if (oraclePriceInCrvUsd > 0) {
+                const crvUsdAddress = this.constants.ALIASES.crvUSD;
+                const crvUsdPrice = assetId.toLowerCase() === crvUsdAddress.toLowerCase() ? 1 :
+                    await _getUsdRate.call(this, crvUsdAddress);
+                
+                _usdRatesCache[assetId] = {'rate': oraclePriceInCrvUsd * crvUsdPrice, 'time': Date.now()};
+            }
         }
     }
 
