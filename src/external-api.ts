@@ -209,3 +209,13 @@ const _assembleTxOdosMemoized = memoize(
 export async function _assembleTxOdos(this: Llamalend, pathId: string): Promise<string> {
     return _assembleTxOdosMemoized(this.constants.ALIASES.leverage_zap, pathId);
 }
+
+export const _getHiddenPools = memoize(
+    () => fetch(`https://api.curve.finance/api/getHiddenPools`)
+        .then((r) => (r.json()))
+        .then((json) => (json as {data: IDict<string[]>}).data),
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    }
+)

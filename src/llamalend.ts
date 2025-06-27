@@ -79,7 +79,7 @@ import {LLAMMAS} from "./constants/llammas";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
-import {_getMarketsData} from "./external-api.js";
+import {_getHiddenPools, _getMarketsData} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
@@ -244,7 +244,7 @@ class Llamalend implements ILlamalend {
         this.options = {};
         this.constants = {
             ONE_WAY_MARKETS: {},
-            LLAMMAS: {...LLAMMAS},
+            LLAMMAS: await this._filterHiddenPools(LLAMMAS),
             COINS: {},
             DECIMALS: {},
             NETWORK_NAME: 'ethereum',
@@ -796,6 +796,11 @@ class Llamalend implements ILlamalend {
                 this.parseUnits(this.feeData.maxPriorityFeePerGas.toString(), "gwei") :
                 feeData.maxPriorityFeePerGas;
         }
+    }
+
+    async _filterHiddenPools(pools: IDict<ILlamma>): Promise<IDict<ILlamma>> {
+        const hiddenPools = (await _getHiddenPools())[this.constants.NETWORK_NAME] || [];
+        return Object.fromEntries(Object.entries(pools).filter(([id]) => !hiddenPools.includes(id))) as IDict<ILlamma>;
     }
 }
 
