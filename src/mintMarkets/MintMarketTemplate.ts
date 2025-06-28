@@ -22,6 +22,8 @@ import {
 } from "../utils";
 import {IDict, TGas} from "../interfaces";
 import {_getUserCollateralCrvUsd} from "../external-api.js";
+import { ILeverageV2 } from "./interfaces/leverage.js";
+import { LeverageV2Module } from "./modules";
 
 
 export class MintMarketTemplate {
@@ -107,6 +109,7 @@ export class MintMarketTemplate {
             createLoan: (collateral: number | string, debt: number | string, range: number, slippage?: number) => Promise<TGas>,
         }
     }
+    leverageV2: ILeverageV2
     deleverage: {
         repayStablecoins: (collateral: number | string) => Promise<{ stablecoins: string, routeIdx: number }>,
         getRouteName: (routeIdx: number) => Promise<string>,
@@ -201,6 +204,62 @@ export class MintMarketTemplate {
                 createLoan: this.leverageCreateLoanEstimateGas.bind(this),
             },
         }
+
+        const leverageV2 = new LeverageV2Module(this);
+        this.leverageV2 = {
+            hasLeverage: leverageV2.hasLeverage,
+
+            maxLeverage: leverageV2.maxLeverage,
+
+            createLoanMaxRecv: leverageV2.leverageCreateLoanMaxRecv,
+            createLoanMaxRecvAllRanges: leverageV2.leverageCreateLoanMaxRecvAllRanges,
+            createLoanExpectedCollateral: leverageV2.leverageCreateLoanExpectedCollateral,
+            createLoanPriceImpact: leverageV2.leverageCreateLoanPriceImpact,
+            createLoanMaxRange: leverageV2.leverageCreateLoanMaxRange,
+            createLoanBands: leverageV2.leverageCreateLoanBands,
+            createLoanBandsAllRanges: leverageV2.leverageCreateLoanBandsAllRanges,
+            createLoanPrices: leverageV2.leverageCreateLoanPrices,
+            createLoanPricesAllRanges: leverageV2.leverageCreateLoanPricesAllRanges,
+            createLoanHealth: leverageV2.leverageCreateLoanHealth,
+            createLoanIsApproved: leverageV2.leverageCreateLoanIsApproved,
+            createLoanApprove: leverageV2.leverageCreateLoanApprove,
+            createLoanRouteImage: leverageV2.leverageCreateLoanRouteImage,
+            createLoan: leverageV2.leverageCreateLoan,
+
+            borrowMoreMaxRecv: leverageV2.leverageBorrowMoreMaxRecv,
+            borrowMoreExpectedCollateral: leverageV2.leverageBorrowMoreExpectedCollateral,
+            borrowMorePriceImpact: leverageV2.leverageBorrowMorePriceImpact,
+            borrowMoreBands: leverageV2.leverageBorrowMoreBands,
+            borrowMorePrices: leverageV2.leverageBorrowMorePrices,
+            borrowMoreHealth: leverageV2.leverageBorrowMoreHealth,
+            borrowMoreIsApproved: leverageV2.leverageCreateLoanIsApproved,
+            borrowMoreApprove: leverageV2.leverageCreateLoanApprove,
+            borrowMoreRouteImage: leverageV2.leverageBorrowMoreRouteImage,
+            borrowMore: leverageV2.leverageBorrowMore,
+
+            repayExpectedBorrowed: leverageV2.leverageRepayExpectedBorrowed,
+            repayPriceImpact: leverageV2.leverageRepayPriceImpact,
+            repayIsFull: leverageV2.leverageRepayIsFull,
+            repayIsAvailable: leverageV2.leverageRepayIsAvailable,
+            repayBands: leverageV2.leverageRepayBands,
+            repayPrices: leverageV2.leverageRepayPrices,
+            repayHealth: leverageV2.leverageRepayHealth,
+            repayIsApproved: leverageV2.leverageRepayIsApproved,
+            repayApprove: leverageV2.leverageRepayApprove,
+            repayRouteImage: leverageV2.leverageRepayRouteImage,
+            repay: leverageV2.leverageRepay,
+
+            estimateGas: {
+                createLoanApprove: leverageV2.leverageCreateLoanApproveEstimateGas,
+                createLoan: leverageV2.leverageCreateLoanEstimateGas,
+
+                borrowMoreApprove: leverageV2.leverageCreateLoanApproveEstimateGas,
+                borrowMore: leverageV2.leverageBorrowMoreEstimateGas,
+
+                repayApprove: leverageV2.leverageRepayApproveEstimateGas,
+                repay: leverageV2.leverageRepayEstimateGas,
+            },
+        }
         this.deleverage = {
             repayStablecoins: this.deleverageRepayStablecoins.bind(this),
             getRouteName: this.deleverageGetRouteName.bind(this),
@@ -219,7 +278,7 @@ export class MintMarketTemplate {
 
     // ---------------- STATS ----------------
 
-    private statsParameters = memoize(async (): Promise<{
+    public statsParameters = memoize(async (): Promise<{
         fee: string, // %
         admin_fee: string, // %
         rate: string, // %
@@ -591,7 +650,7 @@ export class MintMarketTemplate {
 
     // ---------------- CREATE LOAN ----------------
 
-    private _checkRange(range: number): void {
+    public _checkRange(range: number): void {
         if (range < this.minBands) throw Error(`range must be >= ${this.minBands}`);
         if (range > this.maxBands) throw Error(`range must be <= ${this.maxBands}`);
     }
@@ -646,7 +705,7 @@ export class MintMarketTemplate {
         return await this.llamalend.multicallProvider.all(calls) as bigint[];
     }
 
-    private async _getPrices(_n2: bigint, _n1: bigint): Promise<string[]> {
+    public async _getPrices(_n2: bigint, _n1: bigint): Promise<string[]> {
         const contract = this.llamalend.contracts[this.address].multicallContract;
         return (await this.llamalend.multicallProvider.all([
             contract.p_oracle_down(_n2),
@@ -654,7 +713,7 @@ export class MintMarketTemplate {
         ]) as bigint[]).map((_p) => formatUnits(_p));
     }
 
-    private async _calcPrices(_n2: bigint, _n1: bigint): Promise<[string, string]> {
+    public async _calcPrices(_n2: bigint, _n1: bigint): Promise<[string, string]> {
         return [await this.calcTickPrice(Number(_n2) + 1), await this.calcTickPrice(Number(_n1))];
     }
 
@@ -1785,5 +1844,9 @@ export class MintMarketTemplate {
     private async deleverageRepay(collateral: number | string, slippage = 0.1): Promise<string> {
         this._checkDeleverageZap();
         return await this._deleverageRepay(collateral, slippage, false) as string;
+    }
+
+    public getLlamalend(): Llamalend {
+        return this.llamalend;
     }
 }
