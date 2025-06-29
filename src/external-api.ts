@@ -209,3 +209,36 @@ const _assembleTxOdosMemoized = memoize(
 export async function _assembleTxOdos(this: Llamalend, pathId: string): Promise<string> {
     return _assembleTxOdosMemoized(this.constants.ALIASES.leverage_zap, pathId);
 }
+
+export const _getOraclePricesFromApi = memoize(
+    async (network: INetworkName): Promise<IDict<number>> => {
+        const url = `https://prices.curve.finance/v1/lending/markets/${network}`;
+        const response = await fetch(url);
+        if (response.status !== 200) {
+            return {};
+        }
+        
+        const { data } = await response.json() as { data: Array<{
+            controller: string,
+            collateral_token: {
+                symbol: string,
+                address: string
+            },
+            price_oracle: number
+        }> };
+        
+        const oraclePrices: IDict<number> = {};
+        
+        for (const market of data) {
+            if (market.price_oracle && market.collateral_token && market.collateral_token.address) {
+                oraclePrices[market.collateral_token.address.toLowerCase()] = market.price_oracle;
+            }
+        }
+        
+        return oraclePrices;
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000,
+    }
+);
