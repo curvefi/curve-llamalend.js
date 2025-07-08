@@ -12,32 +12,32 @@ import {
     IMarketDataAPI,
 } from "./interfaces.js";
 // OneWayMarket ABIs
-import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" assert { type: 'json' };
-import ERC20ABI from './constants/abis/ERC20.json' assert {type: 'json'};
-import ERC4626ABI from './constants/abis/ERC4626.json' assert {type: 'json'};
-import LlammaABI from './constants/abis/Llamma.json' assert {type: 'json'};
-import ControllerABI from './constants/abis/Controller.json' assert {type: 'json'};
-import MonetaryPolicyABI from './constants/abis/MonetaryPolicy.json' assert {type: 'json'};
-import VaultABI from './constants/abis/Vault.json' assert {type: 'json'};
-import GaugeABI from './constants/abis/GaugeV5.json' assert {type: 'json'};
-import SidechainGaugeABI from './constants/abis/SidechainGauge.json' assert {type: 'json'};
-import GaugeControllerABI from './constants/abis/GaugeController.json' assert {type: 'json'};
-import GaugeFactoryMainnetABI from './constants/abis/GaugeFactoryMainnet.json' assert {type: 'json'};
-import GaugeFactorySidechainABI from './constants/abis/GaugeFactorySidechain.json' assert {type: 'json'};
-import MinterABI from './constants/abis/Minter.json' assert {type: 'json'};
-import LeverageZapABI from './constants/abis/LeverageZap.json' assert {type: 'json'};
-import gasOracleABI from './constants/abis/gas_oracle_optimism.json' assert {type: 'json'};
-import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' assert {type: 'json'};
+import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: 'json'};
+import ERC20ABI from './constants/abis/ERC20.json' with {type: 'json'};
+import ERC4626ABI from './constants/abis/ERC4626.json' with {type: 'json'};
+import LlammaABI from './constants/abis/Llamma.json' with {type: 'json'};
+import ControllerABI from './constants/abis/Controller.json' with {type: 'json'};
+import MonetaryPolicyABI from './constants/abis/MonetaryPolicy.json' with {type: 'json'};
+import VaultABI from './constants/abis/Vault.json' with {type: 'json'};
+import GaugeABI from './constants/abis/GaugeV5.json' with {type: 'json'};
+import SidechainGaugeABI from './constants/abis/SidechainGauge.json' with {type: 'json'};
+import GaugeControllerABI from './constants/abis/GaugeController.json' with {type: 'json'};
+import GaugeFactoryMainnetABI from './constants/abis/GaugeFactoryMainnet.json' with {type: 'json'};
+import GaugeFactorySidechainABI from './constants/abis/GaugeFactorySidechain.json' with {type: 'json'};
+import MinterABI from './constants/abis/Minter.json' with {type: 'json'};
+import LeverageZapABI from './constants/abis/LeverageZap.json' with {type: 'json'};
+import gasOracleABI from './constants/abis/gas_oracle_optimism.json' with {type: 'json'};
+import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' with {type: 'json'};
 // crvUSD ABIs
-import llammaABI from "./constants/abis/crvUSD/llamma.json" assert { type: 'json'};
-import controllerABI from "./constants/abis/crvUSD/controller.json" assert { type: 'json'};
+import llammaABI from "./constants/abis/crvUSD/llamma.json" with {type: 'json'};
+import controllerABI from "./constants/abis/crvUSD/controller.json" with {type: 'json'};
 import controllerV2ABI from "./constants/abis/crvUSD/controller_v2.json";
-import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" assert { type: 'json'};
-import FactoryABI from "./constants/abis/crvUSD/Factory.json" assert { type: 'json'};
-import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" assert { type: 'json'};
-import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" assert { type: 'json'};
-import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" assert { type: 'json'};
-import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" assert { type: 'json'};
+import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" with {type: 'json'};
+import FactoryABI from "./constants/abis/crvUSD/Factory.json" with {type: 'json'};
+import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" with {type: 'json'};
+import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" with {type: 'json'};
+import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: 'json'};
+import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {type: 'json'};
 
 import {
     ALIASES_ETHEREUM,
