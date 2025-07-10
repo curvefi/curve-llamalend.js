@@ -24,7 +24,7 @@ import {
 } from "../utils.js";
 import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket} from "../interfaces.js";
 import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral, _getMarketsData } from "../external-api.js";
-import ERC20Abi from '../constants/abis/ERC20.json' assert { type: 'json' };
+import ERC20Abi from '../constants/abis/ERC20.json' with {type: 'json'};
 import {cacheKey, cacheStats} from "../cache/index.js";
 
 
