@@ -79,7 +79,7 @@ import {LLAMMAS} from "./constants/llammas";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
-import {_getMarketsData} from "./external-api.js";
+import {_getMarketsData, _getHiddenPools} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
@@ -529,6 +529,11 @@ class Llamalend implements ILlamalend {
         this.feeData = { ...this.feeData, ...customFeeData };
     }
 
+    async _filterHiddenMarkets(markets: IDict<IOneWayMarket>): Promise<IDict<IOneWayMarket>> {
+        const hiddenMarkets = (await _getHiddenPools() as any)[this.constants.NETWORK_NAME] || [];
+        return Object.fromEntries(Object.entries(markets).filter(([id]) => !hiddenMarkets.includes(id))) as IDict<IOneWayMarket>;
+    }
+
     getLendMarketList = () => Object.keys(this.constants.ONE_WAY_MARKETS);
 
     getMintMarketList = () => Object.keys(this.constants.LLAMMAS);
@@ -720,6 +725,8 @@ class Llamalend implements ILlamalend {
             }
         })
 
+        this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
+
         await this.fetchStats(amms, controllers, vaults, borrowed_tokens, collateral_tokens);
     }
 
@@ -767,6 +774,8 @@ class Llamalend implements ILlamalend {
                 collateral_token: COIN_DATA[collateral_tokens[index]],
             }
         })
+
+        this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
     }
 
     formatUnits(value: BigNumberish, unit?: string | Numeric): string {
