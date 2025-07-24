@@ -22,7 +22,7 @@ import {
     DIGas,
     smartNumber,
 } from "../utils.js";
-import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket} from "../interfaces.js";
+import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket, IPartialFrac} from "../interfaces.js";
 import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral, _getMarketsData } from "../external-api.js";
 import ERC20Abi from '../constants/abis/ERC20.json' with {type: 'json'};
 import {cacheKey, cacheStats} from "../cache/index.js";
@@ -82,6 +82,8 @@ export class LendMarketTemplate {
         liquidate: (address: string, slippage?: number) => Promise<TGas>,
         selfLiquidateApprove: () => Promise<TGas>,
         selfLiquidate: (slippage?: number) => Promise<TGas>,
+        partialSelfLiquidateApprove: (partialFrac: IPartialFrac) => Promise<TGas>,
+        partialSelfLiquidate: (partialFrac: IPartialFrac, slippage?: number) => Promise<TGas>,
     };
     stats: {
         parameters: () => Promise<{
@@ -265,6 +267,8 @@ export class LendMarketTemplate {
             liquidate: this.liquidateEstimateGas.bind(this),
             selfLiquidateApprove: this.selfLiquidateApproveEstimateGas.bind(this),
             selfLiquidate: this.selfLiquidateEstimateGas.bind(this),
+            partialSelfLiquidateApprove: this.partialSelfLiquidateApproveEstimateGas.bind(this),
+            partialSelfLiquidate: this.partialSelfLiquidateEstimateGas.bind(this),
         }
         this.stats = {
             parameters: this.statsParameters.bind(this),
@@ -2043,9 +2047,32 @@ export class LendMarketTemplate {
     public async tokensToLiquidate(address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const _tokens = await this.llamalend.contracts[this.addresses.controller].contract.tokens_to_liquidate(address, this.llamalend.constantOptions) as bigint;
-
         return formatUnits(_tokens, this.borrowed_token.decimals)
     }
+
+    public async calcPartialFrac(amount: TAmount, address = ""): Promise<IPartialFrac> {
+        address = _getAddress.call(this.llamalend, address);
+        const tokensToLiquidate = await this.tokensToLiquidate(address);
+        
+        const amountBN = BN(amount);
+        const tokensToLiquidateBN = BN(tokensToLiquidate);
+        
+        if (amountBN.gt(tokensToLiquidateBN)) throw Error("Amount cannot be greater than total tokens to liquidate");
+        if (amountBN.lte(0)) throw Error("Amount must be greater than 0");
+        
+        // Calculate frac = amount / tokensToLiquidate * 10**18
+        // 100% = 10**18
+        const ONE_E18 = BN(10).pow(18);
+        const fracDecimalBN = amountBN.div(tokensToLiquidateBN);
+        const frac = fromBN(fracDecimalBN.times(ONE_E18));
+        
+        return {
+            frac: frac.toString(),
+            fracDecimal: fracDecimalBN.toString(),
+            amount: amountBN.toString(),
+        };
+    }
+
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
@@ -2080,6 +2107,43 @@ export class LendMarketTemplate {
         return (await contract.liquidate(address, _minAmount, { ...this.llamalend.options, gasLimit })).hash
     }
 
+    private async _partialLiquidate(address: string, partialFrac: IPartialFrac, slippage: number, estimateGas: boolean): Promise<string | TGas> {
+        const { borrowed, debt: currentDebt } = await this.userState(address);
+        if (slippage <= 0) throw Error("Slippage must be > 0");
+        if (slippage > 100) throw Error("Slippage must be <= 100");
+        if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
+        if (Number(borrowed) === 0) throw Error(`User ${address} is not in liquidation mode`);
+        
+        const frac = partialFrac.frac;
+        
+        const amountBN = BN(partialFrac.amount); // approved amount
+        const minAmountBN = amountBN.times(100 - slippage).div(100);
+        const _minAmount = fromBN(minAmountBN);
+        
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const gas = (await contract.liquidate_extended.estimateGas(
+            address, 
+            _minAmount, 
+            frac, 
+            this.llamalend.constants.ZERO_ADDRESS,
+            [],
+            this.llamalend.constantOptions
+        ));
+        
+        if (estimateGas) return smartNumber(gas);
+
+        await this.llamalend.updateFeeData();
+        const gasLimit = _mulBy1_3(DIGas(gas));
+        return (await contract.liquidate_extended(
+            address, 
+            _minAmount, 
+            frac, 
+            this.llamalend.constants.ZERO_ADDRESS,
+            [],
+            { ...this.llamalend.options, gasLimit }
+        )).hash;
+    }
+
     public async liquidateEstimateGas(address: string, slippage = 0.1): Promise<TGas> {
         if (!(await this.liquidateIsApproved(address))) throw Error("Approval is needed for gas estimation");
         return await this._liquidate(address, slippage, true) as TGas;
@@ -2112,6 +2176,30 @@ export class LendMarketTemplate {
     public async selfLiquidate(slippage = 0.1): Promise<string> {
         await this.selfLiquidateApprove();
         return await this._liquidate(this.llamalend.signerAddress, slippage, false) as string;
+    }
+
+    // ---------------- PARTIAL SELF-LIQUIDATE ----------------
+
+    public async partialSelfLiquidateIsApproved(partialFrac: IPartialFrac): Promise<boolean> {
+        return await hasAllowance.call(this.llamalend, [this.addresses.borrowed_token], [partialFrac.amount], this.llamalend.signerAddress, this.addresses.controller);
+    }
+
+    private async partialSelfLiquidateApproveEstimateGas(partialFrac: IPartialFrac): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.borrowed_token], [partialFrac.amount], this.addresses.controller);
+    }
+
+    public async partialSelfLiquidateApprove(partialFrac: IPartialFrac): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.addresses.borrowed_token], [partialFrac.amount], this.addresses.controller);
+    }
+
+    public async partialSelfLiquidateEstimateGas(partialFrac: IPartialFrac, slippage = 0.1): Promise<TGas> {
+        if (!(await this.partialSelfLiquidateIsApproved(partialFrac))) throw Error("Approval is needed for gas estimation");
+        return await this._partialLiquidate(this.llamalend.signerAddress, partialFrac, slippage, true) as TGas;
+    }
+
+    public async partialSelfLiquidate(partialFrac: IPartialFrac, slippage = 0.1): Promise<string> {
+        await this.partialSelfLiquidateApprove(partialFrac);
+        return await this._partialLiquidate(this.llamalend.signerAddress, partialFrac, slippage, false) as string;
     }
 
     // ---------------- LEVERAGE CREATE LOAN ----------------

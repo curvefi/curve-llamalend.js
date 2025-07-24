@@ -18,6 +18,12 @@ export interface ICurveContract {
 export type TAmount = number | string
 export type TGas = number | number[]
 
+export interface IPartialFrac {
+    frac: string;
+    fracDecimal: string;
+    amount: string;
+}
+
 export interface ILlamma {
     amm_address: string,
     controller_address: string,
