@@ -2062,10 +2062,8 @@ export class LendMarketTemplate {
         
         // Calculate frac = amount / tokensToLiquidate * 10**18
         // 100% = 10**18
-        const ONE_E18 = BN(10).pow(18);
         const fracDecimalBN = amountBN.div(tokensToLiquidateBN);
-        const frac = fromBN(fracDecimalBN.times(ONE_E18));
-        
+        const frac = fromBN(fracDecimalBN);
         return {
             frac: frac.toString(),
             fracDecimal: fracDecimalBN.toString(),

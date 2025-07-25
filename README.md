@@ -828,20 +828,20 @@ import llamalend from "@curvefi/llamalend-api";
     // 301.533523886491869218
 
     const fraction = await lendMarket.calcPartialFrac(140); // <- 140 - amount (should be less then lendMarket.tokensToLiquidate)
-    // {frac: '472880873283878292070000000000000000', fracDecimal: '0.47288087328387829207', amount: 200}
+    // {frac: '472880873283878292', fracDecimal: '0.47288087328387829207', amount: 140}
     // 
 
     
     await lendMarket.partialSelfLiquidateIsApproved(fraction);
     // false
-    await lendMarket.partialSelfLiquidateApproveEstimateGas(fraction);
+    await lendMarket.partialSelfLiquidateApprove(fraction);
     // []
     await lendMarket.partialSelfLiquidateIsApproved(fraction);
     // true
     await lendMarket.partialSelfLiquidate(fraction, 0.1); // slippage = 0.1 %
 
-    // Wallet balances: { borrowed: '0.0', collateral: '1.0' }
-    // State: { collateral: '0.0', borrowed: '0.0', debt: '0.0' }
+    // Wallet balances: { borrowed: '0', collateral: '0.7' }
+    // State: { collateral: '0.6', borrowed: '1300', debt: '1500' }
 })()
 ```
 
