@@ -833,9 +833,11 @@ import llamalend from "@curvefi/llamalend-api";
 
     
     await lendMarket.partialSelfLiquidateIsApproved(fraction);
-    // true
+    // false
     await lendMarket.partialSelfLiquidateApproveEstimateGas(fraction);
     // []
+    await lendMarket.partialSelfLiquidateIsApproved(fraction);
+    // true
     await lendMarket.partialSelfLiquidate(fraction, 0.1); // slippage = 0.1 %
 
     // Wallet balances: { borrowed: '0.0', collateral: '1.0' }

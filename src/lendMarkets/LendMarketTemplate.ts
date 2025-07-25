@@ -2115,9 +2115,11 @@ export class LendMarketTemplate {
         if (Number(borrowed) === 0) throw Error(`User ${address} is not in liquidation mode`);
         
         const frac = partialFrac.frac;
+        const fracBN = BN(partialFrac.fracDecimal);
         
-        const amountBN = BN(partialFrac.amount); // approved amount
-        const minAmountBN = amountBN.times(100 - slippage).div(100);
+        const borrowedBN = BN(borrowed);
+        const expectedBorrowedBN = borrowedBN.times(fracBN);
+        const minAmountBN = expectedBorrowedBN.times(100 - slippage).div(100);
         const _minAmount = fromBN(minAmountBN);
         
         const contract = this.llamalend.contracts[this.addresses.controller].contract;
