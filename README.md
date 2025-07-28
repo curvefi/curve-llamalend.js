@@ -807,6 +807,44 @@ import llamalend from "@curvefi/llamalend-api";
 })()
 ```
 
+### Partial self-liquidation for lendMarket
+```ts
+(async () => {
+    await llamalend.init('JsonRpc', {});
+
+    const lendMarket = llamalend.getLendMarket('one-way-market-0');
+
+    // Wallet balances: {
+    //     borrowed: '301.533523886491869218',
+    //     collateral: '0.860611976623971606'
+    // }
+    // State: {
+    //     collateral: '0.139388023376028394',
+    //     borrowed: '2751.493405530582315609',
+    //     debt: '3053.026929417074184827'
+    // }
+    
+    await lendMarket.tokensToLiquidate();
+    // 301.533523886491869218
+
+    const fraction = await lendMarket.calcPartialFrac(140); // <- 140 - amount (should be less then lendMarket.tokensToLiquidate)
+    // {frac: '472880873283878292', fracDecimal: '0.47288087328387829207', amount: 140}
+    // 
+
+    
+    await lendMarket.partialSelfLiquidateIsApproved(fraction);
+    // false
+    await lendMarket.partialSelfLiquidateApprove(fraction);
+    // []
+    await lendMarket.partialSelfLiquidateIsApproved(fraction);
+    // true
+    await lendMarket.partialSelfLiquidate(fraction, 0.1); // slippage = 0.1 %
+
+    // Wallet balances: { borrowed: '0', collateral: '0.7' }
+    // State: { collateral: '0.6', borrowed: '1300', debt: '1500' }
+})()
+```
+
 ### Liquidation for lendMarket
 ```ts
 (async () => {
