@@ -247,7 +247,7 @@ export const _ensureAllowance = async function (this: Llamalend, coins: string[]
             const _approveAmount = isMax ? MAX_ALLOWANCE : _amounts[i];
             await this.updateFeeData();
 
-            if (allowance[i] > parseUnits("0")) {
+            if (_allowance[i] > parseUnits("0")) {
                 const gasLimit = _mulBy1_3(DIGas(await contract.approve.estimateGas(spender, parseUnits("0"), this.constantOptions)));
                 const resetTx = await contract.approve(spender, parseUnits("0"), { ...this.options, gasLimit });
                 txHashes.push(resetTx.hash);
