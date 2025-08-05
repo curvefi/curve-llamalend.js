@@ -173,9 +173,10 @@ export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken:
     if (ethers.getAddress(fromToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") fromToken = "0x0000000000000000000000000000000000000000";
     if (ethers.getAddress(toToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") toToken = "0x0000000000000000000000000000000000000000";
 
+    //&blacklist=${ethers.getAddress(blacklist)} - tmp fix
     const url = `https://prices.curve.finance/odos/quote?chain_id=${this.chainId}&from_address=${ethers.getAddress(fromToken)}` +
         `&to_address=${ethers.getAddress(toToken)}&amount=${_amount.toString()}&slippage=${slippage}&pathVizImage=${pathVizImage}` +
-        `&caller_address=${ethers.getAddress(this.constants.ALIASES.leverage_zap)}&blacklist=${ethers.getAddress(blacklist)}`;
+        `&caller_address=${ethers.getAddress(this.constants.ALIASES.leverage_zap)}`;
 
     const response = await fetch(url, {  headers: {"accept": "application/json"} });
     if (response.status !== 200) {
