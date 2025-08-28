@@ -3134,4 +3134,30 @@ export class LendMarketTemplate {
             percentage: percentage.toFixed(2).toString(),
         };
     }
+
+    public async userBoost(address = ""): Promise<string> {
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
+            throw Error(`${this.name} doesn't have gauge`);
+        }
+        if (this.vaultRewardsOnly()) {
+            throw Error(`${this.name} has Rewards-Only Gauge. Use stats.rewardsApy instead`);
+        }
+        address = _getAddress.call(this.llamalend, address);
+
+        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
+        const [workingBalanceBN, balanceBN] = (await this.llamalend.multicallProvider.all([
+            gaugeContract.working_balances(address),
+            gaugeContract.balanceOf(address),
+        ]) as bigint[]).map((value: bigint) => toBN(value));
+
+        if (balanceBN.isZero()) {
+            return '1.0';
+        }
+
+        const boostBN = workingBalanceBN.div(0.4).div(balanceBN);
+        if (boostBN.lt(1)) return '1.0';
+        if (boostBN.gt(2.5)) return '2.5';
+
+        return boostBN.toFixed(4).replace(/([0-9])0+$/, '$1');
+    }
 }
