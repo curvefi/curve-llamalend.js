@@ -90,6 +90,7 @@ export class MintMarketTemplate {
         balances: (address?: string) => Promise<{ stablecoin: string, collateral: string }>,
     };
     leverage: {
+        maxLeverage: (N?: number) => Promise<string>,
         createLoanMaxRecv: (collateral: number | string, range: number) => Promise<{ maxBorrowable: string, maxCollateral: string, leverage: string, routeIdx: number }>,
         createLoanMaxRecvAllRanges: (collateral: number | string) => Promise<IDict<{ maxBorrowable: string, maxCollateral: string, leverage: string, routeIdx: number }>>,
         createLoanCollateral: (userCollateral: number | string, debt: number | string) => Promise<{ collateral: string, leverage: string, routeIdx: number }>,
@@ -185,6 +186,7 @@ export class MintMarketTemplate {
             balances: this.walletBalances.bind(this),
         }
         this.leverage = {
+            maxLeverage: this.maxLeverage.bind(this),
             createLoanMaxRecv: this.leverageCreateLoanMaxRecv.bind(this),
             createLoanMaxRecvAllRanges: this.leverageCreateLoanMaxRecvAllRanges.bind(this),
             createLoanCollateral: this.leverageCreateLoanCollateral.bind(this),
@@ -1686,6 +1688,33 @@ export class MintMarketTemplate {
         this._checkLeverageZap();
         await this.createLoanApprove(collateral);
         return await this._leverageCreateLoan(collateral, debt, range, slippage, false) as string;
+    }
+
+    private async _get_k_effective_BN(N: number): Promise<BigNumber> {
+        // d_k_effective: uint256 = (1 - loan_discount) * sqrt((A-1)/A) / N
+        // k_effective = d_k_effective * sum_{0..N-1}(((A-1) / A)**k)
+        const { loan_discount } = await this.statsParameters();
+        console.log("loan_discount", loan_discount);
+        const A = this.A;
+        console.log("A", A);
+        const A_BN = BN(A);
+        const A_ratio_BN = A_BN.minus(1).div(A_BN);
+        console.log("A_ratio_BN", A_ratio_BN, A_ratio_BN.toString());
+
+        const d_k_effective_BN = BN(100).minus(loan_discount).div(100).times(A_ratio_BN.sqrt()).div(N);
+        let S = BN(0);
+        for (let n = 0; n < N; n++) {
+            S = S.plus(A_ratio_BN.pow(n))
+        }
+
+        return d_k_effective_BN.times(S);
+    }
+
+    private async maxLeverage(N: number = 4): Promise<string> {
+        // max_leverage = 1 / (k_effective - 1)
+        const k_effective_BN = await this._get_k_effective_BN(N);
+
+        return BN(1).div(BN(1).minus(k_effective_BN)).toString()
     }
 
     // ---------------- DELEVERAGE REPAY ----------------
