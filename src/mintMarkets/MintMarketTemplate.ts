@@ -1694,12 +1694,9 @@ export class MintMarketTemplate {
         // d_k_effective: uint256 = (1 - loan_discount) * sqrt((A-1)/A) / N
         // k_effective = d_k_effective * sum_{0..N-1}(((A-1) / A)**k)
         const { loan_discount } = await this.statsParameters();
-        console.log("loan_discount", loan_discount);
         const A = this.A;
-        console.log("A", A);
         const A_BN = BN(A);
         const A_ratio_BN = A_BN.minus(1).div(A_BN);
-        console.log("A_ratio_BN", A_ratio_BN, A_ratio_BN.toString());
 
         const d_k_effective_BN = BN(100).minus(loan_discount).div(100).times(A_ratio_BN.sqrt()).div(N);
         let S = BN(0);
