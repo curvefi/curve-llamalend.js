@@ -891,6 +891,45 @@ import llamalend from "@curvefi/llamalend-api";
 })()
 ```
 
+### Force Update User State for lendMarket
+
+After executing certain transactions, it's recommended to force update the user's state in the cache to ensure data consistency:
+
+```ts
+// Methods after which you should call forceUpdateUserState:
+// - createLoan()
+// - leverage.createLoan()
+// - borrowMore()
+// - partialSelfLiquidate()
+// - repay()
+
+// Basic usage (after successful transaction):
+const txHash = await lendMarket.createLoan(0.5, 1000, 5);
+// Wait for transaction to be mined and confirmed
+await lendMarket.forceUpdateUserState(txHash);
+
+// With specific user address:
+await lendMarket.forceUpdateUserState(txHash, "0x123...");
+
+// The method sends a request with new_tx parameter and clears the cache
+// to get fresh user state data
+// Important: Only call after successful transaction confirmation
+```
+
+**Why use forceUpdateUserState?**
+- Ensures data consistency after successful transactions
+- Clears cached user state data
+- Forces fresh API request with transaction hash
+- Prevents stale data issues
+- **Important**: Only call after transaction is successfully mined and confirmed
+
+**When to use:**
+- After `createLoan()` - when creating a new loan
+- After `leverage.createLoan()` - when creating a leveraged position
+- After `borrowMore()` - when increasing loan amount
+- After `partialSelfLiquidate()` - when partially liquidating position
+- After `repay()` - when repaying loan
+
 ### User loss for lendMarket
 ```ts
 (async () => {
@@ -2361,3 +2400,4 @@ import llamalend from "@curvefi/llamalend-api";
     //     '50': [ '759.898822708156242647', '1560.282492846180089068' ]
     // }
 ```
+
