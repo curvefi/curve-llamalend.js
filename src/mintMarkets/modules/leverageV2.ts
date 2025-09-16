@@ -238,9 +238,8 @@ export class LeverageV2Module {
         const key = `${inputCoinAddress}-${_amount}`;
         if (!(key in this.swapDataCache)) throw Error(
             "You must call corresponding `expected` method first " +
-            "(leverage.createLoanExpectedCollateral, leverage.borrowMoreExpectedCollateral or leverage.repayExpectedBorrowed)"
+            "(leverageV2.createLoanExpectedCollateral, leverageV2.borrowMoreExpectedCollateral or leverageV2.repayExpectedBorrowed)"
         );
-
         return this.swapDataCache[key]
     }
 

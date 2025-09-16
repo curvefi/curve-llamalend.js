@@ -20,7 +20,7 @@ import {
     _mulBy1_3,
     DIGas,
 } from "../utils";
-import {IDict, TGas} from "../interfaces";
+import {IDict, ILlamma, TGas} from "../interfaces";
 import {_getUserCollateralCrvUsd} from "../external-api.js";
 import { ILeverageV2 } from "./interfaces/leverage.js";
 import { LeverageV2Module } from "./modules";
@@ -126,10 +126,8 @@ export class MintMarketTemplate {
         }
     }
 
-    constructor(id: string, llamalend: Llamalend) {
+    constructor(id: string, llammaData: ILlamma, llamalend: Llamalend) {
         this.llamalend = llamalend;
-        const llammaData = this.llamalend.constants.LLAMMAS[id];
-
         this.id = id;
         this.address = llammaData.amm_address;
         this.controller = llammaData.controller_address;

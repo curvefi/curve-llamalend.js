@@ -81,6 +81,8 @@ import {createCall, handleMultiCallResponse} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
 import {_getMarketsData, _getHiddenPools} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
+import {MintMarketTemplate} from "./mintMarkets";
+import {LendMarketTemplate} from "./lendMarkets";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
@@ -177,6 +179,8 @@ class Llamalend implements ILlamalend {
     signerAddress: string;
     chainId: IChainId;
     contracts: { [index: string]: ICurveContract };
+    mintMarkets: { [addres: string]: MintMarketTemplate };
+    lendMarkets: { [addres: string]: LendMarketTemplate };
     feeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number };
     constantOptions: { gasLimit: number };
     options: { gasPrice?: number | bigint, maxFeePerGas?: number | bigint, maxPriorityFeePerGas?: number | bigint };
@@ -204,6 +208,8 @@ class Llamalend implements ILlamalend {
         this.chainId = 1;
         this.multicallProvider = null as unknown as MulticallProvider;
         this.contracts = {};
+        this.mintMarkets = {};
+        this.lendMarkets = {};
         this.feeData = {}
         this.constantOptions = { gasLimit: 12000000 }
         this.options = {};
