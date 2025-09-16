@@ -238,9 +238,8 @@ export class LeverageV2Module {
         const key = `${inputCoinAddress}-${_amount}`;
         if (!(key in this.swapDataCache)) throw Error(
             "You must call corresponding `expected` method first " +
-            "(leverage.createLoanExpectedCollateral, leverage.borrowMoreExpectedCollateral or leverage.repayExpectedBorrowed)"
+            "(leverageV2.createLoanExpectedCollateral, leverageV2.borrowMoreExpectedCollateral or leverageV2.repayExpectedBorrowed)"
         );
-
         return this.swapDataCache[key]
     }
 
@@ -494,7 +493,7 @@ export class LeverageV2Module {
         const _userBorrowed = parseUnits(userBorrowed, this.market.coinDecimals[0]);
         const _debt = parseUnits(debt, this.market.coinDecimals[0]);
         const swapData = this._getSwapDataFromCache(this.market.coinAddresses[0], _debt + _userBorrowed);
-        if (slippage !== swapData.slippage) throw Error(`You must call leverage.createLoanExpectedCollateral() with slippage=${slippage} first`);
+        if (slippage !== swapData.slippage) throw Error(`You must call leverageV2.createLoanExpectedCollateral() with slippage=${slippage} first`);
         const calldata = await _assembleTxOdos.call(this.llamalend, swapData.pathId as string);
         const contract = this.llamalend.contracts[this.market.controller].contract;
         const gas = await contract.create_loan_extended.estimateGas(
@@ -666,7 +665,7 @@ export class LeverageV2Module {
         const _userBorrowed = parseUnits(userBorrowed, this.market.coinDecimals[0]);
         const _debt = parseUnits(debt, this.market.coinDecimals[0]);
         const swapData = this._getSwapDataFromCache(this.market.coinAddresses[0], _debt + _userBorrowed);
-        if (slippage !== swapData.slippage) throw Error(`You must call leverage.borrowMoreExpectedCollateral() with slippage=${slippage} first`)
+        if (slippage !== swapData.slippage) throw Error(`You must call leverageV2.borrowMoreExpectedCollateral() with slippage=${slippage} first`)
         const calldata = await _assembleTxOdos.call(this.llamalend, swapData.pathId as string);
         const contract = this.llamalend.contracts[this.market.controller].contract;
         const gas = await contract.borrow_more_extended.estimateGas(
@@ -894,7 +893,7 @@ export class LeverageV2Module {
         let calldata = "0x";
         if (_stateCollateral + _userCollateral > BigInt(0)) {
             const swapData = this._getSwapDataFromCache(this.market.coinAddresses[1], _stateCollateral + _userCollateral);
-            if (slippage !== swapData.slippage) throw Error(`You must call leverage.repayExpectedBorrowed() with slippage=${slippage} first`)
+            if (slippage !== swapData.slippage) throw Error(`You must call leverageV2.repayExpectedBorrowed() with slippage=${slippage} first`)
             calldata = await _assembleTxOdos.call(this.llamalend, swapData.pathId as string);
         }
 
