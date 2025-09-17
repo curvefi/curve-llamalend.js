@@ -23,7 +23,7 @@ import {
     smartNumber,
 } from "../utils.js";
 import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket, IPartialFrac} from "../interfaces.js";
-import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral, _getMarketsData } from "../external-api.js";
+import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral, _getUserCollateralForce, _getMarketsData } from "../external-api.js";
 import ERC20Abi from '../constants/abis/ERC20.json' with {type: 'json'};
 import {cacheKey, cacheStats} from "../cache/index.js";
 
@@ -3159,5 +3159,17 @@ export class LendMarketTemplate {
         if (boostBN.gt(2.5)) return '2.5';
 
         return boostBN.toFixed(4).replace(/([0-9])0+$/, '$1');
+    }
+
+    public async forceUpdateUserState(newTx: string, userAddress?: string): Promise<void> {
+        const address = userAddress || this.llamalend.signerAddress;
+        if (!address) throw Error("Need to connect wallet or pass address into args");
+        
+        await _getUserCollateralForce(
+            this.llamalend.constants.NETWORK_NAME,
+            this.addresses.controller,
+            address,
+            newTx
+        );
     }
 }
