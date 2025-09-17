@@ -231,6 +231,7 @@ export class LeverageV2Module {
             swapData = await _getQuoteOdos.call(this.llamalend, inputCoinAddress, outputCoinAddress, _amount, this.market.address, true, slippage);
         }
         const key = `${inputCoinAddress}-${_amount}`;
+        console.log(key, inputCoinAddress, _amount);
         this.swapDataCache[key] = { ...swapData, slippage };
     }
 
