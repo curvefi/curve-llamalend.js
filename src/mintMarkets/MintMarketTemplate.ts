@@ -71,6 +71,7 @@ export class MintMarketTemplate {
             fee: string, // %
             admin_fee: string, // %
             rate: string, // %
+            future_rate: string, // %
             liquidation_discount: string, // %
             loan_discount: string, // %
         }>,
