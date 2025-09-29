@@ -34,7 +34,7 @@ import { useState, useMemo } from 'react'
 import { providers } from 'ethers'
 import Onboard from 'bnc-onboard'
 import type { Wallet } from 'bnc-onboard/dist/src/interfaces'
-import llamalend from '@curvefi/lending-api'
+import llamalend from '@curvefi/llamalend-api'
     ...
 
 const WalletProvider: FunctionComponent = ({ children }) => {
@@ -79,7 +79,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { providers } from 'ethers'
 import Onboard from 'bnc-onboard'
 import type { Wallet } from 'bnc-onboard/dist/src/interfaces'
-import llamalend from '@curvefi/lending-api'
+import llamalend from '@curvefi/llamalend-api'
 
     ...
 
