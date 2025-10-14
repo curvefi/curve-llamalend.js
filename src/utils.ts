@@ -2,7 +2,7 @@ import { ethers,  BigNumberish, Numeric } from "ethers";
 import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
 import { ICurveContract, IDict, TGas } from "./interfaces.js";
-import { _getUsdPricesFromApi } from "./external-api.js";
+import { _getUsdPricesFromApi } from "./cached.js";
 import type { Llamalend } from "./llamalend.js";
 import { JsonFragment } from "ethers/lib.esm";
 import { L2Networks } from "./constants/L2Networks.js";
@@ -286,7 +286,7 @@ export const ensureAllowance = async function (this: Llamalend, coins: string[],
 const _usdRatesCache: IDict<{ rate: number, time: number }> = {}
 export const _getUsdRate = async function (this: Llamalend, assetId: string): Promise<number> {
     if (this.chainId === 1 && assetId.toLowerCase() === '0x8762db106b2c2a0bccb3a80d1ed41273552616e8') return 0; // RSR
-    const pricesFromApi = await _getUsdPricesFromApi.call(this);
+    const pricesFromApi = await _getUsdPricesFromApi(this.constants.NETWORK_NAME);
     if (assetId.toLowerCase() in pricesFromApi) return pricesFromApi[assetId.toLowerCase()];
 
     if (assetId === 'USD' || (this.chainId === 137 && (assetId.toLowerCase() === this.constants.COINS.am3crv.toLowerCase()))) return 1

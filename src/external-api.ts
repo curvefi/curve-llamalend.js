@@ -6,40 +6,27 @@ import {
     IExtendedPoolDataFromApi,
     IMarketData,
     INetworkName,
-    IPoolFactory,
     IQuoteOdos,
     IResponseApi,
+    IPoolType,
 } from "./interfaces";
 
-
-const _getPoolsFromApi = memoize(
-    async (network: INetworkName, poolFactory: IPoolFactory ): Promise<IExtendedPoolDataFromApi> => {
-        const response = await fetch(`https://api.curve.finance/api/getPools/${network}/${poolFactory}`);
-        const { data } = await response.json() as { data?: IExtendedPoolDataFromApi, success: boolean };
-        return data ?? { poolData: [], tvl: 0, tvlAll: 0 };
-    },
-    {
-        promise: true,
-        maxAge: 5 * 60 * 1000, // 5m
-    }
-)
-
-const _getAllPoolsFromApi = async (network: INetworkName): Promise<IExtendedPoolDataFromApi[]> => {
-    return await Promise.all([
-        _getPoolsFromApi(network, "main"),
-        _getPoolsFromApi(network, "crypto"),
-        _getPoolsFromApi(network, "factory"),
-        _getPoolsFromApi(network, "factory-crvusd"),
-        _getPoolsFromApi(network, "factory-crypto"),
-        _getPoolsFromApi(network, "factory-twocrypto"),
-        _getPoolsFromApi(network, "factory-tricrypto"),
-        _getPoolsFromApi(network, "factory-stable-ng"),
-    ]);
+const uncached_getPoolsFromApi = async (network: INetworkName, poolType: IPoolType): Promise<IExtendedPoolDataFromApi> => {
+    const api = "https://api.curve.finance/api";
+    const url = `${api}/getPools/${network}/${poolType}`;
+    return await fetchData(url) ?? { poolData: [], tvl: 0, tvlAll: 0 };
 }
 
-export async function _getUsdPricesFromApi(this: Llamalend): Promise<IDict<number>> {
-    const network = this.constants.NETWORK_NAME;
-    const allTypesExtendedPoolData = await _getAllPoolsFromApi(network);
+const getPoolTypes = () => ["main", "crypto", "factory", "factory-crvusd", "factory-crypto", "factory-twocrypto", "factory-tricrypto", "factory-stable-ng"] as const;
+export const uncached_getAllPoolsFromApi = async (network: INetworkName): Promise<Record<IPoolType, IExtendedPoolDataFromApi>> =>
+    Object.fromEntries(
+        await Promise.all(getPoolTypes().map(async (poolType) => {
+            const data = await uncached_getPoolsFromApi(network, poolType);
+            return [poolType, data];
+        }))
+    )
+
+export const createUsdPricesDict = (allTypesExtendedPoolData:  IExtendedPoolDataFromApi[]): IDict<number> => {
     const priceDict: IDict<Record<string, number>[]> = {};
     const priceDictByMaxTvl: IDict<number> = {};
 
@@ -97,23 +84,17 @@ export async function _getUsdPricesFromApi(this: Llamalend): Promise<IDict<numbe
     }
 
     for(const address in priceDict) {
-        if(priceDict[address].length > 0) {
-            const maxTvlItem = priceDict[address].reduce((prev, current) => {
-                if (+current.tvl > +prev.tvl) {
-                    return current;
-                } else {
-                    return prev;
-                }
-            });
+        if (priceDict[address].length) {
+            const maxTvlItem = priceDict[address].reduce((prev, current) => +current.tvl > +prev.tvl ? current : prev);
             priceDictByMaxTvl[address] = maxTvlItem.price
         } else {
             priceDictByMaxTvl[address] = 0
         }
-
     }
 
     return priceDictByMaxTvl
 }
+
 
 type UserCollateral = { total_deposit_precise: string, total_deposit_from_user: number, total_deposit_usd_value: number , total_borrowed: number, total_deposit_from_user_precise: number, total_deposit_from_user_usd_value: number}
 export const _getUserCollateral = memoize(
@@ -232,3 +213,13 @@ export const _getHiddenPools = memoize(
         maxAge: 5 * 60 * 1000, // 5m
     }
 )
+
+async function fetchJson(url: string): Promise<any> {
+    const response = await fetch(url);
+    return await response.json() ?? {};
+}
+
+async function fetchData(url: string) {
+    const {data} = await fetchJson(url);
+    return data;
+}
