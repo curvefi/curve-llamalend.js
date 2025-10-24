@@ -397,6 +397,10 @@
       {
         "name": "callback_args",
         "type": "uint256[]"
+      },
+      {
+        "name": "callback_bytes",
+        "type": "bytes"
       }
     ],
     "name": "create_loan_extended",
@@ -449,6 +453,34 @@
     "type": "function"
   },
   {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "borrow_more_extended",
+    "inputs": [
+      {
+        "name": "collateral",
+        "type": "uint256"
+      },
+      {
+        "name": "debt",
+        "type": "uint256"
+      },
+      {
+        "name": "callbacker",
+        "type": "address"
+      },
+      {
+        "name": "callback_args",
+        "type": "uint256[]"
+      },
+      {
+        "name": "callback_bytes",
+        "type": "bytes"
+      }
+    ],
+    "outputs": []
+  },
+  {
     "inputs": [
       {
         "name": "_d_debt",
@@ -477,6 +509,10 @@
       {
         "name": "callback_args",
         "type": "uint256[]"
+      },
+      {
+        "name": "callback_bytes",
+        "type": "bytes"
       }
     ],
     "name": "repay_extended",
