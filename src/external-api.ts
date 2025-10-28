@@ -143,7 +143,7 @@ export const _getUserCollateralCrvUsd = memoize(
 
 export const _getUserCollateralCrvUsdFull = memoize(
     async (network: INetworkName, controller: string, user: string): Promise<UserCollateral> => {
-        const url = `https://prices.curve.finance/v1/lending/collateral_events/${network}/${controller}/${user}`;
+        const url = `https://prices.curve.finance/v1/crvusd/collateral_events/${network}/${controller}/${user}`;
         const response = await fetch(url);
         const data = await response.json() as UserCollateral;
         return {
