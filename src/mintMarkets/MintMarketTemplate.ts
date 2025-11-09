@@ -1919,13 +1919,13 @@ export class MintMarketTemplate {
         const oraclePriceFormatted = this.llamalend.formatUnits(oraclePrice, 18);
         const debtFormatted = this.llamalend.formatUnits(debt, 18);
 
-        const {_collateral: AmmCollateral, _stablecoin: AmmBorrowed} = await this._userState(userAddress)
-        const [AmmCollateralFormatted, AmmBorrowedFormatted] = [this.llamalend.formatUnits(AmmCollateral, this.collateralDecimals), this.llamalend.formatUnits(AmmBorrowed, 18)];
+        const {_collateral: ammCollateral, _stablecoin: ammBorrowed} = await this._userState(userAddress)
+        const [ammCollateralFormatted, ammBorrowedFormatted] = [this.llamalend.formatUnits(ammCollateral, this.collateralDecimals), this.llamalend.formatUnits(ammBorrowed, 18)];
 
-        const a = BN(AmmCollateralFormatted).times(oraclePriceFormatted);
-        const b = BN(totalBorrowed).minus(debtFormatted)
+        const collateralValueUsd = BN(ammCollateralFormatted).times(oraclePriceFormatted);
+        const repaidDebt = BN(totalBorrowed).minus(debtFormatted)
 
-        const currentPosition = a.plus(AmmBorrowedFormatted).plus(b);
+        const currentPosition = collateralValueUsd.plus(ammBorrowedFormatted).plus(repaidDebt);
         const currentProfit = currentPosition.minus(totalDepositUsdValueFull);
         const percentage = currentProfit.div(totalDepositUsdValueUser).times(100);
 

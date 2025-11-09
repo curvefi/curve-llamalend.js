@@ -145,15 +145,7 @@ export const _getUserCollateralCrvUsdFull = memoize(
     async (network: INetworkName, controller: string, user: string): Promise<UserCollateral> => {
         const url = `https://prices.curve.finance/v1/crvusd/collateral_events/${network}/${controller}/${user}`;
         const response = await fetch(url);
-        const data = await response.json() as UserCollateral;
-        return {
-            total_borrowed: data.total_borrowed,
-            total_deposit_from_user_precise: data.total_deposit_from_user_precise,
-            total_deposit_precise: data.total_deposit_precise,
-            total_deposit_from_user: data.total_deposit_from_user,
-            total_deposit_usd_value: data.total_deposit_usd_value,
-            total_deposit_from_user_usd_value: data.total_deposit_from_user_usd_value,
-        }
+        return await response.json() as UserCollateral;
     },
     {
         promise: true,
