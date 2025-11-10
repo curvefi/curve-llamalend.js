@@ -1930,10 +1930,10 @@ export class MintMarketTemplate {
         const percentage = currentProfit.div(totalDepositUsdValueUser).times(100);
 
         return {
-            currentPosition: currentPosition.toFixed(18).toString(),
+            currentPosition: currentPosition.toString(),
             deposited: totalDepositUsdValueUser.toString(),
-            currentProfit: currentProfit.toFixed(18).toString(),
-            percentage: percentage.toFixed(2).toString(),
+            currentProfit: currentProfit.toString(),
+            percentage: percentage.toString(),
         };
     }
 
