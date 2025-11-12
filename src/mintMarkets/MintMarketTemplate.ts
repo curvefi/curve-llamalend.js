@@ -21,7 +21,7 @@ import {
     DIGas,
 } from "../utils";
 import {IDict, ILlamma, TGas} from "../interfaces";
-import {_getUserCollateralCrvUsd} from "../external-api.js";
+import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
 import { ILeverageV2 } from "./interfaces/leverage.js";
 import { LeverageV2Module } from "./modules";
 
@@ -1869,6 +1869,72 @@ export class MintMarketTemplate {
     private async deleverageRepay(collateral: number | string, slippage = 0.1): Promise<string> {
         this._checkDeleverageZap();
         return await this._deleverageRepay(collateral, slippage, false) as string;
+    }
+
+    // ---------------- CURRENT LEVERAGE & PNL ----------------
+
+    private _checkLeverageForStats(): void {
+        const leverageV2Module = new LeverageV2Module(this);
+        if (!leverageV2Module.hasLeverage()) {
+            throw Error("This market does not support leverage");
+        }
+    }
+
+    public async currentLeverage(userAddress = ''): Promise<string> {
+        this._checkLeverageForStats();
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        
+        const [userCollateral, {collateral}] = await Promise.all([
+            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise ?? userCollateral.total_deposit_precise;
+
+        return BN(collateral).div(total_deposit_from_user).toString();
+    }
+
+    public async currentPnL(userAddress = ''): Promise<Record<string, string>> {
+        this._checkLeverageForStats();
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+
+        const calls = [
+            this.llamalend.contracts[this.controller].multicallContract.user_state(userAddress, this.llamalend.constantOptions),
+            this.llamalend.contracts[this.address].multicallContract.price_oracle(this.llamalend.constantOptions),
+        ];
+
+        const [userState, oraclePrice] = await this.llamalend.multicallProvider.all(calls) as  [bigint[], bigint];
+
+        if(!(userState || oraclePrice)) {
+            throw new Error('Multicall error')
+        }
+
+        const debt = userState[2];
+
+        const userCollateral = await _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress);
+        const totalDepositUsdValueFull = userCollateral.total_deposit_usd_value;
+        const totalDepositUsdValueUser = userCollateral.total_deposit_from_user_usd_value ?? userCollateral.total_deposit_usd_value;
+        const totalBorrowed = userCollateral.total_borrowed;
+
+        const oraclePriceFormatted = this.llamalend.formatUnits(oraclePrice, 18);
+        const debtFormatted = this.llamalend.formatUnits(debt, 18);
+
+        const {_collateral: ammCollateral, _stablecoin: ammBorrowed} = await this._userState(userAddress)
+        const [ammCollateralFormatted, ammBorrowedFormatted] = [this.llamalend.formatUnits(ammCollateral, this.collateralDecimals), this.llamalend.formatUnits(ammBorrowed, 18)];
+
+        const collateralValueUsd = BN(ammCollateralFormatted).times(oraclePriceFormatted);
+        const repaidDebt = BN(totalBorrowed).minus(debtFormatted)
+
+        const currentPosition = collateralValueUsd.plus(ammBorrowedFormatted).plus(repaidDebt);
+        const currentProfit = currentPosition.minus(totalDepositUsdValueFull);
+        const percentage = currentProfit.div(totalDepositUsdValueUser).times(100);
+
+        return {
+            currentPosition: currentPosition.toString(),
+            deposited: totalDepositUsdValueUser.toString(),
+            currentProfit: currentProfit.toString(),
+            percentage: percentage.toString(),
+        };
     }
 
     public getLlamalend(): Llamalend {
