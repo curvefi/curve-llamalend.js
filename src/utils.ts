@@ -361,11 +361,12 @@ export const _getUsdRate = async function (this: Llamalend, assetId: string): Pr
         const url = [nativeTokenName, 'ethereum', 'bitcoin', 'link', 'curve-dao-token', 'stasis-eurs'].includes(assetId.toLowerCase()) ?
             `https://api.coingecko.com/api/v3/simple/price?ids=${assetId}&vs_currencies=usd` :
             `https://api.coingecko.com/api/v3/simple/token_price/${chainName}?contract_addresses=${assetId}&vs_currencies=usd`
-        const response = await fetch(url);
-        const data = await response.json() as Record<string, { usd: number }>;
         try {
+            const response = await fetch(url);
+            const data = await response.json() as Record<string, { usd: number }>;
             _usdRatesCache[assetId] = {'rate': data[assetId]['usd'] ?? 0, 'time': Date.now()};
-        } catch { // TODO pay attention!
+        } catch {
+            // coingecko often fails due to 429 (rate limit) errors, due to missing CORS headers we get no details
             _usdRatesCache[assetId] = {'rate': 0, 'time': Date.now()};
         }
     }
