@@ -1,4 +1,4 @@
-import {IDict, TAmount, TGas} from "../../interfaces";
+import {IDict, TAmount, TGas} from "../../interfaces.js";
 
 export interface ILeverageV2 {
     hasLeverage: () => boolean,

@@ -1,4 +1,4 @@
-import {IDict, ILlamma} from "../interfaces";
+import {IDict, ILlamma} from "../interfaces.js";
 
 export const lowerCaseValues = (dict: IDict<string>): IDict<string> =>
     Object.fromEntries(Object.entries(dict).map((entry) => [entry[0], entry[1].toLowerCase()]))
@@ -30,4 +30,3 @@ export const extractDecimals = (llammas: IDict<ILlamma>): IDict<number> => {
 
     return DECIMALS
 }
-
