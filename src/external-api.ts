@@ -9,7 +9,7 @@ import {
     IQuoteOdos,
     IResponseApi,
     IPoolType,
-} from "./interfaces";
+} from "./interfaces.js";
 
 const uncached_getPoolsFromApi = async (network: INetworkName, poolType: IPoolType): Promise<IExtendedPoolDataFromApi> => {
     const api = "https://api.curve.finance/api";

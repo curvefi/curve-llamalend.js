@@ -1,4 +1,4 @@
-import { MintMarketTemplate} from "./MintMarketTemplate";
+import { MintMarketTemplate} from "./MintMarketTemplate.js";
 import type { Llamalend } from "../llamalend.js";
 
 export const getMintMarket = function (this: Llamalend, mintMarketId: string): MintMarketTemplate {

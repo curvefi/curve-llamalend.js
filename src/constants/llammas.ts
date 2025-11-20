@@ -1,7 +1,7 @@
-import { IDict, ILlamma } from "../interfaces";
+import { IDict, ILlamma } from "../interfaces.js";
 import MonetaryPolicyABI from './abis/crvUSD/MonetaryPolicy.json' with {type: 'json'};
 import MonetaryPolicy2ABI from './abis/crvUSD/MonetaryPolicy2.json' with {type: 'json'};
-import { lowerCaseLlammasAddresses } from "./utils";
+import { lowerCaseLlammasAddresses } from "./utils.js";
 
 
 export const LLAMMAS: IDict<ILlamma> = lowerCaseLlammasAddresses({

@@ -19,11 +19,11 @@ import {
     MAX_ACTIVE_BAND,
     _mulBy1_3,
     DIGas,
-} from "../utils";
-import {IDict, ILlamma, TGas} from "../interfaces";
+} from "../utils.js";
+import {IDict, ILlamma, TGas} from "../interfaces.js";
 import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
 import { ILeverageV2 } from "./interfaces/leverage.js";
-import { LeverageV2Module } from "./modules";
+import { LeverageV2Module } from "./modules/index.js";
 
 
 export class MintMarketTemplate {

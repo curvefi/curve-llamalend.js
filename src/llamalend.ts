@@ -75,7 +75,7 @@ import {
     COINS_FRAXTAL,
     COINS_SONIC,
 } from "./constants/coins.js";
-import {LLAMMAS} from "./constants/llammas";
+import {LLAMMAS} from "./constants/llammas.js";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
