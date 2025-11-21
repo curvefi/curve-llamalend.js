@@ -171,15 +171,16 @@ export const _getMarketsData = memoize(
 
 // --- ODOS ---
 
-export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken: string, _amount: bigint, blacklist: string, pathVizImage: boolean, slippage = 0.5): Promise<IQuoteOdos> {
+export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken: string, _amount: bigint, blacklist: string, pathVizImage: boolean, slippage = 0.5, useZapV2 = true): Promise<IQuoteOdos> {
     if (_amount === BigInt(0)) return { outAmounts: ["0.0"], pathId: '', pathVizImage: '', priceImpact: 0, slippage };
 
     if (ethers.getAddress(fromToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") fromToken = "0x0000000000000000000000000000000000000000";
     if (ethers.getAddress(toToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") toToken = "0x0000000000000000000000000000000000000000";
 
+    const leverageZapAddress = useZapV2 ? this.constants.ALIASES.leverage_zap_v2 : this.constants.ALIASES.leverage_zap;
     const url = `https://prices.curve.finance/odos/quote?chain_id=${this.chainId}&from_address=${ethers.getAddress(fromToken)}` +
         `&to_address=${ethers.getAddress(toToken)}&amount=${_amount.toString()}&slippage=${slippage}&pathVizImage=${pathVizImage}` +
-        `&caller_address=${ethers.getAddress(this.constants.ALIASES.leverage_zap)}&blacklist=${ethers.getAddress(blacklist)}`;
+        `&caller_address=${ethers.getAddress(leverageZapAddress)}&blacklist=${ethers.getAddress(blacklist)}`;
 
     const response = await fetch(url, {  headers: {"accept": "application/json"} });
     if (response.status !== 200) {
@@ -189,8 +190,8 @@ export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken:
     return { ...data, slippage };
 }
 
-export async function _getExpectedOdos(this: Llamalend, fromToken: string, toToken: string, _amount: bigint, blacklist: string) {
-    return (await _getQuoteOdos.call(this, fromToken, toToken, _amount, blacklist, false)).outAmounts[0]
+export async function _getExpectedOdos(this: Llamalend, fromToken: string, toToken: string, _amount: bigint, blacklist: string, useZapV2 = false) {
+    return (await _getQuoteOdos.call(this, fromToken, toToken, _amount, blacklist, false, 0.5, useZapV2)).outAmounts[0]
 }
 
 const _assembleTxOdosMemoized = memoize(
@@ -210,8 +211,9 @@ const _assembleTxOdosMemoized = memoize(
     }
 );
 
-export async function _assembleTxOdos(this: Llamalend, pathId: string): Promise<string> {
-    return _assembleTxOdosMemoized(this.constants.ALIASES.leverage_zap, pathId);
+export async function _assembleTxOdos(this: Llamalend, pathId: string, useZapV2 = true): Promise<string> {
+    const leverageZapAddress = useZapV2 ? this.constants.ALIASES.leverage_zap_v2 : this.constants.ALIASES.leverage_zap;
+    return _assembleTxOdosMemoized(leverageZapAddress, pathId);
 }
 
 export const _getHiddenPools = memoize(

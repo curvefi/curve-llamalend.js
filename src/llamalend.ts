@@ -348,6 +348,7 @@ class Llamalend implements ILlamalend {
         this.setContract(this.constants.ALIASES['one_way_factory'], OneWayLendingFactoryABI);
         this.setContract(this.constants.ALIASES['gauge_controller'], GaugeControllerABI);
         this.setContract(this.constants.ALIASES['leverage_zap'], LeverageZapABI);
+        this.setContract(this.constants.ALIASES['leverage_zap_v2'], LeverageZapABI);
         if (this.chainId === 1) {
             this.setContract(this.constants.ALIASES.minter, MinterABI);
             this.setContract(this.constants.ALIASES.gauge_factory, GaugeFactoryMainnetABI);

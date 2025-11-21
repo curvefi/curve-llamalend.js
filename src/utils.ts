@@ -7,6 +7,7 @@ import type { Llamalend } from "./llamalend.js";
 import { JsonFragment } from "ethers/lib.esm";
 import { L2Networks } from "./constants/L2Networks.js";
 import memoize from "memoizee";
+import { ROUTERS, TRouterName } from "./constants/routers.js";
 
 export const MAX_ALLOWANCE = BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935");  // 2**256 - 1
 export const MAX_ACTIVE_BAND = BigInt("57896044618658097711785492504343953926634992332820282019728792003956564819967");  // 2**255 - 1
@@ -499,3 +500,18 @@ export const getLsdApy = memoize(async(name: 'wstETH' | 'sfrxETH'): Promise<{
     promise: true,
     maxAge: 60 * 1000, // 1m
 });
+
+export const buildCalldataForLeverageZapV2 = (routerAddress: string, exchangeCalldata: string): string => {
+    const cleanCalldata = exchangeCalldata.startsWith('0x') ? exchangeCalldata.slice(2) : exchangeCalldata;
+    
+    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+    return abiCoder.encode(
+        ['address', 'bytes'],
+        [routerAddress, '0x' + cleanCalldata]
+    );
+};
+
+export function getRouters(this: Llamalend): TRouterName[] {
+    const routers = ROUTERS[this.chainId] || [];
+    return routers.map(r => r.name);
+}
