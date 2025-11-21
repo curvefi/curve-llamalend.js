@@ -948,34 +948,93 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
 ```
 
 ### Leverage (createLoan, borrowMore, repay) for lendMarket
+
+LendMarket leverage operations support different routers and require quote information from external routing services.
+
+#### Breaking Changes
+
+**1. New metrics methods - get all metrics in one call**
+- Instead of `createLoanBands`, `createLoanPrices`, `createLoanHealth`, `createLoanPriceImpact`: `createLoanExpectedMetrics()` - returns priceImpact, bands, prices, health 
+- Instead of `borrowMoreBands`, `borrowMorePrices`, `borrowMoreHealth`, `borrowMorePriceImpact`:
+  `borrowMoreExpectedMetrics()` – returns priceImpact, bands, prices, health
+- Instead of `repayBands`, `repayPrices`, `repayHealth`, `repayPriceImpact`:
+  `repayExpectedMetrics()` – returns priceImpact, bands, prices, health
+
+
+**ILeverageMetrics** - metrics object returned by new methods:
+
+```ts
+interface ILeverageMetrics {
+    priceImpact: number;
+    bands: [number, number];
+    prices: string[];
+    health: string;
+}
+```
+
+**2. Final methods now require `router` and `calldata` parameters**
+- **Before**: `createLoan(userCollateral, userBorrowed, debt, range)`
+- **Now**: `createLoan(userCollateral, userBorrowed, debt, range, router, calldata)`
+- **Before**: `borrowMore(userCollateral, userBorrowed, debt, slippage)`
+- **Now**: `borrowMore(userCollateral, userBorrowed, debt, router, calldata)`
+- **Before**: `repay(stateCollateral, userCollateral, userBorrowed, slippage)`
+- **Now**: `repay(stateCollateral, userCollateral, userBorrowed, router, calldata)`
+
+where `router` - address of router, `calldata` - calldata byte code
+
+#### Understanding Callback Functions and Quotes
+
+**GetExpectedFn** - callback function for fetching quotes from router (e.g., Odos, Curve):
+
+```ts
+type GetExpectedFn = (
+    fromToken: string,      // Address of token to swap from
+    toToken: string,        // Address of token to swap to
+    amountIn: bigint,       // Amount of tokens to swap (in wei)
+    blacklist: string | string[], // Contract/pool addresses to exclude
+) => Promise<IQuote>;
+```
+
+**IQuote** - quote object with swap information:
+
+```ts
+interface IQuote {
+    outAmount: string;      // Amount of tokens to receive
+    priceImpact: number;    // Price impac
+}
+```
+
+#### Which quotes are needed for different operations
+
+| Action type  | Quote inputAmount |
+|--------------|------------------|
+| createLoan   | debt + userBorrowed |
+| borrowMore   | debt + userBorrowed |
+| repay        | stateCollateral + userCollateral |
+
+**For createLoan and borrowMore:**
+- Get quote for swapping `(debt + userBorrowed)` borrowed tokens → collateral tokens
+- Example: For debt=2000 and userBorrowed=1000, get quote for swapping 3000 borrowed tokens to collateral
+
+!!! Be careful: here debt means the amount of debt added during the operation, not the new total debt the user will have after it.
+
+**For repay:**
+- Get quote for swapping `(stateCollateral + userCollateral)` collateral tokens → borrowed tokens
+- Example: For stateCollateral=2 and userCollateral=1, get quote for swapping 3 collateral tokens to borrowed tokens
+
+
+#### Leverage operations with routers
+
 ```ts
 (async () => {
-    await llamalend.init('JsonRpc', {}, {}, API_KEY_1INCH);
+    await llamalend.init('JsonRpc', {});
     await llamalend.lendMarkets.fetchMarkets();
 
     const lendMarket = llamalend.getLendMarket('one-way-market-0');
-    console.log(lendMarket.collateral_token, lendMarket.borrowed_token);
-    // {
-    //     address: '0x82af49447d8a07e3bd95bd0d56f35241523fbab1',
-    //     decimals: 18,
-    //     name: 'Wrapped Ether',
-    //     symbol: 'WETH'
-    // }
-    //
-    // {
-    //     address: '0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5',
-    //     decimals: 18,
-    //     name: 'curve.finance USD Stablecoin',
-    //     symbol: 'crvUSD'
-    // }
-    console.log(await lendMarket.wallet.balances());
-    // {
-    //     collateral: '100.0',
-    //     borrowed: '2000000.0',
-    //     vaultShares: '0.0',
-    //     gauge: '0'
-    // }
-
+    
+    const router = '0x.....'; // router name
+    const calldata = '0x...'; // calldata from router for executing swap
+    const quote = // quote from your router (debt + userBorrowed)
     
     // - Create Loan -
 
@@ -994,10 +1053,11 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     let userBorrowed = 1000;
     let debt = 2000;
     const range = 10;
-    const slippage = 0.5; // %
     await lendMarket.leverage.maxLeverage(range);
     // 7.4728229145282742179
-    await lendMarket.leverage.createLoanMaxRecv(userCollateral, userBorrowed, range);
+    
+    // Get maximum possible debt for given parameters
+    await lendMarket.leverage.createLoanMaxRecv(userCollateral, userBorrowed, range, getExpected);
     // {
     //     maxDebt: '26089.494406081862861214',
     //     maxTotalCollateral: '9.539182089833411347',
@@ -1007,7 +1067,11 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     //     maxLeverage: '7.25291100528992828612',
     //     avgPrice: '3172.3757757003568790858'
     // }
-    await lendMarket.leverage.createLoanExpectedCollateral(userCollateral, userBorrowed, debt, slippage);
+    
+    // Get quote for swapping (debt + userBorrowed)!!!
+    
+    // Get expected collateral amount
+    await lendMarket.leverage.createLoanExpectedCollateral(userCollateral, userBorrowed, debt, quote);
     // {
     //     totalCollateral: '1.946422996710829',
     //     userCollateral: '1.0',
@@ -1016,18 +1080,23 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     //     leverage: '1.4796358613861877'
     //     avgPrice: '3169.8299919022623523421'
     // }
-    await lendMarket.leverage.createLoanPriceImpact(userBorrowed, debt);
-    // 0.08944411854377342 %
-    await lendMarket.leverage.createLoanMaxRange(userCollateral, userBorrowed, debt);
-    // 50
-    await lendMarket.leverage.createLoanBands(userCollateral, userBorrowed, debt, range);
-    // [ 76, 67 ]
-    await lendMarket.leverage.createLoanPrices(userCollateral, userBorrowed, debt, range);
-    // [ '1027.977701011670136614', '1187.061409925215211173' ]
-    await lendMarket.leverage.createLoanHealth(userCollateral, userBorrowed, debt, range);
-    // 195.8994783042570637
-    await lendMarket.leverage.createLoanHealth(userCollateral, userBorrowed, debt, range, false);
-    // 3.2780908310686365
+    
+    // NEW: Get all metrics in one call
+    const metrics = await lendMarket.leverage.createLoanExpectedMetrics(
+        userCollateral, 
+        userBorrowed, 
+        debt, 
+        range, 
+        quote, 
+        true  // healthIsFull - true for full health, false for not full
+    );
+    // {
+    //     priceImpact: 0.08944411854377342,  // %
+    //     bands: [76, 67],
+    //     prices: ['1027.977701011670136614', '1187.061409925215211173'],
+    //     health: '195.8994783042570637'  // %
+    // 
+    
     await lendMarket.leverage.createLoanIsApproved(userCollateral, userBorrowed);
     // false
     await lendMarket.leverage.createLoanApprove(userCollateral, userBorrowed);
@@ -1035,12 +1104,10 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     //     '0xd5491d9f1e9d8ac84b03867494e35b25efad151c597d2fa4211d7bf5d540c98e',
     //     '0x93565f37ec5be902a824714a30bddc25cf9cd9ed39b4c0e8de61fab44af5bc8c'
     // ]
-    await lendMarket.leverage.createLoanRouteImage(userBorrowed, debt);
-    // 'data:image/svg+xml;base64,PHN2ZyBpZD0ic2Fua2V5UGFyZW50U3ZnIiB4bWxucz...'
 
     
-    // You must call lendMarket.leverage.createLoanExpectedCollateral() with the same args before
-    await lendMarket.leverage.createLoan(userCollateral, userBorrowed, debt, range);
+    // Create loan, passing router address and calldata from router
+    await lendMarket.leverage.createLoan(userCollateral, userBorrowed, debt, range, router, calldata);
     // 0xeb1b7a92bcb02598f00dc8bbfe8fa3a554e7a2b1ca764e0ee45e2bf583edf731
 
     await lendMarket.wallet.balances();
@@ -1083,7 +1150,9 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     userCollateral = 2;
     userBorrowed = 2000;
     debt = 10000;
-    await lendMarket.leverage.borrowMoreMaxRecv(userCollateral, userBorrowed);
+    
+    // Get maximum possible debt for given parameters
+    await lendMarket.leverage.borrowMoreMaxRecv(userCollateral, userBorrowed, getExpected);
     // {
     //     maxDebt: '76182.8497941193262889',
     //     maxTotalCollateral: '26.639775583730298462',
@@ -1092,7 +1161,10 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     //     collateralFromMaxDebt: '22.962457277119938834',
     //     avgPrice: '3172.55402418338331369083'
     // }
-    await lendMarket.leverage.borrowMoreExpectedCollateral(userCollateral, userBorrowed, debt, slippage);
+    
+    // Get quote for swapping (debt + userBorrowed)
+    
+    await lendMarket.leverage.borrowMoreExpectedCollateral(userCollateral, userBorrowed, debt, quote);
     // {
     //     totalCollateral: '5.783452104143246413',
     //     userCollateral: '2.0',
@@ -1100,25 +1172,29 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     //     collateralFromDebt: '3.152876753452705342'
     //     avgPrice: '3171.70659749038129067231'
     // }
-    await lendMarket.leverage.borrowMorePriceImpact(userBorrowed, debt);
-    // 0.010784277354269765 %
-    await lendMarket.leverage.borrowMoreBands(userCollateral, userBorrowed, debt);
-    // [ 47, 38 ]
-    await lendMarket.leverage.borrowMorePrices(userCollateral, userBorrowed, debt);
-    // [ '1560.282474721398939216', '1801.742501325928269008' ]
-    await lendMarket.leverage.borrowMoreHealth(userCollateral, userBorrowed, debt, true);
-    // 91.6798951784708552
-    await lendMarket.leverage.borrowMoreHealth(userCollateral, userBorrowed, debt, false);
-    // 3.7614279042995641
+    
+    // NEW: Get all metrics in one call
+    const metricsBM = await lendMarket.leverage.borrowMoreExpectedMetrics(
+        userCollateral, 
+        userBorrowed, 
+        debt, 
+        quote,
+        true  // healthIsFull - true for full health, false for not full
+    );
+    // {
+    //     priceImpact: 0.010784277354269765,  // %
+    //     bands: [47, 38],
+    //     prices: ['1560.282474721398939216', '1801.742501325928269008'],
+    //     health: '91.6798951784708552'  // %
+    // }
+    
     await lendMarket.leverage.borrowMoreIsApproved(userCollateral, userBorrowed);
     // true
     await lendMarket.leverage.borrowMoreApprove(userCollateral, userBorrowed);
     // []
-    await lendMarket.leverage.borrowMoreRouteImage(userBorrowed, debt);
-    // 'data:image/svg+xml;base64,PHN2ZyBpZD0ic2Fua2V5UGFyZW50U3ZnIiB4bWxucz...'
 
-    // You must call lendMarket.leverage.borrowMoreExpectedCollateral() with the same args before
-    await lendMarket.leverage.borrowMore(userCollateral, userBorrowed, debt, slippage);
+    // Execute borrowMore, passing router address and calldata from router
+    await lendMarket.leverage.borrowMore(userCollateral, userBorrowed, debt, router, calldata);
     // 0x6357dd6ea7250d7adb2344cd9295f8255fd8fbbe85f00120fbcd1ebf139e057c
 
     await lendMarket.wallet.balances();
@@ -1164,7 +1240,10 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     const stateCollateral = 2;
     userCollateral = 1;
     userBorrowed = 1500;
-    await lendMarket.leverage.repayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed, slippage);
+    
+    // Get quote for swapping (stateCollateral + userCollateral)
+    
+    await lendMarket.leverage.repayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed, quote);
     // {
     //     totalBorrowed: '10998.882838599741571472',
     //     borrowedFromStateCollateral: '6332.588559066494374648',
@@ -1173,29 +1252,33 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     //     avgPrice: '3166.29427953324743125312'
     // }
 
-    await lendMarket.leverage.repayPriceImpact(stateCollateral, userCollateral);
-    // 0.013150142802201724 %
-    await lendMarket.leverage.repayIsFull(stateCollateral, userCollateral, userBorrowed);
+    await lendMarket.leverage.repayIsFull(stateCollateral, userCollateral, userBorrowed, quote);
     // false
-    await lendMarket.leverage.repayIsAvailable(stateCollateral, userCollateral, userBorrowed);
+    await lendMarket.leverage.repayIsAvailable(stateCollateral, userCollateral, userBorrowed, quote);
     // true
-    await lendMarket.leverage.repayBands(stateCollateral, userCollateral, userBorrowed);
-    // [ 199, 190 ]
-    await lendMarket.leverage.repayPrices(stateCollateral, userCollateral, userBorrowed);
-    // [ '175.130965754280721633', '202.233191367561902757' ]
-    await lendMarket.leverage.repayHealth(stateCollateral, userCollateral, userBorrowed, true);
-    // 1699.6097751079226865
-    await lendMarket.leverage.repayHealth(stateCollateral, userCollateral, userBorrowed, false);
-    // 3.4560086962806991
+    
+    // NEW: Get all metrics in one call
+    const metricsRepay = await lendMarket.leverage.repayExpectedMetrics(
+        stateCollateral, 
+        userCollateral, 
+        userBorrowed, 
+        true,  // healthIsFull - true for full health, false for not full
+        quote
+    );
+    // {
+    //     priceImpact: 0.013150142802201724,  // %
+    //     bands: [199, 190],
+    //     prices: ['175.130965754280721633', '202.233191367561902757'],
+    //     health: '1699.6097751079226865'  // %
+    // }
+    
     await lendMarket.leverage.repayIsApproved(userCollateral, userBorrowed);
     // false
     await lendMarket.leverage.repayApprove(userCollateral, userBorrowed);
     // ['0xd8a8d3b3f67395e1a4f4d4f95b041edcaf1c9f7bab5eb8a8a767467678295498']
-    await lendMarket.leverage.repayRouteImage(stateCollateral, userCollateral);
-    // 'data:image/svg+xml;base64,PHN2ZyBpZD0ic2Fua2V5UGFyZW50U3ZnIiB4bWxucz...'
 
-    // You must call lendMarket.leverage.repayExpectedBorrowed() with the same args before
-    await lendMarket.leverage.repay(stateCollateral, userCollateral, userBorrowed, slippage);
+    // Execute repay, passing router address and calldata from router
+    await lendMarket.leverage.repay(stateCollateral, userCollateral, userBorrowed, router, calldata);
     // 0xe48a97fef1c54180a2c7d104d210a95ac1a516fdd22109682179f1582da23a82
 
     await lendMarket.wallet.balances();
@@ -1225,7 +1308,7 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
 
 ### Leverage createLoan all ranges methods for lendMarket
 ```ts
-    await llamalend.init('JsonRpc', {}, {}, API_KEY_1INCH);
+    await llamalend.init('JsonRpc', {});
     await llamalend.lendMarkets.fetchMarkets();
     
     const lendMarket = llamalend.getLendMarket('one-way-market-0');
@@ -1233,7 +1316,9 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     const userCollateral = 1;
     const userBorrowed = 1000;
     const debt = 2000;
-    await lendMarket.leverage.createLoanMaxRecvAllRanges(userCollateral, userBorrowed);
+    
+    // Get maximum values for all possible ranges
+    await lendMarket.leverage.createLoanMaxRecvAllRanges(userCollateral, userBorrowed, getExpected);
     // {
     //     '4': {
     //         maxDebt: '37916.338071504823875251',
@@ -1283,8 +1368,10 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     //         maxLeverage: '2.94916151440614435181',
     //         avgPrice: '3167.28167656266072703689'
     //     }
-
-    await lendMarket.leverage.createLoanBandsAllRanges(userCollateral, userBorrowed, debt);
+    
+    // Get quote for specific debt + userBorrowed
+    // and provide getExpected callback
+    await lendMarket.leverage.createLoanBandsAllRanges(userCollateral, userBorrowed, debt, getExpected, quote);
     // {
     //     '4': [ 73, 70 ],
     //     '5': [ 73, 69 ],
@@ -1296,7 +1383,7 @@ await lendMarket.forceUpdateUserState(txHash, "0x123...");
     //     '50': [ 97, 48 ]
     // }
 
-    await lendMarket.leverage.createLoanPricesAllRanges(userCollateral, userBorrowed, debt);
+    await lendMarket.leverage.createLoanPricesAllRanges(userCollateral, userBorrowed, debt, getExpected, quote);
     // {
     //     '4': [ '1073.323292757532604807', '1136.910693647788699808' ],
     //     '5': [ '1073.323292757532604807', '1153.387660222394333133' ],

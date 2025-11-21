@@ -230,3 +230,22 @@ export interface ILlamma {
 export interface IResponseApi {
     data: any
 }
+
+export interface IQuote {
+    outAmount: string,
+    priceImpact: number
+}
+
+export interface ILeverageMetrics {
+    priceImpact: number,
+    bands: [number, number],
+    prices: string[],
+    health: string,
+}
+
+export type GetExpectedFn = (
+    fromToken: string,
+    toToken: string,
+    amountIn: bigint,
+    blacklist: string | string[],
+) => Promise<IQuote>;

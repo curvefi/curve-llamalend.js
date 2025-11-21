@@ -118,9 +118,9 @@ export const _getUserCollateral = memoize(
 )
 
 export const _getUserCollateralForce = async (
-    network: INetworkName, 
-    controller: string, 
-    user: string, 
+    network: INetworkName,
+    controller: string,
+    user: string,
     newTx: string
 ): Promise<void> => {
     await fetch(`https://prices.curve.finance/v1/lending/collateral_events/${network}/${controller}/${user}?new_tx=${newTx}`);
