@@ -23,9 +23,11 @@ import {
     smartNumber,
 } from "../utils.js";
 import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket, IPartialFrac} from "../interfaces.js";
-import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral, _getUserCollateralForce, _getMarketsData } from "../external-api.js";
+import { _getUserCollateral, _getUserCollateralForce, _getMarketsData } from "../external-api.js";
+import {createRouterAdapter, RouterAdapterType} from "../routerAdapters/index.js";
 import ERC20Abi from '../constants/abis/ERC20.json' with {type: 'json'};
 import {cacheKey, cacheStats} from "../cache/index.js";
+import {TRouterName} from "../constants/routers";
 
 
 const DAY = 86400;
@@ -62,7 +64,8 @@ export class LendMarketTemplate {
     defaultBands: number
     minBands: number
     maxBands: number
-    swapDataCache: IDict<IQuoteOdos> = {}
+    routerAdapter: RouterAdapterType
+    swapDataCache: IDict<IQuote> = {}
 
     estimateGas: {
         createLoanApprove: (collateral: number | string) => Promise<TGas>,
@@ -158,7 +161,7 @@ export class LendMarketTemplate {
 
         maxLeverage: (N: number) => Promise<string>,
 
-        createLoanMaxRecv: (userCollateral: TAmount, userBorrowed: TAmount, range: number) =>
+        createLoanMaxRecv: (userCollateral: TAmount, userBorrowed: TAmount, range: number, router: TRouterName) =>
             Promise<{
                 maxDebt: string,
                 maxTotalCollateral: string,
@@ -168,7 +171,7 @@ export class LendMarketTemplate {
                 maxLeverage: string,
                 avgPrice: string,
             }>,
-        createLoanMaxRecvAllRanges: (userCollateral: TAmount, userBorrowed: TAmount) =>
+        createLoanMaxRecvAllRanges: (userCollateral: TAmount, userBorrowed: TAmount, router: TRouterName) =>
             Promise<IDict<{
                 maxDebt: string,
                 maxTotalCollateral: string,
@@ -178,19 +181,19 @@ export class LendMarketTemplate {
                 maxLeverage: string,
                 avgPrice: string,
             }>>,
-        createLoanExpectedCollateral: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage?: number) =>
+        createLoanExpectedCollateral: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName, slippage?: number) =>
             Promise<{ totalCollateral: string, userCollateral: string, collateralFromUserBorrowed: string, collateralFromDebt: string, leverage: string, avgPrice: string }>,
-        createLoanPriceImpact: (userBorrowed: TAmount, debt: TAmount) => Promise<string>,
-        createLoanMaxRange: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount) => Promise<number>,
-        createLoanBands: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number) => Promise<[number, number]>,
-        createLoanBandsAllRanges: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount) => Promise<IDict<[number, number] | null>>,
-        createLoanPrices: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number) => Promise<string[]>,
-        createLoanPricesAllRanges: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount) => Promise<IDict<[string, string] | null>>,
-        createLoanHealth: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, full?: boolean) => Promise<string>,
+        createLoanPriceImpact: (userBorrowed: TAmount, debt: TAmount, router: TRouterName) => Promise<string>,
+        createLoanMaxRange: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName) => Promise<number>,
+        createLoanBands: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName) => Promise<[number, number]>,
+        createLoanBandsAllRanges: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName) => Promise<IDict<[number, number] | null>>,
+        createLoanPrices: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName) => Promise<string[]>,
+        createLoanPricesAllRanges: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName) => Promise<IDict<[string, string] | null>>,
+        createLoanHealth: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName, full?: boolean) => Promise<string>,
         createLoanIsApproved: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<boolean>,
         createLoanApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<string[]>,
-        createLoanRouteImage: (userBorrowed: TAmount, debt: TAmount) => Promise<string>,
-        createLoan: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage?: number) => Promise<string>,
+        createLoanRouteImage: (userBorrowed: TAmount, debt: TAmount, router: TRouterName) => Promise<string>,
+        createLoan: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName, slippage?: number) => Promise<string>,
 
         borrowMoreMaxRecv: (userCollateral: TAmount, userBorrowed: TAmount, address?: string) =>
             Promise<{
@@ -227,7 +230,7 @@ export class LendMarketTemplate {
 
         estimateGas: {
             createLoanApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<TGas>,
-            createLoan: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage?: number) => Promise<number>,
+            createLoan: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName, slippage?: number) => Promise<number>,
 
             borrowMoreApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<TGas>,
             borrowMore: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage?: number) => Promise<number>,
@@ -249,6 +252,7 @@ export class LendMarketTemplate {
         this.defaultBands = 10
         this.minBands = 4
         this.maxBands = 50
+        this.routerAdapter = createRouterAdapter(this.llamalend);
         this.estimateGas = {
             createLoanApprove: this.createLoanApproveEstimateGas.bind(this),
             createLoan: this.createLoanEstimateGas.bind(this),
@@ -2238,7 +2242,7 @@ export class LendMarketTemplate {
         return BN(1).div(BN(1).minus(k_effective_BN)).toString()
     }
 
-    private async leverageCreateLoanMaxRecv(userCollateral: TAmount, userBorrowed: TAmount, range: number):
+    private async leverageCreateLoanMaxRecv(userCollateral: TAmount, userBorrowed: TAmount, range: number, router: TRouterName):
         Promise<{
             maxDebt: string,
             maxTotalCollateral: string,
@@ -2276,8 +2280,12 @@ export class LendMarketTemplate {
             }
 
             // additionalCollateral = (userBorrowed / p) + leverageCollateral
-            const _maxAdditionalCollateral = BigInt(await _getExpectedOdos.call(this.llamalend,
-                this.addresses.borrowed_token, this.addresses.collateral_token, _maxBorrowable + _userBorrowed, this.addresses.amm));
+            const _maxAdditionalCollateral = BigInt(await this.routerAdapter[router].getExpected(
+                this.addresses.borrowed_token, 
+                this.addresses.collateral_token, 
+                _maxBorrowable + _userBorrowed, 
+                this.addresses.amm
+            ));
             pAvgBN = maxBorrowableBN.plus(userBorrowed).div(toBN(_maxAdditionalCollateral, this.collateral_token.decimals));
             _maxLeverageCollateral = _maxAdditionalCollateral - fromBN(BN(userBorrowed).div(pAvgBN), this.collateral_token.decimals);
         }
@@ -2296,7 +2304,7 @@ export class LendMarketTemplate {
         };
     }
 
-    private leverageCreateLoanMaxRecvAllRanges = memoize(async (userCollateral: TAmount, userBorrowed: TAmount):
+    private leverageCreateLoanMaxRecvAllRanges = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, router: TRouterName):
         Promise<IDict<{
             maxDebt: string,
             maxTotalCollateral: string,
@@ -2309,6 +2317,8 @@ export class LendMarketTemplate {
         this._checkLeverageZap();
         const _userCollateral = parseUnits(userCollateral, this.collateral_token.decimals);
         const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].multicallContract;
+
+        const routerMethods = this._getRouterMethods(router);
 
         const oraclePriceBand = await this.oraclePriceBand();
         const pAvgApproxBN = BN(await this.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
@@ -2339,7 +2349,12 @@ export class LendMarketTemplate {
             }
 
             if (pAvgBN === null){
-                const _y = BigInt(await _getExpectedOdos.call(this.llamalend, this.addresses.borrowed_token, this.addresses.collateral_token, _maxBorrowable[0], this.addresses.amm));
+                const _y = BigInt(await routerMethods.getExpected(
+                    this.addresses.borrowed_token, 
+                    this.addresses.collateral_token, 
+                    _maxBorrowable[0], 
+                    this.addresses.amm
+                ));
                 const yBN = toBN(_y, this.collateral_token.decimals);
                 pAvgBN = maxBorrowableBN[0].div(yBN);
             }
@@ -2379,17 +2394,18 @@ export class LendMarketTemplate {
         maxAge: 60 * 1000, // 1m
     });
 
-    private _setSwapDataToCache = async (inputCoinAddress: string, outputCoinAddress: string, _amount: bigint, slippage: number) => {
-        let swapData = await _getQuoteOdos.call(this.llamalend, inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, true, slippage);
-        while (swapData.pathId == null) {
-            swapData = await _getQuoteOdos.call(this.llamalend, inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, true, slippage);
+    private _setSwapDataToCache = async (inputCoinAddress: string, outputCoinAddress: string, _amount: bigint, router: TRouterName, slippage: number) => {
+        let swapData = await this.routerAdapter[router].getQuote(inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, slippage);
+        while (this.routerAdapter[router].isQuoteValid(swapData)) {
+            swapData = await this.routerAdapter[router].getQuote(inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, slippage);
         }
-        const key = `${inputCoinAddress}-${_amount}`;
+
+        const key = `${router}-${inputCoinAddress}-${_amount}`;
         this.swapDataCache[key] = { ...swapData, slippage };
     }
 
-    private _getSwapDataFromCache = (inputCoinAddress: string, _amount: bigint): IQuoteOdos => {
-        const key = `${inputCoinAddress}-${_amount}`;
+    private _getSwapDataFromCache = (inputCoinAddress: string, _amount: bigint, router: TRouterName): IQuoteOdos => {
+        const key = `${router}-${inputCoinAddress}-${_amount}`;
         if (!(key in this.swapDataCache)) throw Error(
             "You must call corresponding `expected` method first " +
             "(leverage.createLoanExpectedCollateral, leverage.borrowMoreExpectedCollateral or leverage.repayExpectedBorrowed)"
@@ -2398,14 +2414,14 @@ export class LendMarketTemplate {
         return this.swapDataCache[key]
     }
 
-    private _leverageExpectedCollateral = async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, user?: string):
+    private _leverageExpectedCollateral = async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName, user?: string):
         Promise<{ _futureStateCollateral: bigint, _totalCollateral: bigint, _userCollateral: bigint,
             _collateralFromUserBorrowed: bigint, _collateralFromDebt: bigint, avgPrice: string }> => {
         const _userCollateral = parseUnits(userCollateral, this.collateral_token.decimals);
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.borrowed_token.decimals);
         // additionalCollateral = (userBorrowed / p) + leverageCollateral
-        const _additionalCollateral = BigInt(this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed).outAmounts[0]);
+        const _additionalCollateral = BigInt(this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed, router).outAmounts[0]);
         const _collateralFromDebt = _debt * BigInt(10**18) / (_debt + _userBorrowed) * _additionalCollateral / BigInt(10**18);
         const _collateralFromUserBorrowed = _additionalCollateral - _collateralFromDebt;
         let _stateCollateral = BigInt(0);
@@ -2421,14 +2437,14 @@ export class LendMarketTemplate {
         return { _futureStateCollateral, _totalCollateral, _userCollateral, _collateralFromUserBorrowed, _collateralFromDebt, avgPrice };
     };
 
-    private async leverageCreateLoanExpectedCollateral(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage = 0.1):
+    private async leverageCreateLoanExpectedCollateral(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName, slippage = 0.1):
         Promise<{ totalCollateral: string, userCollateral: string, collateralFromUserBorrowed: string, collateralFromDebt: string, leverage: string, avgPrice: string }> {
         this._checkLeverageZap();
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.borrowed_token.decimals);
-        await this._setSwapDataToCache(this.addresses.borrowed_token, this.addresses.collateral_token, _debt + _userBorrowed, slippage);
+        await this._setSwapDataToCache(this.addresses.borrowed_token, this.addresses.collateral_token, _debt + _userBorrowed, router, slippage);
         const { _totalCollateral, _userCollateral, _collateralFromUserBorrowed, _collateralFromDebt, avgPrice } =
-            await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt);
+            await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, router);
         return {
             totalCollateral: formatUnits(_totalCollateral, this.collateral_token.decimals),
             userCollateral: formatUnits(_userCollateral, this.collateral_token.decimals),
@@ -2440,16 +2456,16 @@ export class LendMarketTemplate {
         }
     }
 
-    private async leverageCreateLoanPriceImpact(userBorrowed: TAmount, debt: TAmount): Promise<string> {
+    private async leverageCreateLoanPriceImpact(userBorrowed: TAmount, debt: TAmount, router: TRouterName): Promise<string> {
         this._checkLeverageZap();
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.borrowed_token.decimals);
-        return this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed).priceImpact.toString();
+        return this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed, router).priceImpact.toString();
     }
 
-    private async leverageCreateLoanMaxRange(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount): Promise<number> {
+    private async leverageCreateLoanMaxRange(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName): Promise<number> {
         this._checkLeverageZap();
-        const maxRecv = await this.leverageCreateLoanMaxRecvAllRanges(userCollateral, userBorrowed);
+        const maxRecv = await this.leverageCreateLoanMaxRecvAllRanges(userCollateral, userBorrowed, router);
         for (let N = this.minBands; N <= this.maxBands; N++) {
             if (BN(debt).gt(maxRecv[N].maxDebt)) return N - 1;
         }
@@ -2457,7 +2473,7 @@ export class LendMarketTemplate {
         return this.maxBands;
     }
 
-    private _leverageCalcN1 = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, user?: string): Promise<bigint> => {
+    private _leverageCalcN1 = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName, user?: string): Promise<bigint> => {
         if (range > 0) this._checkRange(range);
         let _stateDebt = BigInt(0);
         if (user) {
@@ -2466,7 +2482,7 @@ export class LendMarketTemplate {
             _stateDebt = _debt;
             if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
         }
-        const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, user);
+        const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, router, user);
         const _debt = _stateDebt + parseUnits(debt, this.borrowed_token.decimals);
         return await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_futureStateCollateral, _debt, range, this.llamalend.constantOptions);
     },
@@ -2475,8 +2491,8 @@ export class LendMarketTemplate {
         maxAge: 60 * 1000, // 1m
     });
 
-    private _leverageCalcN1AllRanges = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, maxN: number): Promise<bigint[]> => {
-        const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt);
+    private _leverageCalcN1AllRanges = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, maxN: number, router: TRouterName): Promise<bigint[]> => {
+        const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, router);
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
         const calls = [];
         for (let N = this.minBands; N <= maxN; N++) {
@@ -2489,8 +2505,8 @@ export class LendMarketTemplate {
         maxAge: 60 * 1000, // 1m
     });
 
-    private async _leverageBands(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, user?: string): Promise<[bigint, bigint]> {
-        const _n1 = await this._leverageCalcN1(userCollateral, userBorrowed, debt, range, user);
+    private async _leverageBands(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName, user?: string): Promise<[bigint, bigint]> {
+        const _n1 = await this._leverageCalcN1(userCollateral, userBorrowed, debt, range, router, user);
         if (range < 0) {
             const { N } = await this.userState(user);
             range = Number(N);
@@ -2500,9 +2516,9 @@ export class LendMarketTemplate {
         return [_n2, _n1];
     }
 
-    private async _leverageCreateLoanBandsAllRanges(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount): Promise<IDict<[bigint, bigint]>> {
-        const maxN = await this.leverageCreateLoanMaxRange(userCollateral, userBorrowed, debt);
-        const _n1_arr = await this._leverageCalcN1AllRanges(userCollateral, userBorrowed, debt, maxN);
+    private async _leverageCreateLoanBandsAllRanges(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName): Promise<IDict<[bigint, bigint]>> {
+        const maxN = await this.leverageCreateLoanMaxRange(userCollateral, userBorrowed, debt, router);
+        const _n1_arr = await this._leverageCalcN1AllRanges(userCollateral, userBorrowed, debt, maxN, router);
         const _n2_arr: bigint[] = [];
         for (let N = this.minBands; N <= maxN; N++) {
             _n2_arr.push(_n1_arr[N - this.minBands] + BigInt(N - 1));
@@ -2516,16 +2532,16 @@ export class LendMarketTemplate {
         return _bands;
     }
 
-    private async leverageCreateLoanBands(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number): Promise<[number, number]> {
+    private async leverageCreateLoanBands(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName): Promise<[number, number]> {
         this._checkLeverageZap();
-        const [_n2, _n1] = await this._leverageBands(userCollateral, userBorrowed, debt, range);
+        const [_n2, _n1] = await this._leverageBands(userCollateral, userBorrowed, debt, range, router);
 
         return [Number(_n2), Number(_n1)];
     }
 
-    private async leverageCreateLoanBandsAllRanges(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount): Promise<IDict<[number, number] | null>> {
+    private async leverageCreateLoanBandsAllRanges(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName): Promise<IDict<[number, number] | null>> {
         this._checkLeverageZap();
-        const _bands = await this._leverageCreateLoanBandsAllRanges(userCollateral, userBorrowed, debt);
+        const _bands = await this._leverageCreateLoanBandsAllRanges(userCollateral, userBorrowed, debt, router);
 
         const bands: { [index: number]: [number, number] | null } = {};
         for (let N = this.minBands; N <= this.maxBands; N++) {
@@ -2539,16 +2555,16 @@ export class LendMarketTemplate {
         return bands;
     }
 
-    private async leverageCreateLoanPrices(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number): Promise<string[]> {
+    private async leverageCreateLoanPrices(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName): Promise<string[]> {
         this._checkLeverageZap();
-        const [_n2, _n1] = await this._leverageBands(userCollateral, userBorrowed, debt, range);
+        const [_n2, _n1] = await this._leverageBands(userCollateral, userBorrowed, debt, range, router);
 
         return await this._getPrices(_n2, _n1);
     }
 
-    private async leverageCreateLoanPricesAllRanges(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount): Promise<IDict<[string, string] | null>> {
+    private async leverageCreateLoanPricesAllRanges(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, router: TRouterName): Promise<IDict<[string, string] | null>> {
         this._checkLeverageZap();
-        const _bands = await this._leverageCreateLoanBandsAllRanges(userCollateral, userBorrowed, debt);
+        const _bands = await this._leverageCreateLoanBandsAllRanges(userCollateral, userBorrowed, debt, router);
 
         const prices: { [index: number]: [string, string] | null } = {};
         for (let N = this.minBands; N <= this.maxBands; N++) {
@@ -2568,10 +2584,11 @@ export class LendMarketTemplate {
         dDebt: TAmount,
         range: number,
         full: boolean,
+        router: TRouterName,
         user = this.llamalend.constants.ZERO_ADDRESS
     ): Promise<string> {
         if (range > 0) this._checkRange(range);
-        const { _totalCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, dDebt, user);
+        const { _totalCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, dDebt, router, user);
         const { _borrowed, _N } = await this._userState(user);
         if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
         if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
@@ -2584,9 +2601,9 @@ export class LendMarketTemplate {
         return formatUnits(_health);
     }
 
-    private async leverageCreateLoanHealth(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, full = true): Promise<string> {
+    private async leverageCreateLoanHealth(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName, full = true): Promise<string> {
         this._checkLeverageZap();
-        return await this._leverageHealth(userCollateral, userBorrowed, debt, range, full);
+        return await this._leverageHealth(userCollateral, userBorrowed, debt, range, router, full);
     }
 
     private async leverageCreateLoanIsApproved(userCollateral: TAmount, userBorrowed: TAmount): Promise<boolean> {
@@ -2623,12 +2640,12 @@ export class LendMarketTemplate {
         return [...collateralApproveTx, ...borrowedApproveTx]
     }
 
-    private async leverageCreateLoanRouteImage(userBorrowed: TAmount, debt: TAmount): Promise<string> {
+    private async leverageCreateLoanRouteImage(userBorrowed: TAmount, debt: TAmount, router: TRouterName): Promise<string> {
         this._checkLeverageZap();
         const _userBorrowed = parseUnits(userBorrowed, this.borrowed_token.decimals);
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
 
-        return this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed).pathVizImage;
+        return this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed, router).pathVizImage;
     }
 
     private async _leverageCreateLoan(
@@ -2636,6 +2653,7 @@ export class LendMarketTemplate {
         userBorrowed: TAmount,
         debt: TAmount,
         range: number,
+        router: TRouterName,
         slippage: number,
         estimateGas: boolean
     ): Promise<string | TGas>  {
@@ -2645,9 +2663,9 @@ export class LendMarketTemplate {
         const _userCollateral = parseUnits(userCollateral, this.collateral_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.borrowed_token.decimals);
         const _debt = parseUnits(debt, this.borrowed_token.decimals);
-        const swapData = this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed);
-        if (slippage !== swapData.slippage) throw Error(`You must call leverage.createLoanExpectedCollateral() with slippage=${slippage} first`);
-        const calldata = await _assembleTxOdos.call(this.llamalend, swapData.pathId as string);
+        const swapData = this._getSwapDataFromCache(this.addresses.borrowed_token, _debt + _userBorrowed, router);
+        if (slippage !== swapData.slippage) throw Error(`You must call leverage.createLoanExpectedCollateral() with router="${router}" and slippage=${slippage} first`);
+        const calldata = swapData.pathId as string;
         const contract = this.llamalend.contracts[this.addresses.controller].contract;
         const gas = await contract.create_loan_extended.estimateGas(
             _userCollateral,
@@ -2673,16 +2691,16 @@ export class LendMarketTemplate {
         )).hash
     }
 
-    private async leverageCreateLoanEstimateGas(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage = 0.1): Promise<number> {
+    private async leverageCreateLoanEstimateGas(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName, slippage = 0.1): Promise<number> {
         this._checkLeverageZap();
         if (!(await this.leverageCreateLoanIsApproved(userCollateral, userBorrowed))) throw Error("Approval is needed for gas estimation");
-        return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, slippage,  true) as number;
+        return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, router, slippage,  true) as number;
     }
 
-    private async leverageCreateLoan(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage = 0.1): Promise<string> {
+    private async leverageCreateLoan(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, router: TRouterName, slippage = 0.1): Promise<string> {
         this._checkLeverageZap();
         await this.leverageCreateLoanApprove(userCollateral, userBorrowed);
-        return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, slippage, false) as string;
+        return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, router, slippage, false) as string;
     }
 
     // ---------------- LEVERAGE BORROW MORE ----------------

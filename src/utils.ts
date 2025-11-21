@@ -499,3 +499,13 @@ export const getLsdApy = memoize(async(name: 'wstETH' | 'sfrxETH'): Promise<{
     promise: true,
     maxAge: 60 * 1000, // 1m
 });
+
+export const buildCalldataForLeverageZapV2 = (routerAddress: string, exchangeCalldata: string): string => {
+    const cleanCalldata = exchangeCalldata.startsWith('0x') ? exchangeCalldata.slice(2) : exchangeCalldata;
+    
+    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+    return abiCoder.encode(
+        ['address', 'bytes'],
+        [routerAddress, '0x' + cleanCalldata]
+    );
+};
