@@ -1747,6 +1747,20 @@ export class LendMarketTemplate {
         return await this._addCollateral(collateral, address, false) as string;
     }
 
+    public async addCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
+            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
+        const collateralBN = BN(collateral);
+        const currentCollateralBN = BN(currentCollateral);
+
+        return currentCollateralBN.plus(collateralBN).div(BN(total_deposit_from_user).plus(collateralBN)).toString();
+    }
+
     // ---------------- REMOVE COLLATERAL ----------------
 
     public async maxRemovable(): Promise<string> {
@@ -1811,6 +1825,20 @@ export class LendMarketTemplate {
 
     public async removeCollateral(collateral: number | string): Promise<string> {
         return await this._removeCollateral(collateral, false) as string;
+    }
+
+    public async removeCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
+            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
+        const collateralBN = BN(collateral);
+        const currentCollateralBN = BN(currentCollateral);
+
+        return currentCollateralBN.minus(collateralBN).div(BN(total_deposit_from_user).minus(collateralBN)).toString();
     }
 
     // ---------------- REPAY ----------------
