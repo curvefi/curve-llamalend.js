@@ -14,6 +14,7 @@ import {
     getGasPriceFromL1,
     totalSupply,
     getLsdApy,
+    getRouters,
 } from "./utils.js";
 import {
     convertToAssets,
@@ -88,6 +89,7 @@ export function createLlamalend() {
 
         // Core methods
         fetchStats: llamalend.fetchStats.bind(llamalend),
+        getRouters: getRouters.bind(llamalend),
 
         // Market lists
         mintMarkets: {
