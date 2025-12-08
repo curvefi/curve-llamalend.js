@@ -19,6 +19,7 @@ import {
     MAX_ACTIVE_BAND,
     _mulBy1_3,
     DIGas,
+    calculateFutureLeverage,
 } from "../utils.js";
 import {IDict, ILlamma, TGas} from "../interfaces.js";
 import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
@@ -1001,6 +1002,19 @@ export class MintMarketTemplate {
         return await this._addCollateral(collateral, address, false) as string;
     }
 
+    public async addCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
+        this._checkLeverageForStats();
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
+            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise ?? userCollateral.total_deposit_precise;
+
+        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'add');
+    }
+
     // ---------------- REMOVE COLLATERAL ----------------
 
     public async maxRemovable(): Promise<string> {
@@ -1067,6 +1081,19 @@ export class MintMarketTemplate {
 
     public async removeCollateral(collateral: number | string): Promise<string> {
         return await this._removeCollateral(collateral, false) as string;
+    }
+
+    public async removeCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
+        this._checkLeverageForStats();
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
+            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise ?? userCollateral.total_deposit_precise;
+
+        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'remove');
     }
 
     // ---------------- REPAY ----------------
