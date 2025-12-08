@@ -21,6 +21,7 @@ import {
     _getUsdRate,
     DIGas,
     smartNumber,
+    calculateFutureLeverage,
 } from "../utils.js";
 import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket, IPartialFrac} from "../interfaces.js";
 import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral, _getUserCollateralForce, _getMarketsData } from "../external-api.js";
@@ -1755,10 +1756,8 @@ export class LendMarketTemplate {
         ]);
 
         const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
-        const collateralBN = BN(collateral);
-        const currentCollateralBN = BN(currentCollateral);
 
-        return currentCollateralBN.plus(collateralBN).div(BN(total_deposit_from_user).plus(collateralBN)).toString();
+        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'add');
     }
 
     // ---------------- REMOVE COLLATERAL ----------------
@@ -1835,10 +1834,8 @@ export class LendMarketTemplate {
         ]);
 
         const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
-        const collateralBN = BN(collateral);
-        const currentCollateralBN = BN(currentCollateral);
 
-        return currentCollateralBN.minus(collateralBN).div(BN(total_deposit_from_user).minus(collateralBN)).toString();
+        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'remove');
     }
 
     // ---------------- REPAY ----------------

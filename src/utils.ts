@@ -499,3 +499,20 @@ export const getLsdApy = memoize(async(name: 'wstETH' | 'sfrxETH'): Promise<{
     promise: true,
     maxAge: 60 * 1000, // 1m
 });
+
+export const calculateFutureLeverage = (
+    currentCollateral: number | string,
+    totalDepositFromUser: number | string,
+    collateral: number | string,
+    operation: 'add' | 'remove'
+): string => {
+    const collateralBN = BN(collateral);
+    const currentCollateralBN = BN(currentCollateral);
+    const totalDepositBN = BN(totalDepositFromUser);
+
+    if (operation === 'add') {
+        return currentCollateralBN.plus(collateralBN).div(totalDepositBN.plus(collateralBN)).toString();
+    } else {
+        return currentCollateralBN.minus(collateralBN).div(totalDepositBN.minus(collateralBN)).toString();
+    }
+};

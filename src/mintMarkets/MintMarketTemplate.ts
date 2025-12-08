@@ -19,6 +19,7 @@ import {
     MAX_ACTIVE_BAND,
     _mulBy1_3,
     DIGas,
+    calculateFutureLeverage,
 } from "../utils.js";
 import {IDict, ILlamma, TGas} from "../interfaces.js";
 import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
@@ -1010,10 +1011,8 @@ export class MintMarketTemplate {
         ]);
 
         const total_deposit_from_user = userCollateral.total_deposit_from_user_precise ?? userCollateral.total_deposit_precise;
-        const collateralBN = BN(collateral);
-        const currentCollateralBN = BN(currentCollateral);
 
-        return currentCollateralBN.plus(collateralBN).div(BN(total_deposit_from_user).plus(collateralBN)).toString();
+        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'add');
     }
 
     // ---------------- REMOVE COLLATERAL ----------------
@@ -1093,10 +1092,8 @@ export class MintMarketTemplate {
         ]);
 
         const total_deposit_from_user = userCollateral.total_deposit_from_user_precise ?? userCollateral.total_deposit_precise;
-        const collateralBN = BN(collateral);
-        const currentCollateralBN = BN(currentCollateral);
 
-        return currentCollateralBN.minus(collateralBN).div(BN(total_deposit_from_user).minus(collateralBN)).toString();
+        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'remove');
     }
 
     // ---------------- REPAY ----------------
