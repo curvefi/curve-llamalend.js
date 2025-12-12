@@ -1086,23 +1086,23 @@ export class LendMarketTemplate {
     }
 
     private statsBandsInfo = memoize(async (): Promise<{ activeBand: number, maxBand: number, minBand: number, liquidationBand: number | null }> => {
-            const ammContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
-            const calls = [
-                ammContract.active_band_with_skip(),
-                ammContract.max_band(),
-                ammContract.min_band(),
-            ]
+        const ammContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
+        const calls = [
+            ammContract.active_band_with_skip(),
+            ammContract.max_band(),
+            ammContract.min_band(),
+        ]
 
-            const [activeBand, maxBand, minBand] = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_b) => Number(_b));
-            const { borrowed, collateral } = await this.statsBandBalances(activeBand);
-            let liquidationBand = null;
-            if (Number(borrowed) > 0 && Number(collateral) > 0) liquidationBand = activeBand;
-            return { activeBand, maxBand, minBand, liquidationBand }
-        },
-        {
-            promise: true,
-            maxAge: 60 * 1000, // 1m
-        });
+        const [activeBand, maxBand, minBand] = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_b) => Number(_b));
+        const { borrowed, collateral } = await this.statsBandBalances(activeBand);
+        let liquidationBand = null;
+        if (Number(borrowed) > 0 && Number(collateral) > 0) liquidationBand = activeBand;
+        return { activeBand, maxBand, minBand, liquidationBand }
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000, // 1m
+    });
 
     private async statsBandBalances(n: number): Promise<{ borrowed: string, collateral: string }> {
         const ammContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
@@ -1253,31 +1253,31 @@ export class LendMarketTemplate {
     // ---------------- PRICES ----------------
 
     public A = memoize(async(): Promise<string> => {
-            const _A = await this.llamalend.contracts[this.addresses.amm].contract.A(this.llamalend.constantOptions) as bigint;
-            return formatUnits(_A, 0);
-        },
-        {
-            promise: true,
-            maxAge: 86400 * 1000, // 1d
-        });
+        const _A = await this.llamalend.contracts[this.addresses.amm].contract.A(this.llamalend.constantOptions) as bigint;
+        return formatUnits(_A, 0);
+    },
+    {
+        promise: true,
+        maxAge: 86400 * 1000, // 1d
+    });
 
     public basePrice = memoize(async(): Promise<string> => {
-            const _price = await this.llamalend.contracts[this.addresses.amm].contract.get_base_price(this.llamalend.constantOptions) as bigint;
-            return formatUnits(_price);
-        },
-        {
-            promise: true,
-            maxAge: 86400 * 1000, // 1d
-        });
+        const _price = await this.llamalend.contracts[this.addresses.amm].contract.get_base_price(this.llamalend.constantOptions) as bigint;
+        return formatUnits(_price);
+    },
+    {
+        promise: true,
+        maxAge: 86400 * 1000, // 1d
+    });
 
     public oraclePrice = memoize(async (): Promise<string> => {
-            const _price = await this.llamalend.contracts[this.addresses.amm].contract.price_oracle(this.llamalend.constantOptions) as bigint;
-            return formatUnits(_price);
-        },
-        {
-            promise: true,
-            maxAge: 60 * 1000, // 1m
-        });
+        const _price = await this.llamalend.contracts[this.addresses.amm].contract.price_oracle(this.llamalend.constantOptions) as bigint;
+        return formatUnits(_price);
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000, // 1m
+    });
 
     public async oraclePriceBand(): Promise<number> {
         const oraclePriceBN = BN(await this.oraclePrice());
@@ -1346,16 +1346,16 @@ export class LendMarketTemplate {
     }
 
     public _userState = memoize(async (address = ""): Promise<{ _collateral: bigint, _borrowed: bigint, _debt: bigint, _N: bigint }> => {
-            address = _getAddress.call(this.llamalend, address);
-            const contract = this.llamalend.contracts[this.addresses.controller].contract;
-            const [_collateral, _borrowed, _debt, _N] = await contract.user_state(address, this.llamalend.constantOptions) as bigint[];
+        address = _getAddress.call(this.llamalend, address);
+        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const [_collateral, _borrowed, _debt, _N] = await contract.user_state(address, this.llamalend.constantOptions) as bigint[];
 
-            return { _collateral, _borrowed, _debt, _N }
-        },
-        {
-            promise: true,
-            maxAge: 10 * 1000, // 10s
-        });
+        return { _collateral, _borrowed, _debt, _N }
+    },
+    {
+        promise: true,
+        maxAge: 10 * 1000, // 10s
+    });
 
     public async userState(address = ""): Promise<{ collateral: string, borrowed: string, debt: string, N: string }> {
         const { _collateral, _borrowed, _debt, _N } = await this._userState(address);
@@ -1464,25 +1464,25 @@ export class LendMarketTemplate {
     }
 
     public createLoanMaxRecvAllRanges = memoize(async (collateral: number | string): Promise<{ [index: number]: string }> => {
-            const _collateral = parseUnits(collateral, this.collateral_token.decimals);
+        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
 
-            const calls = [];
-            for (let N = this.minBands; N <= this.maxBands; N++) {
-                calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.max_borrowable(_collateral, N, 0));
-            }
-            const _amounts = await this.llamalend.multicallProvider.all(calls) as bigint[];
+        const calls = [];
+        for (let N = this.minBands; N <= this.maxBands; N++) {
+            calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.max_borrowable(_collateral, N, 0));
+        }
+        const _amounts = await this.llamalend.multicallProvider.all(calls) as bigint[];
 
-            const res: { [index: number]: string } = {};
-            for (let N = this.minBands; N <= this.maxBands; N++) {
-                res[N] = formatUnits(_amounts[N - this.minBands], this.borrowed_token.decimals);
-            }
+        const res: { [index: number]: string } = {};
+        for (let N = this.minBands; N <= this.maxBands; N++) {
+            res[N] = formatUnits(_amounts[N - this.minBands], this.borrowed_token.decimals);
+        }
 
-            return res;
-        },
-        {
-            promise: true,
-            maxAge: 5 * 60 * 1000, // 5m
-        });
+        return res;
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    });
 
     public async getMaxRange(collateral: number | string, debt: number | string): Promise<number> {
         const maxRecv = await this.createLoanMaxRecvAllRanges(collateral);
@@ -2377,51 +2377,51 @@ export class LendMarketTemplate {
             maxLeverage: string,
             avgPrice: string,
         }>> => {
-            this._checkLeverageZap();
-            const _userCollateral = parseUnits(userCollateral, this.collateral_token.decimals);
-            const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].multicallContract;
+        this._checkLeverageZap();
+        const _userCollateral = parseUnits(userCollateral, this.collateral_token.decimals);
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].multicallContract;
 
-            const oraclePriceBand = await this.oraclePriceBand();
-            const pAvgApproxBN = BN(await this.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
-            let pAvgBN: BigNumber | null = null;
-            const arrLength = this.maxBands - this.minBands + 1;
-            let maxLeverageCollateralBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let _maxLeverageCollateral: bigint[] = new Array(arrLength).fill(BigInt(0));
-            let maxBorrowablePrevBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let maxBorrowableBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let _maxBorrowable: bigint[] = new Array(arrLength).fill(BigInt(0));
+        const oraclePriceBand = await this.oraclePriceBand();
+        const pAvgApproxBN = BN(await this.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
+        let pAvgBN: BigNumber | null = null;
+        const arrLength = this.maxBands - this.minBands + 1;
+        let maxLeverageCollateralBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let _maxLeverageCollateral: bigint[] = new Array(arrLength).fill(BigInt(0));
+        let maxBorrowablePrevBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let maxBorrowableBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let _maxBorrowable: bigint[] = new Array(arrLength).fill(BigInt(0));
 
-            for (let i = 0; i < 5; i++) {
-                const pBN = pAvgBN ?? pAvgApproxBN;
-                maxBorrowablePrevBN = maxBorrowableBN;
-                const _userEffectiveCollateral: bigint = _userCollateral + fromBN(BN(userBorrowed).div(pBN), this.collateral_token.decimals);
-                const calls = [];
-                for (let N = this.minBands; N <= this.maxBands; N++) {
-                    const j = N - this.minBands;
-                    calls.push(contract.max_borrowable(this.addresses.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
-                }
-                _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(998) / BigInt(1000));
-                maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.borrowed_token.decimals));
+        for (let i = 0; i < 5; i++) {
+            const pBN = pAvgBN ?? pAvgApproxBN;
+            maxBorrowablePrevBN = maxBorrowableBN;
+            const _userEffectiveCollateral: bigint = _userCollateral + fromBN(BN(userBorrowed).div(pBN), this.collateral_token.decimals);
+            const calls = [];
+            for (let N = this.minBands; N <= this.maxBands; N++) {
+                const j = N - this.minBands;
+                calls.push(contract.max_borrowable(this.addresses.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
+            }
+            _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(998) / BigInt(1000));
+            maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.borrowed_token.decimals));
 
-                const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
-                if (BigNumber.max(...deltaBN).lt(0.0005)) {
-                    maxBorrowableBN = maxBorrowablePrevBN;
-                    break;
-                }
-
-                if (pAvgBN === null){
-                    const _y = BigInt(await _getExpectedOdos.call(this.llamalend, this.addresses.borrowed_token, this.addresses.collateral_token, _maxBorrowable[0], this.addresses.amm));
-                    const yBN = toBN(_y, this.collateral_token.decimals);
-                    pAvgBN = maxBorrowableBN[0].div(yBN);
-                }
-
-                maxLeverageCollateralBN = maxBorrowableBN.map((mb) => mb.div(pAvgBN as BigNumber));
-                _maxLeverageCollateral = maxLeverageCollateralBN.map((mlc) => fromBN(mlc, this.collateral_token.decimals));
+            const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
+            if (BigNumber.max(...deltaBN).lt(0.0005)) {
+                maxBorrowableBN = maxBorrowablePrevBN;
+                break;
             }
 
-            const userEffectiveCollateralBN = BN(userCollateral).plus(BN(userBorrowed).div(pAvgBN as BigNumber));
+            if (pAvgBN === null){
+                const _y = BigInt(await _getExpectedOdos.call(this.llamalend, this.addresses.borrowed_token, this.addresses.collateral_token, _maxBorrowable[0], this.addresses.amm));
+                const yBN = toBN(_y, this.collateral_token.decimals);
+                pAvgBN = maxBorrowableBN[0].div(yBN);
+            }
 
-            const res: IDict<{
+            maxLeverageCollateralBN = maxBorrowableBN.map((mb) => mb.div(pAvgBN as BigNumber));
+            _maxLeverageCollateral = maxLeverageCollateralBN.map((mlc) => fromBN(mlc, this.collateral_token.decimals));
+        }
+
+        const userEffectiveCollateralBN = BN(userCollateral).plus(BN(userBorrowed).div(pAvgBN as BigNumber));
+
+        const res: IDict<{
                 maxDebt: string,
                 maxTotalCollateral: string,
                 userCollateral: string,
@@ -2430,25 +2430,25 @@ export class LendMarketTemplate {
                 maxLeverage: string,
                 avgPrice: string,
             }> = {};
-            for (let N = this.minBands; N <= this.maxBands; N++) {
-                const j = N - this.minBands;
-                res[N] = {
-                    maxDebt: formatNumber(maxBorrowableBN[j].toString(), this.borrowed_token.decimals),
-                    maxTotalCollateral: formatNumber(maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).toString(), this.collateral_token.decimals),
-                    userCollateral: formatNumber(userCollateral, this.collateral_token.decimals),
-                    collateralFromUserBorrowed: formatNumber(BN(userBorrowed).div(pAvgBN as BigNumber).toString(), this.collateral_token.decimals),
-                    collateralFromMaxDebt: formatNumber(maxLeverageCollateralBN[j].toString(), this.collateral_token.decimals),
-                    maxLeverage: maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).div(userEffectiveCollateralBN).toString(),
-                    avgPrice: (pAvgBN as BigNumber).toString(),
-                };
-            }
+        for (let N = this.minBands; N <= this.maxBands; N++) {
+            const j = N - this.minBands;
+            res[N] = {
+                maxDebt: formatNumber(maxBorrowableBN[j].toString(), this.borrowed_token.decimals),
+                maxTotalCollateral: formatNumber(maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).toString(), this.collateral_token.decimals),
+                userCollateral: formatNumber(userCollateral, this.collateral_token.decimals),
+                collateralFromUserBorrowed: formatNumber(BN(userBorrowed).div(pAvgBN as BigNumber).toString(), this.collateral_token.decimals),
+                collateralFromMaxDebt: formatNumber(maxLeverageCollateralBN[j].toString(), this.collateral_token.decimals),
+                maxLeverage: maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).div(userEffectiveCollateralBN).toString(),
+                avgPrice: (pAvgBN as BigNumber).toString(),
+            };
+        }
 
-            return res;
-        },
-        {
-            promise: true,
-            maxAge: 60 * 1000, // 1m
-        });
+        return res;
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000, // 1m
+    });
 
     private _setSwapDataToCache = async (inputCoinAddress: string, outputCoinAddress: string, _amount: bigint, slippage: number) => {
         let swapData = await _getQuoteOdos.call(this.llamalend, inputCoinAddress, outputCoinAddress, _amount, this.addresses.amm, true, slippage);
@@ -2529,36 +2529,36 @@ export class LendMarketTemplate {
     }
 
     private _leverageCalcN1 = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, user?: string): Promise<bigint> => {
-            if (range > 0) this._checkRange(range);
-            let _stateDebt = BigInt(0);
-            if (user) {
-                const { _debt, _borrowed, _N } = await this._userState(user);
-                if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
-                _stateDebt = _debt;
-                if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
-            }
-            const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, user);
-            const _debt = _stateDebt + parseUnits(debt, this.borrowed_token.decimals);
-            return await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_futureStateCollateral, _debt, range, this.llamalend.constantOptions);
-        },
-        {
-            promise: true,
-            maxAge: 60 * 1000, // 1m
-        });
+        if (range > 0) this._checkRange(range);
+        let _stateDebt = BigInt(0);
+        if (user) {
+            const { _debt, _borrowed, _N } = await this._userState(user);
+            if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
+            _stateDebt = _debt;
+            if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
+        }
+        const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt, user);
+        const _debt = _stateDebt + parseUnits(debt, this.borrowed_token.decimals);
+        return await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_futureStateCollateral, _debt, range, this.llamalend.constantOptions);
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000, // 1m
+    });
 
     private _leverageCalcN1AllRanges = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, maxN: number): Promise<bigint[]> => {
-            const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt);
-            const _debt = parseUnits(debt, this.borrowed_token.decimals);
-            const calls = [];
-            for (let N = this.minBands; N <= maxN; N++) {
-                calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.calculate_debt_n1(_futureStateCollateral, _debt, N));
-            }
-            return await this.llamalend.multicallProvider.all(calls) as bigint[];
-        },
-        {
-            promise: true,
-            maxAge: 60 * 1000, // 1m
-        });
+        const { _futureStateCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, debt);
+        const _debt = parseUnits(debt, this.borrowed_token.decimals);
+        const calls = [];
+        for (let N = this.minBands; N <= maxN; N++) {
+            calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.calculate_debt_n1(_futureStateCollateral, _debt, N));
+        }
+        return await this.llamalend.multicallProvider.all(calls) as bigint[];
+    },
+    {
+        promise: true,
+        maxAge: 60 * 1000, // 1m
+    });
 
     private async _leverageBands(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, user?: string): Promise<[bigint, bigint]> {
         const _n1 = await this._leverageCalcN1(userCollateral, userBorrowed, debt, range, user);
@@ -3006,30 +3006,30 @@ export class LendMarketTemplate {
     }
 
     private _leverageRepayBands = memoize( async (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, address: string): Promise<[bigint, bigint]> => {
-            address = _getAddress.call(this.llamalend, address);
-            if (!(await this.leverageRepayIsAvailable(stateCollateral, userCollateral, userBorrowed, address))) return [parseUnits(0, 0), parseUnits(0, 0)];
+        address = _getAddress.call(this.llamalend, address);
+        if (!(await this.leverageRepayIsAvailable(stateCollateral, userCollateral, userBorrowed, address))) return [parseUnits(0, 0), parseUnits(0, 0)];
 
-            const _stateRepayCollateral = parseUnits(stateCollateral, this.collateral_token.decimals);
-            const { _collateral: _stateCollateral, _debt: _stateDebt, _N } = await this._userState(address);
-            if (_stateDebt == BigInt(0)) throw Error(`Loan for ${address} does not exist`);
-            if (_stateCollateral < _stateRepayCollateral) throw Error(`Can't use more collateral than user's position has (${_stateRepayCollateral}) > ${_stateCollateral})`);
+        const _stateRepayCollateral = parseUnits(stateCollateral, this.collateral_token.decimals);
+        const { _collateral: _stateCollateral, _debt: _stateDebt, _N } = await this._userState(address);
+        if (_stateDebt == BigInt(0)) throw Error(`Loan for ${address} does not exist`);
+        if (_stateCollateral < _stateRepayCollateral) throw Error(`Can't use more collateral than user's position has (${_stateRepayCollateral}) > ${_stateCollateral})`);
 
-            let _n1 = parseUnits(0, 0);
-            let _n2 = parseUnits(0, 0);
-            const { _totalBorrowed: _repayExpected } = this._leverageRepayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed);
-            try {
-                _n1 = await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_stateCollateral - _stateRepayCollateral, _stateDebt - _repayExpected, _N);
-                _n2 = _n1 + (_N - BigInt(1));
-            } catch {
-                console.log("Full repayment");
-            }
+        let _n1 = parseUnits(0, 0);
+        let _n2 = parseUnits(0, 0);
+        const { _totalBorrowed: _repayExpected } = this._leverageRepayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed);
+        try {
+            _n1 = await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_stateCollateral - _stateRepayCollateral, _stateDebt - _repayExpected, _N);
+            _n2 = _n1 + (_N - BigInt(1));
+        } catch {
+            console.log("Full repayment");
+        }
 
-            return [_n2, _n1];
-        },
-        {
-            promise: true,
-            maxAge: 5 * 60 * 1000, // 5m
-        });
+        return [_n2, _n1];
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    });
 
     private async leverageRepayBands(stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, address = ""): Promise<[number, number]> {
         this._checkLeverageZap();

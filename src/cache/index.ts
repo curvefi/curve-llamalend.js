@@ -1,5 +1,5 @@
 class Cache {
-    // eslint-disable-next-line no-use-before-define
+     
     private static instance: Cache;
     readonly cache: Map<string, any>;
 
