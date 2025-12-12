@@ -150,79 +150,79 @@ export class LeverageZapV2Module {
             maxLeverage: string,
             avgPrice: string,
         }>> => {
-            this._checkLeverageZap();
-            const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
-            const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_v2].multicallContract;
+        this._checkLeverageZap();
+        const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_v2].multicallContract;
 
-            const oraclePriceBand = await this.market.oraclePriceBand();
-            const pAvgApproxBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
-            let pAvgBN: BigNumber | null = null;
-            const arrLength = this.market.maxBands - this.market.minBands + 1;
-            let maxLeverageCollateralBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let _maxLeverageCollateral: bigint[] = new Array(arrLength).fill(BigInt(0));
-            let maxBorrowablePrevBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let maxBorrowableBN: BigNumber[] = new Array(arrLength).fill(BN(0));
-            let _maxBorrowable: bigint[] = new Array(arrLength).fill(BigInt(0));
+        const oraclePriceBand = await this.market.oraclePriceBand();
+        const pAvgApproxBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
+        let pAvgBN: BigNumber | null = null;
+        const arrLength = this.market.maxBands - this.market.minBands + 1;
+        let maxLeverageCollateralBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let _maxLeverageCollateral: bigint[] = new Array(arrLength).fill(BigInt(0));
+        let maxBorrowablePrevBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let maxBorrowableBN: BigNumber[] = new Array(arrLength).fill(BN(0));
+        let _maxBorrowable: bigint[] = new Array(arrLength).fill(BigInt(0));
 
-            for (let i = 0; i < 5; i++) {
-                const pBN = pAvgBN ?? pAvgApproxBN;
-                maxBorrowablePrevBN = maxBorrowableBN;
-                const _userEffectiveCollateral: bigint = _userCollateral + fromBN(BN(userBorrowed).div(pBN), this.market.collateral_token.decimals);
-                const calls = [];
-                for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
-                    const j = N - this.market.minBands;
-                    calls.push(contract.max_borrowable(this.market.addresses.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
-                }
-                _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(998) / BigInt(1000));
-                maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.market.borrowed_token.decimals));
-
-                const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
-                if (BigNumber.max(...deltaBN).lt(0.0005)) {
-                    maxBorrowableBN = maxBorrowablePrevBN;
-                    break;
-                }
-
-                if (pAvgBN === null){
-                    const _y = BigInt((await getExpected(
-                        this.market.addresses.borrowed_token,
-                        this.market.addresses.collateral_token,
-                        _maxBorrowable[0],
-                        this.market.addresses.amm
-                    )).outAmount);
-                    const yBN = toBN(_y, this.market.collateral_token.decimals);
-                    pAvgBN = maxBorrowableBN[0].div(yBN);
-                }
-
-                maxLeverageCollateralBN = maxBorrowableBN.map((mb) => mb.div(pAvgBN as BigNumber));
-                _maxLeverageCollateral = maxLeverageCollateralBN.map((mlc) => fromBN(mlc, this.market.collateral_token.decimals));
-            }
-
-            const userEffectiveCollateralBN = BN(userCollateral).plus(BN(userBorrowed).div(pAvgBN as BigNumber));
-
-            const res: IDict<{
-                maxDebt: string,
-                maxTotalCollateral: string,
-                userCollateral: string,
-                collateralFromUserBorrowed: string,
-                collateralFromMaxDebt: string,
-                maxLeverage: string,
-                avgPrice: string,
-            }> = {};
+        for (let i = 0; i < 5; i++) {
+            const pBN = pAvgBN ?? pAvgApproxBN;
+            maxBorrowablePrevBN = maxBorrowableBN;
+            const _userEffectiveCollateral: bigint = _userCollateral + fromBN(BN(userBorrowed).div(pBN), this.market.collateral_token.decimals);
+            const calls = [];
             for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
                 const j = N - this.market.minBands;
-                res[N] = {
-                    maxDebt: formatNumber(maxBorrowableBN[j].toString(), this.market.borrowed_token.decimals),
-                    maxTotalCollateral: formatNumber(maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).toString(), this.market.collateral_token.decimals),
-                    userCollateral: formatNumber(userCollateral, this.market.collateral_token.decimals),
-                    collateralFromUserBorrowed: formatNumber(BN(userBorrowed).div(pAvgBN as BigNumber).toString(), this.market.collateral_token.decimals),
-                    collateralFromMaxDebt: formatNumber(maxLeverageCollateralBN[j].toString(), this.market.collateral_token.decimals),
-                    maxLeverage: maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).div(userEffectiveCollateralBN).toString(),
-                    avgPrice: (pAvgBN as BigNumber).toString(),
-                };
+                calls.push(contract.max_borrowable(this.market.addresses.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
+            }
+            _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(998) / BigInt(1000));
+            maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.market.borrowed_token.decimals));
+
+            const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
+            if (BigNumber.max(...deltaBN).lt(0.0005)) {
+                maxBorrowableBN = maxBorrowablePrevBN;
+                break;
             }
 
-            return res;
-        },
+            if (pAvgBN === null){
+                const _y = BigInt((await getExpected(
+                    this.market.addresses.borrowed_token,
+                    this.market.addresses.collateral_token,
+                    _maxBorrowable[0],
+                    this.market.addresses.amm
+                )).outAmount);
+                const yBN = toBN(_y, this.market.collateral_token.decimals);
+                pAvgBN = maxBorrowableBN[0].div(yBN);
+            }
+
+            maxLeverageCollateralBN = maxBorrowableBN.map((mb) => mb.div(pAvgBN as BigNumber));
+            _maxLeverageCollateral = maxLeverageCollateralBN.map((mlc) => fromBN(mlc, this.market.collateral_token.decimals));
+        }
+
+        const userEffectiveCollateralBN = BN(userCollateral).plus(BN(userBorrowed).div(pAvgBN as BigNumber));
+
+        const res: IDict<{
+            maxDebt: string,
+            maxTotalCollateral: string,
+            userCollateral: string,
+            collateralFromUserBorrowed: string,
+            collateralFromMaxDebt: string,
+            maxLeverage: string,
+            avgPrice: string,
+        }> = {};
+        for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
+            const j = N - this.market.minBands;
+            res[N] = {
+                maxDebt: formatNumber(maxBorrowableBN[j].toString(), this.market.borrowed_token.decimals),
+                maxTotalCollateral: formatNumber(maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).toString(), this.market.collateral_token.decimals),
+                userCollateral: formatNumber(userCollateral, this.market.collateral_token.decimals),
+                collateralFromUserBorrowed: formatNumber(BN(userBorrowed).div(pAvgBN as BigNumber).toString(), this.market.collateral_token.decimals),
+                collateralFromMaxDebt: formatNumber(maxLeverageCollateralBN[j].toString(), this.market.collateral_token.decimals),
+                maxLeverage: maxLeverageCollateralBN[j].plus(userEffectiveCollateralBN).div(userEffectiveCollateralBN).toString(),
+                avgPrice: (pAvgBN as BigNumber).toString(),
+            };
+        }
+
+        return res;
+    },
         {
             promise: true,
             maxAge: 60 * 1000, // 1m

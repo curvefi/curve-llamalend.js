@@ -821,45 +821,44 @@ export class LendMarketTemplate {
     }
 
     private vaultRewardTokens = memoize(async (): Promise<{token: string, symbol: string, decimals: number}[]> => {
-            if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) return []
+        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) return []
 
-            // if (useApi) {
-            //     const rewards = await _getRewardsFromApi();
-            //     if (!rewards[this.addresses.gauge]) return [];
-            //     rewards[this.addresses.gauge].forEach((r) => _setContracts(r.tokenAddress, ERC20Abi));
-            //     return rewards[this.addresses.gauge].map((r) => ({ token: r.tokenAddress, symbol: r.symbol, decimals: Number(r.decimals) }));
-            // }
+        // if (useApi) {
+        //     const rewards = await _getRewardsFromApi();
+        //     if (!rewards[this.addresses.gauge]) return [];
+        //     rewards[this.addresses.gauge].forEach((r) => _setContracts(r.tokenAddress, ERC20Abi));
+        //     return rewards[this.addresses.gauge].map((r) => ({ token: r.tokenAddress, symbol: r.symbol, decimals: Number(r.decimals) }));
+        // }
 
-            const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
-            const gaugeMulticallContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
-            const rewardCount = Number(this.llamalend.formatUnits(await gaugeContract.reward_count(this.llamalend.constantOptions), 0));
+        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
+        const gaugeMulticallContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
+        const rewardCount = Number(this.llamalend.formatUnits(await gaugeContract.reward_count(this.llamalend.constantOptions), 0));
 
-            const tokenCalls = [];
-            for (let i = 0; i < rewardCount; i++) {
-                tokenCalls.push(gaugeMulticallContract.reward_tokens(i));
-            }
-            const tokens = (await this.llamalend.multicallProvider.all(tokenCalls) as string[])
-                .filter((addr) => addr !== this.llamalend.constants.ZERO_ADDRESS)
-                .map((addr) => addr.toLowerCase())
-                .filter((addr) => this.llamalend.chainId === 1 || addr !== this.llamalend.constants.COINS.crv);
+        const tokenCalls = [];
+        for (let i = 0; i < rewardCount; i++) {
+            tokenCalls.push(gaugeMulticallContract.reward_tokens(i));
+        }
+        const tokens = (await this.llamalend.multicallProvider.all(tokenCalls) as string[])
+            .filter((addr) => addr !== this.llamalend.constants.ZERO_ADDRESS)
+            .map((addr) => addr.toLowerCase())
+            .filter((addr) => this.llamalend.chainId === 1 || addr !== this.llamalend.constants.COINS.crv);
 
-            const tokenInfoCalls = [];
-            for (const token of tokens) {
-                this.llamalend.setContract(token, ERC20Abi);
-                const tokenMulticallContract = this.llamalend.contracts[token].multicallContract;
-                tokenInfoCalls.push(tokenMulticallContract.symbol(), tokenMulticallContract.decimals());
-            }
-            const tokenInfo = await this.llamalend.multicallProvider.all(tokenInfoCalls);
-            for (let i = 0; i < tokens.length; i++) {
-                this.llamalend.constants.DECIMALS[tokens[i]] = Number(tokenInfo[(i * 2) + 1]);
-            }
+        const tokenInfoCalls = [];
+        for (const token of tokens) {
+            this.llamalend.setContract(token, ERC20Abi);
+            const tokenMulticallContract = this.llamalend.contracts[token].multicallContract;
+            tokenInfoCalls.push(tokenMulticallContract.symbol(), tokenMulticallContract.decimals());
+        }
+        const tokenInfo = await this.llamalend.multicallProvider.all(tokenInfoCalls);
+        for (let i = 0; i < tokens.length; i++) {
+            this.llamalend.constants.DECIMALS[tokens[i]] = Number(tokenInfo[(i * 2) + 1]);
+        }
 
-            return tokens.map((token, i) => ({ token, symbol: tokenInfo[i * 2] as string, decimals: Number(tokenInfo[(i * 2) + 1]) }));
-        },
-        {
-            promise: true,
-            maxAge: 30 * 60 * 1000, // 30m
-        });
+        return tokens.map((token, i) => ({ token, symbol: tokenInfo[i * 2] as string, decimals: Number(tokenInfo[(i * 2) + 1]) }));
+    }, {
+        promise: true,
+        maxAge: 30 * 60 * 1000, // 30m
+    });
 
     private vaultRewardsApr = async (useApi = true): Promise<IReward[]> => {
         if(useApi) {
@@ -971,30 +970,29 @@ export class LendMarketTemplate {
             base_price: string,
             A: string,
         }> => {
-            const llammaContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
-            const controllerContract = this.llamalend.contracts[this.addresses.controller].multicallContract;
+        const llammaContract = this.llamalend.contracts[this.addresses.amm].multicallContract;
+        const controllerContract = this.llamalend.contracts[this.addresses.controller].multicallContract;
 
-            const calls = [
-                llammaContract.fee(),
-                llammaContract.admin_fee(),
-                controllerContract.liquidation_discount(),
-                controllerContract.loan_discount(),
-                llammaContract.get_base_price(),
-                llammaContract.A(),
-            ]
+        const calls = [
+            llammaContract.fee(),
+            llammaContract.admin_fee(),
+            controllerContract.liquidation_discount(),
+            controllerContract.loan_discount(),
+            llammaContract.get_base_price(),
+            llammaContract.A(),
+        ]
 
-            const [_fee, _admin_fee, _liquidation_discount, _loan_discount, _base_price, _A]: bigint[] = await this.llamalend.multicallProvider.all(calls) as bigint[];
-            const A = formatUnits(_A, 0)
-            const base_price = formatUnits(_base_price)
-            const [fee, admin_fee, liquidation_discount, loan_discount] = [_fee, _admin_fee, _liquidation_discount, _loan_discount]
-                .map((_x) => formatUnits(_x * BigInt(100)));
+        const [_fee, _admin_fee, _liquidation_discount, _loan_discount, _base_price, _A]: bigint[] = await this.llamalend.multicallProvider.all(calls) as bigint[];
+        const A = formatUnits(_A, 0)
+        const base_price = formatUnits(_base_price)
+        const [fee, admin_fee, liquidation_discount, loan_discount] = [_fee, _admin_fee, _liquidation_discount, _loan_discount]
+            .map((_x) => formatUnits(_x * BigInt(100)));
 
-            return { fee, admin_fee, liquidation_discount, loan_discount, base_price, A }
-        },
-        {
-            promise: true,
-            maxAge: 5 * 60 * 1000, // 5m
-        });
+        return { fee, admin_fee, liquidation_discount, loan_discount, base_price, A }
+    }, {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    });
 
     private _getRate = async (isGetter = true): Promise<bigint> => {
         let _rate;

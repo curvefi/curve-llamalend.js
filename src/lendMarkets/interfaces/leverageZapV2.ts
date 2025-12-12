@@ -9,7 +9,7 @@ export interface ILeverageZapV2 {
         userCollateral,
         userBorrowed,
         range,
-        getExpected
+        getExpected,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
@@ -27,7 +27,7 @@ export interface ILeverageZapV2 {
     createLoanMaxRecvAllRanges: ({
         userCollateral,
         userBorrowed,
-        getExpected
+        getExpected,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
@@ -45,7 +45,7 @@ export interface ILeverageZapV2 {
         userCollateral,
         userBorrowed,
         debt,
-        quote
+        quote,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
@@ -65,7 +65,7 @@ export interface ILeverageZapV2 {
         debt,
         range,
         quote,
-        healthIsFull
+        healthIsFull,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
@@ -78,7 +78,7 @@ export interface ILeverageZapV2 {
         userCollateral,
         userBorrowed,
         debt,
-        getExpected
+        getExpected,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
@@ -90,7 +90,7 @@ export interface ILeverageZapV2 {
         userBorrowed,
         debt,
         getExpected,
-        quote
+        quote,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
@@ -103,7 +103,7 @@ export interface ILeverageZapV2 {
         userBorrowed,
         debt,
         getExpected,
-        quote
+        quote,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
@@ -113,14 +113,14 @@ export interface ILeverageZapV2 {
     }) => Promise<IDict<[string, string] | null>>,
     createLoanIsApproved: ({
         userCollateral,
-        userBorrowed
+        userBorrowed,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount
     }) => Promise<boolean>,
     createLoanApprove: ({
         userCollateral,
-        userBorrowed
+        userBorrowed,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount
@@ -131,7 +131,7 @@ export interface ILeverageZapV2 {
         debt,
         range,
         router,
-        calldata
+        calldata,
     }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
