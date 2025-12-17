@@ -862,11 +862,10 @@ export class LeverageZapV2Module {
         try {
             _n1 = await this.llamalend.contracts[this.market.addresses.controller].contract.calculate_debt_n1(_stateCollateral - _stateRepayCollateral, _stateDebt - _repayExpected, _N);
             _n2 = _n1 + (_N - BigInt(1));
+            return [_n2, _n1];
         } catch {
-            console.log("Full repayment");
+            return [_n2, _n1];
         }
-
-        return [_n2, _n1];
     },
     {
         promise: true,
@@ -947,7 +946,6 @@ export class LeverageZapV2Module {
             zapCalldata = buildCalldataForLeverageZapV2(router, calldata)
         }
 
-        console.log('params', [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed], calldata)
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = await contract.repay_extended.estimateGas(
             this.llamalend.constants.ALIASES.leverage_zap_v2,

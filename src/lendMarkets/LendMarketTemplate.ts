@@ -3118,7 +3118,6 @@ export class LendMarketTemplate {
             calldata = await _assembleTxOdos.call(this.llamalend, swapData.pathId as string);
         }
 
-        console.log('params', [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed], calldata)
         const contract = this.llamalend.contracts[this.addresses.controller].contract;
         const gas = await contract.repay_extended.estimateGas(
             this.llamalend.constants.ALIASES.leverage_zap,
