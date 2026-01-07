@@ -177,7 +177,7 @@ export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken:
     if (ethers.getAddress(fromToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") fromToken = "0x0000000000000000000000000000000000000000";
     if (ethers.getAddress(toToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") toToken = "0x0000000000000000000000000000000000000000";
 
-    const url = `https://prices.curve.finance/odos/quote?chain_id=${this.chainId}&from_address=${ethers.getAddress(fromToken)}` +
+    const url = `https://prices.curve.finance/odos/v3/quote?chain_id=${this.chainId}&from_address=${ethers.getAddress(fromToken)}` +
         `&to_address=${ethers.getAddress(toToken)}&amount=${_amount.toString()}&slippage=${slippage}&pathVizImage=${pathVizImage}` +
         `&caller_address=${ethers.getAddress(this.constants.ALIASES.leverage_zap)}&blacklist=${ethers.getAddress(blacklist)}`;
 
