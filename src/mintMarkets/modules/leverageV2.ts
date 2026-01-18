@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import memoize from "memoizee";
 import type { TAmount, TGas, IDict, IQuoteOdos } from "../../interfaces.js";
 import type { MintMarketTemplate } from "../MintMarketTemplate.js";
