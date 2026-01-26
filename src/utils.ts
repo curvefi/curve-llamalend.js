@@ -289,48 +289,22 @@ export const _getUsdRate = async function (this: Llamalend, assetId: string): Pr
     const pricesFromApi = await _getUsdPricesFromApi(this.constants.NETWORK_NAME);
     if (assetId.toLowerCase() in pricesFromApi) return pricesFromApi[assetId.toLowerCase()];
 
-    if (assetId === 'USD' || (this.chainId === 137 && (assetId.toLowerCase() === this.constants.COINS.am3crv.toLowerCase()))) return 1
+    if (assetId === 'USD' || (assetId.toLowerCase() === this.constants.COINS.am3crv.toLowerCase())) return 1
 
-    let chainName = {
+    const chainName = {
         1: 'ethereum',
         10: 'optimistic-ethereum',
-        56: "binance-smart-chain",
-        100: 'xdai',
-        137: 'polygon-pos',
         146: 'sonic',
-        196: 'x-layer',
-        250: 'fantom',
         252: 'fraxtal',
-        324: 'zksync',
-        1284: 'moonbeam',
-        2222: 'kava',
-        5000: 'mantle',
-        8453: 'base',
-        42220: 'celo',
-        43114: 'avalanche',
         42161: 'arbitrum-one',
-        1313161554: 'aurora',
     }[this.chainId];
 
     const nativeTokenName = {
         1: 'ethereum',
         10: 'ethereum',
-        56: 'binancecoin',
-        100: 'xdai',
-        137: 'matic-network',
         146: 'sonic-3',
-        196: 'okb',
-        250: 'fantom',
         252: 'frax-ether',
-        324: 'ethereum',
-        1284: 'moonbeam',
-        2222: 'kava',
-        5000: 'mantle',
-        8453: 'ethereum',
-        42220: 'celo',
-        43114: 'avalanche-2',
         42161: 'ethereum',
-        1313161554: 'ethereum',
     }[this.chainId] as string;
 
     if (chainName === undefined) {
@@ -345,12 +319,6 @@ export const _getUsdRate = async function (this: Llamalend, assetId: string): Pr
         'LINK': 'link',
     }[assetId.toUpperCase()] || assetId
     assetId = isEth(assetId) ? nativeTokenName : assetId.toLowerCase();
-
-    // No EURT on Coingecko Polygon
-    if (this.chainId === 137 && assetId.toLowerCase() === this.constants.COINS.eurt) {
-        chainName = 'ethereum';
-        assetId = '0xC581b735A1688071A1746c968e0798D642EDE491'.toLowerCase(); // EURT Ethereum
-    }
 
     // CRV
     if (assetId.toLowerCase() === this.constants.ALIASES.crv) {

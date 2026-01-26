@@ -692,7 +692,6 @@ export class LendMarketTemplate {
     // ---------------- VAULT STAKING REWARDS ----------------
 
     private vaultRewardsOnly(): boolean {
-        if (this.llamalend.chainId === 2222 || this.llamalend.chainId === 324) return true;  // TODO remove this for Kava and ZkSync
         if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) throw Error(`${this.name} doesn't have gauge`);
         const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
 
