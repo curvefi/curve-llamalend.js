@@ -42,36 +42,14 @@ import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {
 import {
     ALIASES_ETHEREUM,
     ALIASES_OPTIMISM,
-    ALIASES_POLYGON,
-    ALIASES_FANTOM,
-    ALIASES_AVALANCHE,
     ALIASES_ARBITRUM,
-    ALIASES_XDAI,
-    ALIASES_MOONBEAM,
-    ALIASES_AURORA,
-    ALIASES_KAVA,
-    ALIASES_CELO,
-    ALIASES_ZKSYNC,
-    ALIASES_BASE,
-    ALIASES_BSC,
     ALIASES_FRAXTAL,
     ALIASES_SONIC,
 } from "./constants/aliases.js";
 import {
     COINS_ETHEREUM,
     COINS_OPTIMISM,
-    COINS_POLYGON,
-    COINS_FANTOM,
-    COINS_AVALANCHE,
     COINS_ARBITRUM,
-    COINS_XDAI,
-    COINS_MOONBEAM,
-    COINS_AURORA,
-    COINS_KAVA,
-    COINS_CELO,
-    COINS_ZKSYNC,
-    COINS_BASE,
-    COINS_BSC,
     COINS_FRAXTAL,
     COINS_SONIC,
 } from "./constants/coins.js";
@@ -96,76 +74,21 @@ export const NETWORK_CONSTANTS: { [index: number]: any } = {
         ALIASES: ALIASES_OPTIMISM,
         COINS: COINS_OPTIMISM,
     },
-    56: {
-        NAME: 'bsc',
-        ALIASES: ALIASES_BSC,
-        COINS: COINS_BSC,
-    },
-    100: {
-        NAME: 'xdai',
-        ALIASES: ALIASES_XDAI,
-        COINS: COINS_XDAI,
-    },
-    137: {
-        NAME: 'polygon',
-        ALIASES: ALIASES_POLYGON,
-        COINS: COINS_POLYGON,
-    },
     146: {
         NAME: 'sonic',
         ALIASES: ALIASES_SONIC,
         COINS: COINS_SONIC,
-    },
-    250: {
-        NAME: 'fantom',
-        ALIASES: ALIASES_FANTOM,
-        COINS: COINS_FANTOM,
     },
     252: {
         NAME: 'fraxtal',
         ALIASES: ALIASES_FRAXTAL,
         COINS: COINS_FRAXTAL,
     },
-    324: {
-        NAME: 'zksync',
-        ALIASES: ALIASES_ZKSYNC,
-        COINS: COINS_ZKSYNC,
-    },
-    1284: {
-        NAME: 'moonbeam',
-        ALIASES: ALIASES_MOONBEAM,
-        COINS: COINS_MOONBEAM,
-    },
-    2222: {
-        NAME: 'kava',
-        ALIASES: ALIASES_KAVA,
-        COINS: COINS_KAVA,
-    },
-    8453: {
-        NAME: 'base',
-        ALIASES: ALIASES_BASE,
-        COINS: COINS_BASE,
-    },
     42161: {
         NAME: 'arbitrum',
         ALIASES: ALIASES_ARBITRUM,
         COINS: COINS_ARBITRUM,
         EXCLUDED_PROTOCOLS_1INCH: "",
-    },
-    42220: {
-        NAME: 'celo',
-        ALIASES: ALIASES_CELO,
-        COINS: COINS_CELO,
-    },
-    43114: {
-        NAME: 'avalanche',
-        ALIASES: ALIASES_AVALANCHE,
-        COINS: COINS_AVALANCHE,
-    },
-    1313161554: {
-        NAME: 'aurora',
-        ALIASES: ALIASES_AURORA,
-        COINS: COINS_AURORA,
     },
 }
 
