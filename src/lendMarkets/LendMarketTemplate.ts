@@ -8,7 +8,6 @@ import {
     toBN,
     fromBN,
     getBalances,
-    _ensureAllowance,
     ensureAllowance,
     hasAllowance,
     ensureAllowanceEstimateGas,
@@ -18,21 +17,17 @@ import {
     MAX_ALLOWANCE,
     MAX_ACTIVE_BAND,
     _mulBy1_3,
-    _getUsdRate,
     DIGas,
     smartNumber,
     calculateFutureLeverage,
 } from "../utils.js";
-import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket, IPartialFrac} from "../interfaces.js";
+import {IDict, TGas, TAmount, IQuoteOdos, IOneWayMarket, IPartialFrac} from "../interfaces.js";
 import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral, _getUserCollateralForce, _getMarketsData } from "../external-api.js";
-import ERC20Abi from '../constants/abis/ERC20.json' with {type: 'json'};
 import {cacheKey, cacheStats} from "../cache/index.js";
 import {ILeverageZapV2} from "./interfaces/leverageZapV2.js";
 import {LeverageZapV2Module} from "./modules/leverageZapV2.js";
-
-
-const DAY = 86400;
-const WEEK = 7 * DAY;
+import {IVaultV1} from "./interfaces/vaultV1";
+import {VaultV1Module} from "./modules/vaultV1";
 
 
 export class LendMarketTemplate {
@@ -109,52 +104,6 @@ export class LendMarketTemplate {
     };
     wallet: {
         balances: (address?: string) => Promise<{ collateral: string, borrowed: string, vaultShares: string, gauge: string }>,
-    };
-    vault: {
-        maxDeposit: (address?: string) => Promise<string>,
-        previewDeposit: (amount: TAmount) => Promise<string>,
-        depositIsApproved: (borrowed: TAmount) => Promise<boolean>
-        depositApprove: (borrowed: TAmount) => Promise<string[]>
-        deposit: (amount: TAmount) => Promise<string>,
-        maxMint: (address?: string) => Promise<string>,
-        previewMint: (amount: TAmount) => Promise<string>,
-        mintIsApproved: (borrowed: TAmount) => Promise<boolean>
-        mintApprove: (borrowed: TAmount) => Promise<string[]>
-        mint: (amount: TAmount) => Promise<string>,
-        maxWithdraw: (address?: string) => Promise<string>,
-        previewWithdraw: (amount: TAmount) => Promise<string>,
-        withdraw: (amount: TAmount) => Promise<string>,
-        maxRedeem: (address?: string) => Promise<string>,
-        previewRedeem: (amount: TAmount) => Promise<string>,
-        redeem: (amount: TAmount) => Promise<string>,
-        convertToShares: (assets: TAmount) => Promise<string>,
-        convertToAssets: (shares: TAmount) => Promise<string>,
-        stakeIsApproved: (vaultShares: number | string) => Promise<boolean>,
-        stakeApprove: (vaultShares: number | string) => Promise<string[]>,
-        stake: (vaultShares: number | string) => Promise<string>,
-        unstake: (vaultShares: number | string) => Promise<string>,
-        rewardsOnly: () => boolean,
-        totalLiquidity: () => Promise<string>,
-        crvApr: (useApi?: boolean) => Promise<[baseApy: number, boostedApy: number]>,
-        claimableCrv: (address?: string) => Promise<string>,
-        claimCrv: () => Promise<string>,
-        rewardTokens: (useApi?: boolean) => Promise<{token: string, symbol: string, decimals: number}[]>,
-        rewardsApr: (useApi?: boolean) => Promise<IReward[]>,
-        claimableRewards: (address?: string) => Promise<{token: string, symbol: string, amount: string}[]>,
-        claimRewards: () => Promise<string>,
-        estimateGas: {
-            depositApprove: (amount: TAmount) => Promise<TGas>,
-            deposit: (amount: TAmount) => Promise<TGas>,
-            mintApprove: (amount: TAmount) => Promise<TGas>,
-            mint: (amount: TAmount) => Promise<TGas>,
-            withdraw: (amount: TAmount) => Promise<TGas>,
-            redeem: (amount: TAmount) => Promise<TGas>,
-            stakeApprove: (vaultShares: number | string) => Promise<TGas>,
-            stake: (vaultShares: number | string) => Promise<TGas>,
-            unstake: (vaultShares: number | string) => Promise<TGas>,
-            claimCrv: () => Promise<TGas>,
-            claimRewards: () => Promise<TGas>,
-        }
     };
     leverage: {
         hasLeverage: () => boolean,
@@ -240,6 +189,7 @@ export class LendMarketTemplate {
         }
     };
     leverageZapV2: ILeverageZapV2;
+    vault: IVaultV1;
 
     constructor(id: string, marketData: IOneWayMarket, llamalend: Llamalend) {
         this.llamalend = llamalend;
@@ -289,50 +239,52 @@ export class LendMarketTemplate {
         this.wallet = {
             balances: this.walletBalances.bind(this),
         }
+        const vault = new VaultV1Module(this)
+
         this.vault = {
-            maxDeposit: this.vaultMaxDeposit.bind(this),
-            previewDeposit: this.vaultPreviewDeposit.bind(this),
-            depositIsApproved: this.vaultDepositIsApproved.bind(this),
-            depositApprove: this.vaultDepositApprove.bind(this),
-            deposit: this.vaultDeposit.bind(this),
-            maxMint: this.vaultMaxMint.bind(this),
-            previewMint: this.vaultPreviewMint.bind(this),
-            mintIsApproved: this.vaultMintIsApproved.bind(this),
-            mintApprove: this.vaultMintApprove.bind(this),
-            mint: this.vaultMint.bind(this),
-            maxWithdraw: this.vaultMaxWithdraw.bind(this),
-            previewWithdraw: this.vaultPreviewWithdraw.bind(this),
-            withdraw: this.vaultWithdraw.bind(this),
-            maxRedeem: this.vaultMaxRedeem.bind(this),
-            previewRedeem: this.vaultPreviewRedeem.bind(this),
-            redeem: this.vaultRedeem.bind(this),
-            convertToShares: this.vaultConvertToShares.bind(this),
-            convertToAssets: this.vaultConvertToAssets.bind(this),
-            stakeIsApproved: this.vaultStakeIsApproved.bind(this),
-            stakeApprove: this.vaultStakeApprove.bind(this),
-            stake: this.vaultStake.bind(this),
-            unstake: this.vaultUnstake.bind(this),
-            rewardsOnly: this.vaultRewardsOnly.bind(this),
-            totalLiquidity: this.vaultTotalLiquidity.bind(this),
-            crvApr: this.vaultCrvApr.bind(this),
-            claimableCrv: this.vaultClaimableCrv.bind(this),
-            claimCrv: this.vaultClaimCrv.bind(this),
-            rewardTokens: this.vaultRewardTokens.bind(this),
-            rewardsApr: this.vaultRewardsApr.bind(this),
-            claimableRewards: this.vaultClaimableRewards.bind(this),
-            claimRewards: this.vaultClaimRewards.bind(this),
+            maxDeposit: vault.vaultMaxDeposit.bind(vault),
+            previewDeposit: vault.vaultPreviewDeposit.bind(vault),
+            depositIsApproved: vault.vaultDepositIsApproved.bind(vault),
+            depositApprove: vault.vaultDepositApprove.bind(vault),
+            deposit: vault.vaultDeposit.bind(vault),
+            maxMint: vault.vaultMaxMint.bind(vault),
+            previewMint: vault.vaultPreviewMint.bind(vault),
+            mintIsApproved: vault.vaultMintIsApproved.bind(vault),
+            mintApprove: vault.vaultMintApprove.bind(vault),
+            mint: vault.vaultMint.bind(vault),
+            maxWithdraw: vault.vaultMaxWithdraw.bind(vault),
+            previewWithdraw: vault.vaultPreviewWithdraw.bind(vault),
+            withdraw: vault.vaultWithdraw.bind(vault),
+            maxRedeem: vault.vaultMaxRedeem.bind(vault),
+            previewRedeem: vault.vaultPreviewRedeem.bind(vault),
+            redeem: vault.vaultRedeem.bind(vault),
+            convertToShares: vault.vaultConvertToShares.bind(vault),
+            convertToAssets: vault.vaultConvertToAssets.bind(vault),
+            stakeIsApproved: vault.vaultStakeIsApproved.bind(vault),
+            stakeApprove: vault.vaultStakeApprove.bind(vault),
+            stake: vault.vaultStake.bind(vault),
+            unstake: vault.vaultUnstake.bind(vault),
+            rewardsOnly: vault.vaultRewardsOnly.bind(vault),
+            totalLiquidity: vault.vaultTotalLiquidity.bind(vault),
+            crvApr: vault.vaultCrvApr.bind(vault),
+            claimableCrv: vault.vaultClaimableCrv.bind(vault),
+            claimCrv: vault.vaultClaimCrv.bind(vault),
+            rewardTokens: vault.vaultRewardTokens.bind(vault),
+            rewardsApr: vault.vaultRewardsApr.bind(vault),
+            claimableRewards: vault.vaultClaimableRewards.bind(vault),
+            claimRewards: vault.vaultClaimRewards.bind(vault),
             estimateGas: {
-                depositApprove: this.vaultDepositApproveEstimateGas.bind(this),
-                deposit: this.vaultDepositEstimateGas.bind(this),
-                mintApprove: this.vaultMintApproveEstimateGas.bind(this),
-                mint: this.vaultMintEstimateGas.bind(this),
-                withdraw: this.vaultWithdrawEstimateGas.bind(this),
-                redeem: this.vaultRedeemEstimateGas.bind(this),
-                stakeApprove: this.vaultStakeApproveEstimateGas.bind(this),
-                stake: this.vaultStakeEstimateGas.bind(this),
-                unstake: this.vaultUnstakeEstimateGas.bind(this),
-                claimCrv: this.vaultClaimCrvEstimateGas.bind(this),
-                claimRewards: this.vaultClaimRewardsEstimateGas.bind(this),
+                depositApprove: vault.vaultDepositApproveEstimateGas.bind(vault),
+                deposit: vault.vaultDepositEstimateGas.bind(vault),
+                mintApprove: vault.vaultMintApproveEstimateGas.bind(vault),
+                mint: vault.vaultMintEstimateGas.bind(vault),
+                withdraw: vault.vaultWithdrawEstimateGas.bind(vault),
+                redeem: vault.vaultRedeemEstimateGas.bind(vault),
+                stakeApprove: vault.vaultStakeApproveEstimateGas.bind(vault),
+                stake: vault.vaultStakeEstimateGas.bind(vault),
+                unstake: vault.vaultUnstakeEstimateGas.bind(vault),
+                claimCrv: vault.vaultClaimCrvEstimateGas.bind(vault),
+                claimRewards: vault.vaultClaimRewardsEstimateGas.bind(vault),
             },
         }
         this.leverage = {
@@ -438,526 +390,6 @@ export class LendMarketTemplate {
     }
 
     private _getMarketId = (): number => Number(this.id.split("-").slice(-1)[0]);
-
-    // ---------------- VAULT ----------------
-
-    private async vaultMaxDeposit(address = ""): Promise<string> {
-        address = _getAddress.call(this.llamalend, address);
-        // const _amount = await this.llamalend.contracts[this.addresses.vault].contract.maxDeposit(address);  TODO use maxDeposit
-        const _amount = await this.llamalend.contracts[this.addresses.borrowed_token].contract.balanceOf(address);
-
-        return formatUnits(_amount,  this.borrowed_token.decimals);
-    }
-
-    private async vaultPreviewDeposit(amount: TAmount): Promise<string> {
-        const _amount = parseUnits(amount, this.borrowed_token.decimals);
-        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.previewDeposit(_amount);
-
-        return formatUnits(_shares, 18);
-    }
-
-    private async vaultDepositIsApproved(borrowed: TAmount): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.llamalend.signerAddress, this.addresses.vault);
-    }
-
-    private async vaultDepositApproveEstimateGas (borrowed: TAmount): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.addresses.vault);
-    }
-
-    private async vaultDepositApprove(borrowed: TAmount): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.addresses.vault);
-    }
-
-    private async _vaultDeposit(amount: TAmount, estimateGas = false): Promise<string | TGas> {
-        const _amount = parseUnits(amount, this.borrowed_token.decimals);
-        const gas = await this.llamalend.contracts[this.addresses.vault].contract.deposit.estimateGas(_amount, { ...this.llamalend.constantOptions });
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-
-        const gasLimit = _mulBy1_3(DIGas(gas));
-
-        return (await this.llamalend.contracts[this.addresses.vault].contract.deposit(_amount, { ...this.llamalend.options, gasLimit })).hash;
-    }
-
-    private async vaultDepositEstimateGas(amount: TAmount): Promise<TGas> {
-        if (!(await this.vaultDepositIsApproved(amount))) throw Error("Approval is needed for gas estimation");
-        return await this._vaultDeposit(amount, true) as number;
-    }
-
-    private async vaultDeposit(amount: TAmount): Promise<string> {
-        await this.vaultDepositApprove(amount);
-        return await this._vaultDeposit(amount, false) as string;
-    }
-
-
-    private async vaultMaxMint(address = ""): Promise<string> {
-        address = _getAddress.call(this.llamalend, address);
-        // const _shares = await this.llamalend.contracts[this.addresses.vault].contract.maxMint(address);  TODO use maxMint
-        const _assetBalance = await this.llamalend.contracts[this.addresses.borrowed_token].contract.balanceOf(address);
-        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.convertToShares(_assetBalance);
-
-        return formatUnits(_shares, 18);
-    }
-
-    private async vaultPreviewMint(amount: TAmount): Promise<string> {
-        const _amount = parseUnits(amount, 18);
-        const _assets = await this.llamalend.contracts[this.addresses.vault].contract.previewMint(_amount);
-
-        return formatUnits(_assets, this.borrowed_token.decimals);
-    }
-
-    private async vaultMintIsApproved(borrowed: TAmount): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.llamalend.signerAddress, this.addresses.vault);
-    }
-
-    private async vaultMintApproveEstimateGas (borrowed: TAmount): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.addresses.vault);
-    }
-
-    private async vaultMintApprove(borrowed: TAmount): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.borrowed_token.address], [borrowed], this.addresses.vault);
-    }
-
-    private async _vaultMint(amount: TAmount, estimateGas = false): Promise<string | TGas> {
-        const _amount = parseUnits(amount, 18);
-        const gas = await this.llamalend.contracts[this.addresses.vault].contract.mint.estimateGas(_amount, { ...this.llamalend.constantOptions });
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-
-        const gasLimit = _mulBy1_3(DIGas(gas));
-
-        return (await this.llamalend.contracts[this.addresses.vault].contract.mint(_amount, { ...this.llamalend.options, gasLimit })).hash;
-    }
-
-    private async vaultMintEstimateGas(amount: TAmount): Promise<TGas> {
-        if (!(await this.vaultMintIsApproved(amount))) throw Error("Approval is needed for gas estimation");
-        return await this._vaultMint(amount, true) as number;
-    }
-
-    private async vaultMint(amount: TAmount): Promise<string> {
-        await this.vaultMintApprove(amount);
-        return await this._vaultMint(amount, false) as string;
-    }
-
-
-    private async vaultMaxWithdraw(address = ""): Promise<string> {
-        address = _getAddress.call(this.llamalend, address);
-        const _assets = await this.llamalend.contracts[this.addresses.vault].contract.maxWithdraw(address);
-
-        return formatUnits(_assets, this.borrowed_token.decimals);
-    }
-
-    private async vaultPreviewWithdraw(amount: TAmount): Promise<string> {
-        const _amount = parseUnits(amount, this.borrowed_token.decimals);
-        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.previewWithdraw(_amount);
-
-        return formatUnits(_shares, 18);
-    }
-
-    private async _vaultWithdraw(amount: TAmount, estimateGas = false): Promise<string | TGas> {
-        const _amount = parseUnits(amount, this.borrowed_token.decimals);
-        const gas = await this.llamalend.contracts[this.addresses.vault].contract.withdraw.estimateGas(_amount, { ...this.llamalend.constantOptions });
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-
-        const gasLimit = _mulBy1_3(DIGas(gas));
-
-        return (await this.llamalend.contracts[this.addresses.vault].contract.withdraw(_amount, { ...this.llamalend.options, gasLimit })).hash;
-    }
-
-    private async vaultWithdrawEstimateGas(amount: TAmount): Promise<TGas> {
-        return await this._vaultWithdraw(amount, true) as number;
-    }
-
-    private async vaultWithdraw(amount: TAmount): Promise<string> {
-        return await this._vaultWithdraw(amount, false) as string;
-    }
-
-
-    private async vaultMaxRedeem(address = ""): Promise<string> {
-        address = _getAddress.call(this.llamalend, address);
-        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.maxRedeem(address)
-
-        return formatUnits(_shares, 18);
-    }
-
-    private async vaultPreviewRedeem(amount: TAmount): Promise<string> {
-        const _amount = parseUnits(amount, 18);
-        const _assets = await this.llamalend.contracts[this.addresses.vault].contract.previewRedeem(_amount);
-
-        return formatUnits(_assets, this.borrowed_token.decimals);
-    }
-
-    private async _vaultRedeem(amount: TAmount, estimateGas = false): Promise<string | TGas> {
-        const _amount = parseUnits(amount, 18);
-        const gas = await this.llamalend.contracts[this.addresses.vault].contract.redeem.estimateGas(_amount, { ...this.llamalend.constantOptions });
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-
-        const gasLimit = _mulBy1_3(DIGas(gas));
-
-        return (await this.llamalend.contracts[this.addresses.vault].contract.redeem(_amount, { ...this.llamalend.options, gasLimit })).hash;
-    }
-
-    private async vaultRedeemEstimateGas(amount: TAmount): Promise<TGas> {
-        return await this._vaultRedeem(amount, true) as number;
-    }
-
-    private async vaultRedeem(amount: TAmount): Promise<string> {
-        return await this._vaultRedeem(amount, false) as string;
-    }
-
-    // ---------------- VAULT UTILS ----------------
-
-    private async vaultConvertToShares(assets: TAmount): Promise<string> {
-        const _assets = parseUnits(assets, this.borrowed_token.decimals);
-        const _shares = await this.llamalend.contracts[this.addresses.vault].contract.convertToShares(_assets);
-
-        return this.llamalend.formatUnits(_shares);
-    }
-
-    private async vaultConvertToAssets(shares: TAmount): Promise<string> {
-        const _shares = parseUnits(shares);
-        const _assets = await this.llamalend.contracts[this.addresses.vault].contract.convertToAssets(_shares);
-
-        return this.llamalend.formatUnits(_assets, this.borrowed_token.decimals);
-    }
-
-    // ---------------- VAULT STAKING ----------------
-
-    private async vaultStakeIsApproved(vaultShares: number | string): Promise<boolean> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`stakeIsApproved method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        return await hasAllowance.call(this.llamalend, [this.addresses.vault], [vaultShares], this.llamalend.signerAddress, this.addresses.gauge);
-    }
-
-    private async vaultStakeApproveEstimateGas(vaultShares: number | string): Promise<TGas> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`stakeApproveEstimateGas method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.vault], [vaultShares], this.addresses.gauge);
-    }
-
-    private async vaultStakeApprove(vaultShares: number | string): Promise<string[]> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`stakeApprove method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        return await ensureAllowance.call(this.llamalend, [this.addresses.vault], [vaultShares], this.addresses.gauge);
-    }
-
-    private async vaultStakeEstimateGas(vaultShares: number | string): Promise<TGas> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`stakeEstimateGas method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        const _vaultShares = parseUnits(vaultShares);
-        return smartNumber(await this.llamalend.contracts[this.addresses.gauge].contract.deposit.estimateGas(_vaultShares, this.llamalend.constantOptions));
-    }
-
-    private async vaultStake(vaultShares: number | string): Promise<string> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`stake method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        const _vaultShares = parseUnits(vaultShares);
-        await _ensureAllowance.call(this.llamalend, [this.addresses.vault], [_vaultShares], this.addresses.gauge)
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(await this.llamalend.contracts[this.addresses.gauge].contract.deposit.estimateGas(_vaultShares, this.llamalend.constantOptions)));
-        return (await this.llamalend.contracts[this.addresses.gauge].contract.deposit(_vaultShares, { ...this.llamalend.options, gasLimit })).hash;
-    }
-
-    private async vaultUnstakeEstimateGas(vaultShares: number | string): Promise<TGas> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`unstakeEstimateGas method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        const _vaultShares = parseUnits(vaultShares);
-        return smartNumber(await this.llamalend.contracts[this.addresses.gauge].contract.withdraw.estimateGas(_vaultShares, this.llamalend.constantOptions));
-    }
-
-    private async vaultUnstake(vaultShares: number | string): Promise<string> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`unstake method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        const _vaultShares = parseUnits(vaultShares);
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas((await this.llamalend.contracts[this.addresses.gauge].contract.withdraw.estimateGas(_vaultShares, this.llamalend.constantOptions))));
-        return (await this.llamalend.contracts[this.addresses.gauge].contract.withdraw(_vaultShares, { ...this.llamalend.options, gasLimit })).hash;
-    }
-
-    // ---------------- VAULT STAKING REWARDS ----------------
-
-    private vaultRewardsOnly(): boolean {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) throw Error(`${this.name} doesn't have gauge`);
-        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
-
-        return !('inflation_rate()' in gaugeContract || 'inflation_rate(uint256)' in gaugeContract);
-    }
-
-    private async vaultTotalLiquidity(useAPI = true): Promise<string> {
-        const { cap } = await this.statsCapAndAvailable(true, useAPI);
-        const price = await _getUsdRate.call(this.llamalend, this.addresses.borrowed_token);
-
-        return BN(cap).times(price).toFixed(6)
-    }
-
-    private _calcCrvApr = async (futureWorkingSupplyBN: BigNumber | null = null): Promise<[baseApy: number, boostedApy: number]> => {
-        const totalLiquidityUSD = await this.vaultTotalLiquidity();
-        if (Number(totalLiquidityUSD) === 0) return [0, 0];
-
-        let inflationRateBN, workingSupplyBN, totalSupplyBN;
-        if (this.llamalend.chainId !== 1) {
-            const gaugeContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
-            const lpTokenContract = this.llamalend.contracts[this.addresses.vault].multicallContract;
-            const crvContract = this.llamalend.contracts[this.llamalend.constants.ALIASES.crv].contract;
-
-            const currentWeek = Math.floor(Date.now() / 1000 / WEEK);
-            [inflationRateBN, workingSupplyBN, totalSupplyBN] = (await this.llamalend.multicallProvider.all([
-                gaugeContract.inflation_rate(currentWeek),
-                gaugeContract.working_supply(),
-                lpTokenContract.totalSupply(),
-            ]) as bigint[]).map((value) => toBN(value));
-
-            if (inflationRateBN.eq(0)) {
-                inflationRateBN = toBN(await crvContract.balanceOf(this.addresses.gauge, this.llamalend.constantOptions)).div(WEEK);
-            }
-        } else {
-            const gaugeContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
-            const lpTokenContract = this.llamalend.contracts[this.addresses.vault].multicallContract;
-            const gaugeControllerContract = this.llamalend.contracts[this.llamalend.constants.ALIASES.gauge_controller].multicallContract;
-
-            let weightBN;
-            [inflationRateBN, weightBN, workingSupplyBN, totalSupplyBN] = (await this.llamalend.multicallProvider.all([
-                gaugeContract.inflation_rate(),
-                gaugeControllerContract.gauge_relative_weight(this.addresses.gauge),
-                gaugeContract.working_supply(),
-                lpTokenContract.totalSupply(),
-            ]) as bigint[]).map((value) => toBN(value));
-
-            inflationRateBN = inflationRateBN.times(weightBN);
-        }
-
-        if (inflationRateBN.eq(0)) return [0, 0];
-        if (futureWorkingSupplyBN !== null) workingSupplyBN = futureWorkingSupplyBN;
-
-        // If you added 1$ value of LP it would be 0.4$ of working LP. So your annual reward per 1$ in USD is:
-        // (annual reward per working liquidity in $) * (0.4$ of working LP)
-        const rateBN = inflationRateBN.times(31536000).div(workingSupplyBN).times(totalSupplyBN).div(Number(totalLiquidityUSD)).times(0.4);
-        const crvPrice = await _getUsdRate.call(this.llamalend, this.llamalend.constants.ALIASES.crv);
-        const baseApyBN = rateBN.times(crvPrice);
-        const boostedApyBN = baseApyBN.times(2.5);
-
-        return [baseApyBN.times(100).toNumber(), boostedApyBN.times(100).toNumber()]
-    }
-
-    private async vaultCrvApr(): Promise<[baseApy: number, boostedApy: number]> {
-        if (this.vaultRewardsOnly()) throw Error(`${this.name} has Rewards-Only Gauge. Use stats.rewardsApy instead`);
-
-        // const isDisabledChain = [1313161554].includes(this.llamalend.chainId); // Disable Aurora
-        // if (useApi && !isDisabledChain) {
-        //     const crvAPYs = await _getCrvApyFromApi();
-        //     const poolCrvApy = crvAPYs[this.addresses.gauge] ?? [0, 0];  // new pools might be missing
-        //     return [poolCrvApy[0], poolCrvApy[1]];
-        // }
-
-        return await this._calcCrvApr();
-    }
-
-    private async vaultClaimableCrv (address = ""): Promise<string> {
-        if (this.vaultRewardsOnly()) throw Error(`${this.name} has Rewards-Only Gauge. Use claimableRewards instead`);
-        address = address || this.llamalend.signerAddress;
-        if (!address) throw Error("Need to connect wallet or pass address into args");
-
-        return this.llamalend.formatUnits(await this.llamalend.contracts[this.addresses.gauge].contract.claimable_tokens(address, this.llamalend.constantOptions));
-    }
-
-    private async _vaultClaimCrv(estimateGas: boolean): Promise<string | TGas> {
-        if (this.vaultRewardsOnly()) throw Error(`${this.name} has Rewards-Only Gauge. Use claimRewards instead`);
-
-        let isOldFactory = false;
-        let contract;
-
-        if (this.llamalend.chainId !== 1) {
-            if (this.llamalend.constants.ALIASES.gauge_factory_old && this.llamalend.constants.ALIASES.gauge_factory_old !== this.llamalend.constants.ZERO_ADDRESS) {
-                const oldFactoryContract = this.llamalend.contracts[this.llamalend.constants.ALIASES.gauge_factory_old].contract;
-                const lpToken = await this.llamalend.contracts[this.addresses.gauge].contract.lp_token();
-                const gaugeAddress = await oldFactoryContract.get_gauge_from_lp_token(lpToken);
-
-                isOldFactory = gaugeAddress.toLowerCase() === this.addresses.gauge.toLowerCase();
-
-                if (isOldFactory) {
-                    contract = oldFactoryContract;
-                }
-            }
-        }
-
-        if (!isOldFactory) {
-            contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.minter].contract
-        }
-
-        if(!contract) {
-            throw Error(`${this.name} couldn't match gauge factory`);
-        }
-
-        const gas = await contract.mint.estimateGas(this.addresses.gauge, this.llamalend.constantOptions);
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.mint(this.addresses.gauge, { ...this.llamalend.options, gasLimit })).hash
-    }
-
-    private async vaultClaimCrvEstimateGas(): Promise<TGas> {
-        return await this._vaultClaimCrv(true) as TGas;
-    }
-
-    private async vaultClaimCrv(): Promise<string> {
-        return await this._vaultClaimCrv(false) as string;
-    }
-
-    private vaultRewardTokens = memoize(async (): Promise<{token: string, symbol: string, decimals: number}[]> => {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) return []
-
-        // if (useApi) {
-        //     const rewards = await _getRewardsFromApi();
-        //     if (!rewards[this.addresses.gauge]) return [];
-        //     rewards[this.addresses.gauge].forEach((r) => _setContracts(r.tokenAddress, ERC20Abi));
-        //     return rewards[this.addresses.gauge].map((r) => ({ token: r.tokenAddress, symbol: r.symbol, decimals: Number(r.decimals) }));
-        // }
-
-        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
-        const gaugeMulticallContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
-        const rewardCount = Number(this.llamalend.formatUnits(await gaugeContract.reward_count(this.llamalend.constantOptions), 0));
-
-        const tokenCalls = [];
-        for (let i = 0; i < rewardCount; i++) {
-            tokenCalls.push(gaugeMulticallContract.reward_tokens(i));
-        }
-        const tokens = (await this.llamalend.multicallProvider.all(tokenCalls) as string[])
-            .filter((addr) => addr !== this.llamalend.constants.ZERO_ADDRESS)
-            .map((addr) => addr.toLowerCase())
-            .filter((addr) => this.llamalend.chainId === 1 || addr !== this.llamalend.constants.COINS.crv);
-
-        const tokenInfoCalls = [];
-        for (const token of tokens) {
-            this.llamalend.setContract(token, ERC20Abi);
-            const tokenMulticallContract = this.llamalend.contracts[token].multicallContract;
-            tokenInfoCalls.push(tokenMulticallContract.symbol(), tokenMulticallContract.decimals());
-        }
-        const tokenInfo = await this.llamalend.multicallProvider.all(tokenInfoCalls);
-        for (let i = 0; i < tokens.length; i++) {
-            this.llamalend.constants.DECIMALS[tokens[i]] = Number(tokenInfo[(i * 2) + 1]);
-        }
-
-        return tokens.map((token, i) => ({ token, symbol: tokenInfo[i * 2] as string, decimals: Number(tokenInfo[(i * 2) + 1]) }));
-    }, {
-        promise: true,
-        maxAge: 30 * 60 * 1000, // 30m
-    });
-
-    private vaultRewardsApr = async (useApi = true): Promise<IReward[]> => {
-        if(useApi) {
-            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
-
-            const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.addresses.vault.toLowerCase())
-
-            if(market) {
-                return market.gaugeRewards
-            } else {
-                throw new Error('Market not found in API')
-            }
-        } else {
-            if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) return [];
-
-            // const isDisabledChain = [1313161554].includes(this.llamalend.chainId); // Disable Aurora
-            // if (useApi && !isDisabledChain) {
-            //     const rewards = await _getRewardsFromApi();
-            //     if (!rewards[this.addresses.gauge]) return [];
-            //     return rewards[this.addresses.gauge].map((r) => ({ gaugeAddress: r.gaugeAddress, tokenAddress: r.tokenAddress, symbol: r.symbol, apy: r.apy }));
-            // }
-
-            const apy: IReward[] = [];
-            const rewardTokens = await this.vaultRewardTokens();
-            for (const rewardToken of rewardTokens) {
-                const gaugeContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
-                const lpTokenContract = this.llamalend.contracts[this.addresses.vault].multicallContract;
-                const rewardContract = this.llamalend.contracts[this.addresses.gauge].multicallContract;
-
-                const totalLiquidityUSD = await this.vaultTotalLiquidity();
-                const rewardRate = await _getUsdRate.call(this.llamalend, rewardToken.token);
-
-                const [rewardData, _stakedSupply, _totalSupply] = (await this.llamalend.multicallProvider.all([
-                    rewardContract.reward_data(rewardToken.token),
-                    gaugeContract.totalSupply(),
-                    lpTokenContract.totalSupply(),
-                ]) as any[]);
-                const stakedSupplyBN = toBN(_stakedSupply as bigint);
-                const totalSupplyBN = toBN(_totalSupply as bigint);
-                const inflationBN = toBN(rewardData.rate, rewardToken.decimals);
-                const periodFinish = Number(this.llamalend.formatUnits(rewardData.period_finish, 0)) * 1000;
-                const baseApy = periodFinish > Date.now() ?
-                    inflationBN.times(31536000).times(rewardRate).div(stakedSupplyBN).times(totalSupplyBN).div(Number(totalLiquidityUSD)) :
-                    BN(0);
-
-                apy.push({
-                    gaugeAddress: this.addresses.gauge,
-                    tokenAddress: rewardToken.token,
-                    symbol: rewardToken.symbol,
-                    apy: baseApy.times(100).toNumber(),
-                });
-            }
-
-            return apy
-        }
-    }
-
-    private async vaultClaimableRewards(address = ""): Promise<{token: string, symbol: string, amount: string}[]> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`claimableRewards method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        address = address || this.llamalend.signerAddress;
-        if (!address) throw Error("Need to connect wallet or pass address into args");
-
-        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
-        const rewardTokens = await this.vaultRewardTokens();
-        const rewards = [];
-        for (const rewardToken of rewardTokens) {
-            const _amount = await gaugeContract.claimable_reward(address, rewardToken.token, this.llamalend.constantOptions);
-            rewards.push({
-                token: rewardToken.token,
-                symbol: rewardToken.symbol,
-                amount: this.llamalend.formatUnits(_amount, rewardToken.decimals),
-            });
-        }
-
-        return rewards
-    }
-
-    private async _vaultClaimRewards(estimateGas: boolean): Promise<string | TGas> {
-        if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`claimRewards method doesn't exist for pool ${this.name} (id: ${this.name}). There is no gauge`);
-        }
-        const gaugeContract = this.llamalend.contracts[this.addresses.gauge].contract;
-        if (!("claim_rewards()" in gaugeContract)) throw Error (`${this.name} pool doesn't have such method`);
-        const gas = await gaugeContract.claim_rewards.estimateGas(this.llamalend.constantOptions);
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await gaugeContract.claim_rewards({ ...this.llamalend.options, gasLimit })).hash;
-    }
-
-    private async vaultClaimRewardsEstimateGas(): Promise<TGas> {
-        return await this._vaultClaimRewards(true) as TGas;
-    }
-
-    private async vaultClaimRewards(): Promise<string> {
-        return await this._vaultClaimRewards(false) as string;
-    }
 
     // ---------------- STATS ----------------
 
@@ -3208,7 +2640,7 @@ export class LendMarketTemplate {
         if (this.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`${this.name} doesn't have gauge`);
         }
-        if (this.vaultRewardsOnly()) {
+        if (this.vault.rewardsOnly()) {
             throw Error(`${this.name} has Rewards-Only Gauge. Use stats.rewardsApy instead`);
         }
         address = _getAddress.call(this.llamalend, address);
