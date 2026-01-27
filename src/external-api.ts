@@ -172,7 +172,7 @@ export const _getMarketsData = memoize(
 // --- ODOS ---
 
 export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken: string, _amount: bigint, blacklist: string, pathVizImage: boolean, slippage = 0.5): Promise<IQuoteOdos> {
-    if (_amount === BigInt(0)) return { outAmounts: ["0.0"], pathId: '', pathVizImage: '', priceImpact: 0, slippage };
+    if (_amount === BigInt(0)) return { outAmounts: ["0"], pathId: '', pathVizImage: '', priceImpact: 0, slippage };
 
     if (ethers.getAddress(fromToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") fromToken = "0x0000000000000000000000000000000000000000";
     if (ethers.getAddress(toToken) == "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") toToken = "0x0000000000000000000000000000000000000000";
