@@ -30,3 +30,7 @@ export const extractDecimals = (llammas: IDict<ILlamma>): IDict<number> => {
 
     return DECIMALS
 }
+
+
+export const DAY = 86400;
+export const WEEK = 7 * DAY;
