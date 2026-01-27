@@ -2827,6 +2827,10 @@ export class LendMarketTemplate {
         address = _getAddress.call(this.llamalend, address);
         const _dDebt = parseUnits(dDebt, this.borrowed_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.borrowed_token.decimals);
+        if (_dDebt + _userBorrowed <= BigInt(0)) {
+            throw Error("userBorrowed + dDebt must be greater than 0");
+        }
+
         await this._setSwapDataToCache(this.addresses.borrowed_token, this.addresses.collateral_token, _dDebt + _userBorrowed, slippage);
         const { _totalCollateral, _userCollateral, _collateralFromUserBorrowed, _collateralFromDebt, avgPrice } =
             await this._leverageExpectedCollateral(userCollateral, userBorrowed, dDebt, address);
