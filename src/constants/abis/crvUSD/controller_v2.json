@@ -298,6 +298,10 @@
       {
         "name": "N",
         "type": "uint256"
+      },
+      {
+        "name": "current_debt",
+        "type": "uint256"
       }
     ],
     "name": "max_borrowable",
