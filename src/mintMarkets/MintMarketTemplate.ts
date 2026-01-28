@@ -661,7 +661,7 @@ export class MintMarketTemplate {
         this._checkRange(range);
         const _collateral = parseUnits(collateral, this.collateralDecimals);
 
-        return formatUnits(await this.llamalend.contracts[this.controller].contract.max_borrowable(_collateral, range, this.llamalend.constantOptions));
+        return formatUnits(await this.llamalend.contracts[this.controller].contract.max_borrowable(...(this.isDeleverageSupported ? [_collateral, range, 0] : [_collateral, range]), this.llamalend.constantOptions));
     }
 
     public createLoanMaxRecvAllRanges = memoize(async (collateral: number | string): Promise<{ [index: number]: string }> => {
@@ -669,7 +669,7 @@ export class MintMarketTemplate {
 
         const calls = [];
         for (let N = this.minBands; N <= this.maxBands; N++) {
-            calls.push(this.llamalend.contracts[this.controller].multicallContract.max_borrowable(_collateral, N));
+            calls.push(this.llamalend.contracts[this.controller].multicallContract.max_borrowable(...(this.isDeleverageSupported ? [_collateral, N, 0] : [_collateral, N])));
         }
         const _amounts = await this.llamalend.multicallProvider.all(calls) as bigint[];
 
@@ -842,7 +842,7 @@ export class MintMarketTemplate {
         const _collateral = _currentCollateral + parseUnits(collateralAmount, this.collateralDecimals);
 
         const contract = this.llamalend.contracts[this.controller].contract;
-        const _debt: bigint = await contract.max_borrowable(_collateral, N, this.llamalend.constantOptions);
+        const _debt: bigint = await contract.max_borrowable(...(this.isDeleverageSupported ? [_collateral, N, _currentDebt] : [_collateral, N]), this.llamalend.constantOptions);
 
         return formatUnits(_debt - _currentDebt);
     }
