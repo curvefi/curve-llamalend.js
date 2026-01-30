@@ -1,6 +1,6 @@
 import memoize from "memoizee";
-import type { TAmount, TGas, IDict, IQuote, ILeverageMetrics, GetExpectedFn } from "../../interfaces.js";
-import type { LendMarketTemplate } from "../LendMarketTemplate.js";
+import type { TAmount, TGas, IDict, IQuote, ILeverageMetrics, GetExpectedFn } from "../../../interfaces";
+import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import {
     _getAddress,
     parseUnits,
@@ -16,12 +16,16 @@ import {
     _mulBy1_3,
     DIGas,
     buildCalldataForLeverageZapV2,
-} from "../../utils.js";
-import {Llamalend} from "../../llamalend.js";
+} from "../../../utils";
+import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
 
 /**
  * LeverageZapV2 module for LendMarketTemplate
+ * 
+ * DEPENDENCIES:
+ * - prices
+ * - userPosition
  */
 export class LeverageZapV2Module {
     private market: LendMarketTemplate;
@@ -91,12 +95,12 @@ export class LeverageZapV2Module {
         }> {
         // max_borrowable = userCollateral / (1 / (k_effective * max_p_base) - 1 / p_avg)
         this._checkLeverageZap();
-        if (range > 0) this.market._checkRange(range);
+        if (range > 0) this.market.prices.checkRange(range);
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.market.borrowed_token.decimals);
 
-        const oraclePriceBand = await this.market.oraclePriceBand();
-        let pAvgBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
+        const oraclePriceBand = await this.market.prices.oraclePriceBand();
+        let pAvgBN = BN(await this.market.prices.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
         let maxBorrowablePrevBN = BN(0);
         let maxBorrowableBN = BN(0);
         let _userEffectiveCollateral = BigInt(0);
@@ -159,8 +163,8 @@ export class LeverageZapV2Module {
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_v2].multicallContract;
 
-        const oraclePriceBand = await this.market.oraclePriceBand();
-        const pAvgApproxBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
+        const oraclePriceBand = await this.market.prices.oraclePriceBand();
+        const pAvgApproxBN = BN(await this.market.prices.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
         let pAvgBN: BigNumber | null = null;
         const arrLength = this.market.maxBands - this.market.minBands + 1;
         let maxLeverageCollateralBN: BigNumber[] = new Array(arrLength).fill(BN(0));
@@ -245,7 +249,7 @@ export class LeverageZapV2Module {
         const _collateralFromUserBorrowed = _additionalCollateral - _collateralFromDebt;
         let _stateCollateral = BigInt(0);
         if (user) {
-            const { _collateral, _borrowed } = await this.market._userState(user);
+            const { _collateral, _borrowed } = await this.market.userPosition.userStateBigInt(user);
             if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
             _stateCollateral = _collateral;
         }
@@ -289,7 +293,7 @@ export class LeverageZapV2Module {
 
         const [_n2, _n1] = await this._leverageBands(userCollateral, userBorrowed, debt, range, quote);
 
-        const prices = await this.market._getPrices(_n2, _n1);
+        const prices = await this.market.prices.getPrices(_n2, _n1);
         const health = await this._leverageHealth(userCollateral, userBorrowed, debt, range, quote, healthIsFull);
 
         return {
@@ -316,10 +320,10 @@ export class LeverageZapV2Module {
     }
 
     private _leverageCalcN1 = memoize(async (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, quote: IQuote, user?: string): Promise<bigint> => {
-        if (range > 0) this.market._checkRange(range);
+        if (range > 0) this.market.prices.checkRange(range);
         let _stateDebt = BigInt(0);
         if (user) {
-            const { _debt, _borrowed, _N } = await this.market._userState(user);
+            const { _debt, _borrowed, _N } = await this.market.userPosition.userStateBigInt(user);
             if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
             _stateDebt = _debt;
             if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
@@ -350,7 +354,7 @@ export class LeverageZapV2Module {
     private async _leverageBands(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, quote: IQuote, user?: string): Promise<[bigint, bigint]> {
         const _n1 = await this._leverageCalcN1(userCollateral, userBorrowed, debt, range, quote, user);
         if (range < 0) {
-            const { N } = await this.market.userState(user);
+            const { N } = await this.market.userPosition.userState(user);
             range = Number(N);
         }
         const _n2 = _n1 + BigInt(range - 1);
@@ -409,7 +413,7 @@ export class LeverageZapV2Module {
         const prices: { [index: number]: [string, string] | null } = {};
         for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
             if (_bands[N]) {
-                prices[N] = await this.market._calcPrices(..._bands[N]);
+                prices[N] = await this.market.prices.calcPrices(..._bands[N]);
             } else {
                 prices[N] = null
             }
@@ -427,9 +431,9 @@ export class LeverageZapV2Module {
         full: boolean,
         user = this.llamalend.constants.ZERO_ADDRESS
     ): Promise<string> {
-        if (range > 0) this.market._checkRange(range);
+        if (range > 0) this.market.prices.checkRange(range);
         const { _totalCollateral } = await this._leverageExpectedCollateral(userCollateral, userBorrowed, dDebt, quote, user);
-        const { _borrowed, _N } = await this.market._userState(user);
+        const { _borrowed, _N } = await this.market.userPosition.userStateBigInt(user);
         if (_borrowed > BigInt(0)) throw Error(`User ${user} is already in liquidation mode`);
         if (range < 0) range = Number(this.llamalend.formatUnits(_N, 0));
         const _dDebt = parseUnits(dDebt, this.market.borrowed_token.decimals);
@@ -494,8 +498,8 @@ export class LeverageZapV2Module {
         calldata: string,
         estimateGas: boolean
     ): Promise<string | TGas>  {
-        if (await this.market.userLoanExists()) throw Error("Loan already created");
-        this.market._checkRange(range);
+        if (await this.market.userPosition.userLoanExists()) throw Error("Loan already created");
+        this.market.prices.checkRange(range);
 
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.market.borrowed_token.decimals);
@@ -575,7 +579,7 @@ export class LeverageZapV2Module {
         // max_borrowable = userCollateral / (1 / (k_effective * max_p_base) - 1 / p_avg)
         this._checkLeverageZap();
         address = _getAddress.call(this.llamalend, address);
-        const { _collateral: _stateCollateral, _borrowed: _stateBorrowed, _debt: _stateDebt, _N } = await this.market._userState(address);
+        const { _collateral: _stateCollateral, _borrowed: _stateBorrowed, _debt: _stateDebt, _N } = await this.market.userPosition.userStateBigInt(address);
         if (_stateBorrowed > BigInt(0)) throw Error(`User ${address} is already in liquidation mode`);
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const controllerContract = this.llamalend.contracts[this.market.addresses.controller].contract;
@@ -583,8 +587,8 @@ export class LeverageZapV2Module {
         const _userBorrowed = _borrowedFromStateCollateral + parseUnits(userBorrowed, this.market.borrowed_token.decimals);
         userBorrowed = formatUnits(_userBorrowed, this.market.borrowed_token.decimals);
 
-        const oraclePriceBand = await this.market.oraclePriceBand();
-        let pAvgBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
+        const oraclePriceBand = await this.market.prices.oraclePriceBand();
+        let pAvgBN = BN(await this.market.prices.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
         let maxBorrowablePrevBN = BN(0);
         let maxBorrowableBN = BN(0);
         let _userEffectiveCollateral = BigInt(0);
@@ -661,7 +665,7 @@ export class LeverageZapV2Module {
 
         const [_n2, _n1] = await this._leverageBands(userCollateral, userBorrowed, debt, -1, quote, address);
 
-        const prices = await this.market._getPrices(_n2, _n1);
+        const prices = await this.market.prices.getPrices(_n2, _n1);
         const health = await this._leverageHealth(userCollateral, userBorrowed, debt, -1, quote, healthIsFull, address);
 
         return {
@@ -681,7 +685,7 @@ export class LeverageZapV2Module {
         calldata: string,
         estimateGas: boolean
     ): Promise<string | TGas>  {
-        if (!(await this.market.userLoanExists())) throw Error("Loan does not exist");
+        if (!(await this.market.userPosition.userLoanExists())) throw Error("Loan does not exist");
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.market.borrowed_token.decimals);
         const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
@@ -829,7 +833,7 @@ export class LeverageZapV2Module {
     }): Promise<boolean> {
         this._checkLeverageZap();
         address = _getAddress.call(this.llamalend, address);
-        const { _borrowed: _stateBorrowed, _debt } = await this.market._userState(address);
+        const { _borrowed: _stateBorrowed, _debt } = await this.market.userPosition.userStateBigInt(address);
         const { _totalBorrowed } = this._leverageRepayExpectedBorrowed(stateCollateral, userCollateral, userBorrowed, quote);
 
         return _stateBorrowed + _totalBorrowed > _debt;
@@ -842,13 +846,13 @@ export class LeverageZapV2Module {
         quote: IQuote,
         address?: string
     }): Promise<boolean> {
-        // 0. const { collateral, stablecoin, debt } = await this.market.userState(address);
+        // 0. const { collateral, stablecoin, debt } = await this.market.userPosition.userState(address);
         // 1. maxCollateral for deleverage is collateral from line above.
         // 2. If user is underwater (stablecoin > 0), only full repayment is available:
         //    await this.deleverageRepayStablecoins(deleverageCollateral) + stablecoin > debt
         this._checkLeverageZap();
         address = _getAddress.call(this.llamalend, address);
-        const { collateral, borrowed, debt } = await this.market.userState(address);
+        const { collateral, borrowed, debt } = await this.market.userPosition.userState(address);
         // Loan does not exist
         if (BN(debt).eq(0)) return false;
         // Can't spend more than user has
@@ -871,7 +875,7 @@ export class LeverageZapV2Module {
         address = _getAddress.call(this.llamalend, address);
 
         const [_n2, _n1] = await this._leverageRepayBands(stateCollateral, userCollateral, userBorrowed, quote, address);
-        const prices = await this.market._getPrices(_n2, _n1);
+        const prices = await this.market.prices.getPrices(_n2, _n1);
         const health = await this._leverageRepayHealth(stateCollateral, userCollateral, userBorrowed, quote, healthIsFull, address);
 
         const _stateCollateral = parseUnits(stateCollateral, this.market.collateral_token.decimals);
@@ -891,7 +895,7 @@ export class LeverageZapV2Module {
         if (!(await this.leverageRepayIsAvailable({ stateCollateral, userCollateral, userBorrowed, quote, address }))) return [parseUnits(0, 0), parseUnits(0, 0)];
 
         const _stateRepayCollateral = parseUnits(stateCollateral, this.market.collateral_token.decimals);
-        const { _collateral: _stateCollateral, _debt: _stateDebt, _N } = await this.market._userState(address);
+        const { _collateral: _stateCollateral, _debt: _stateDebt, _N } = await this.market.userPosition.userStateBigInt(address);
         if (_stateDebt == BigInt(0)) throw Error(`Loan for ${address} does not exist`);
         if (_stateCollateral < _stateRepayCollateral) throw Error(`Can't use more collateral than user's position has (${_stateRepayCollateral}) > ${_stateCollateral})`);
 
@@ -915,7 +919,7 @@ export class LeverageZapV2Module {
     private async _leverageRepayHealth(stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, quote: IQuote, full = true, address = ""): Promise<string> {
         this._checkLeverageZap();
         address = _getAddress.call(this.llamalend, address);
-        const { _borrowed: _stateBorrowed, _debt, _N } = await this.market._userState(address);
+        const { _borrowed: _stateBorrowed, _debt, _N } = await this.market.userPosition.userStateBigInt(address);
         if (_stateBorrowed > BigInt(0)) return "0.0";
         if (!(await this.leverageRepayIsAvailable({ stateCollateral, userCollateral, userBorrowed, quote, address }))) return "0.0";
 
@@ -977,7 +981,7 @@ export class LeverageZapV2Module {
         calldata: string,
         estimateGas: boolean
     ): Promise<string | TGas>  {
-        if (!(await this.market.userLoanExists())) throw Error("Loan does not exist");
+        if (!(await this.market.userPosition.userLoanExists())) throw Error("Loan does not exist");
         const _stateCollateral = parseUnits(stateCollateral, this.market.collateral_token.decimals);
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.market.borrowed_token.decimals);

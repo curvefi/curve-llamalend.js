@@ -1,6 +1,6 @@
 import memoize from "memoizee";
-import type { TAmount, TGas, IReward } from "../../interfaces.js";
-import type { LendMarketTemplate } from "../LendMarketTemplate.js";
+import type { TAmount, TGas, IReward } from "../../../interfaces";
+import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import {
     _getAddress,
     parseUnits,
@@ -15,12 +15,12 @@ import {
     _getUsdRate,
     _ensureAllowance,
     DIGas,
-} from "../../utils.js";
-import {Llamalend} from "../../llamalend.js";
+} from "../../../utils";
+import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
-import { _getMarketsData } from "../../external-api.js";
-import ERC20Abi from '../../constants/abis/ERC20.json' with {type: 'json'};
-import {WEEK} from "../../constants/utils.js";
+import { _getMarketsData } from "../../../external-api";
+import ERC20Abi from '../../../constants/abis/ERC20.json' with {type: 'json'};
+import {WEEK} from "../../../constants/utils";
 
 export class VaultV1Module {
     private market: LendMarketTemplate;
@@ -289,7 +289,7 @@ export class VaultV1Module {
     }
 
     public async vaultTotalLiquidity(useAPI = true): Promise<string> {
-        const { cap } = await this.statsCapAndAvailable(true, useAPI);
+        const { cap } = await this.market.stats.capAndAvailable(true, useAPI);
         const price = await _getUsdRate.call(this.llamalend, this.market.addresses.borrowed_token);
 
         return BN(cap).times(price).toFixed(6)

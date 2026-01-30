@@ -1,1 +1,1 @@
-export { LeverageZapV2Module } from './leverageZapV2.js'; 
+export { LeverageZapV2Module } from './v1/leverageV1ZapV2';
