@@ -1,6 +1,6 @@
 import memoize from "memoizee";
-import {TAmount, TGas, IReward, IPartialFrac} from "../../interfaces.js";
-import type { LendMarketTemplate } from "../LendMarketTemplate.js";
+import {TAmount, TGas, IPartialFrac} from "../../../interfaces";
+import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import {
     _getAddress,
     parseUnits,
@@ -12,15 +12,11 @@ import {
     formatUnits,
     smartNumber,
     _mulBy1_3,
-    _getUsdRate,
-    _ensureAllowance,
     DIGas, calculateFutureLeverage, MAX_ACTIVE_BAND, MAX_ALLOWANCE, fromBN, _cutZeros,
-} from "../../utils.js";
-import {Llamalend} from "../../llamalend.js";
+} from "../../../utils";
+import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
-import {_getMarketsData, _getUserCollateral} from "../../external-api.js";
-import ERC20Abi from '../../constants/abis/ERC20.json' with {type: 'json'};
-import {WEEK} from "../../constants/utils.js";
+import {_getUserCollateral} from "../../../external-api";
 
 export class LoanV1Module {
     private market: LendMarketTemplate;
@@ -32,63 +28,63 @@ export class LoanV1Module {
     }
 
     public _checkRange(range: number): void {
-        if (range < this.minBands) throw Error(`range must be >= ${this.minBands}`);
-        if (range > this.maxBands) throw Error(`range must be <= ${this.maxBands}`);
+        if (range < this.market.minBands) throw Error(`range must be >= ${this.market.minBands}`);
+        if (range > this.market.maxBands) throw Error(`range must be <= ${this.market.maxBands}`);
     }
 
     public async createLoanMaxRecv(collateral: number | string, range: number): Promise<string> {
         this._checkRange(range);
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
 
-        return formatUnits(await contract.max_borrowable(_collateral, range, 0, this.llamalend.constantOptions), this.borrowed_token.decimals);
+        return formatUnits(await contract.max_borrowable(_collateral, range, 0, this.llamalend.constantOptions), this.market.borrowed_token.decimals);
     }
 
     public createLoanMaxRecvAllRanges = memoize(async (collateral: number | string): Promise<{ [index: number]: string }> => {
-            const _collateral = parseUnits(collateral, this.collateral_token.decimals);
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
 
-            const calls = [];
-            for (let N = this.minBands; N <= this.maxBands; N++) {
-                calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.max_borrowable(_collateral, N, 0));
-            }
-            const _amounts = await this.llamalend.multicallProvider.all(calls) as bigint[];
+        const calls = [];
+        for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
+            calls.push(this.llamalend.contracts[this.market.addresses.controller].multicallContract.max_borrowable(_collateral, N, 0));
+        }
+        const _amounts = await this.llamalend.multicallProvider.all(calls) as bigint[];
 
-            const res: { [index: number]: string } = {};
-            for (let N = this.minBands; N <= this.maxBands; N++) {
-                res[N] = formatUnits(_amounts[N - this.minBands], this.borrowed_token.decimals);
-            }
+        const res: { [index: number]: string } = {};
+        for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
+            res[N] = formatUnits(_amounts[N - this.market.minBands], this.market.borrowed_token.decimals);
+        }
 
-            return res;
-        },
-        {
-            promise: true,
-            maxAge: 5 * 60 * 1000, // 5m
-        });
+        return res;
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000, // 5m
+    });
 
     public async getMaxRange(collateral: number | string, debt: number | string): Promise<number> {
         const maxRecv = await this.createLoanMaxRecvAllRanges(collateral);
-        for (let N = this.minBands; N <= this.maxBands; N++) {
+        for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
             if (BN(debt).gt(BN(maxRecv[N]))) return N - 1;
         }
 
-        return this.maxBands;
+        return this.market.maxBands;
     }
 
     private async _calcN1(_collateral: bigint, _debt: bigint, range: number): Promise<bigint> {
         this._checkRange(range);
-        return await this.llamalend.contracts[this.addresses.controller].contract.calculate_debt_n1(_collateral, _debt, range, this.llamalend.constantOptions);
+        return await this.llamalend.contracts[this.market.addresses.controller].contract.calculate_debt_n1(_collateral, _debt, range, this.llamalend.constantOptions);
     }
 
     private async _calcN1AllRanges(_collateral: bigint, _debt: bigint, maxN: number): Promise<bigint[]> {
         const calls = [];
-        for (let N = this.minBands; N <= maxN; N++) {
-            calls.push(this.llamalend.contracts[this.addresses.controller].multicallContract.calculate_debt_n1(_collateral, _debt, N));
+        for (let N = this.market.minBands; N <= maxN; N++) {
+            calls.push(this.llamalend.contracts[this.market.addresses.controller].multicallContract.calculate_debt_n1(_collateral, _debt, N));
         }
         return await this.llamalend.multicallProvider.all(calls) as bigint[];
     }
 
     public async _getPrices(_n2: bigint, _n1: bigint): Promise<string[]> {
-        const contract = this.llamalend.contracts[this.addresses.amm].multicallContract;
+        const contract = this.llamalend.contracts[this.market.addresses.amm].multicallContract;
         return (await this.llamalend.multicallProvider.all([
             contract.p_oracle_down(_n2),
             contract.p_oracle_up(_n1),
@@ -96,11 +92,11 @@ export class LoanV1Module {
     }
 
     public async _calcPrices(_n2: bigint, _n1: bigint): Promise<[string, string]> {
-        return [await this.calcTickPrice(Number(_n2) + 1), await this.calcTickPrice(Number(_n1))];
+        return [await this.market.calcTickPrice(Number(_n2) + 1), await this.market.calcTickPrice(Number(_n1))];
     }
 
     private async _createLoanBands(collateral: number | string, debt: number | string, range: number): Promise<[bigint, bigint]> {
-        const _n1 = await this._calcN1(parseUnits(collateral, this.collateral_token.decimals), parseUnits(debt, this.borrowed_token.decimals), range);
+        const _n1 = await this._calcN1(parseUnits(collateral, this.market.collateral_token.decimals), parseUnits(debt, this.market.borrowed_token.decimals), range);
         const _n2 = _n1 + BigInt(range - 1);
 
         return [_n2, _n1];
@@ -108,15 +104,15 @@ export class LoanV1Module {
 
     private async _createLoanBandsAllRanges(collateral: number | string, debt: number | string): Promise<{ [index: number]: [bigint, bigint] }> {
         const maxN = await this.getMaxRange(collateral, debt);
-        const _n1_arr = await this._calcN1AllRanges(parseUnits(collateral, this.collateral_token.decimals), parseUnits(debt, this.borrowed_token.decimals), maxN);
+        const _n1_arr = await this._calcN1AllRanges(parseUnits(collateral, this.market.collateral_token.decimals), parseUnits(debt, this.market.borrowed_token.decimals), maxN);
         const _n2_arr: bigint[] = [];
-        for (let N = this.minBands; N <= maxN; N++) {
-            _n2_arr.push(_n1_arr[N - this.minBands] + BigInt(N - 1));
+        for (let N = this.market.minBands; N <= maxN; N++) {
+            _n2_arr.push(_n1_arr[N - this.market.minBands] + BigInt(N - 1));
         }
 
         const res: { [index: number]: [bigint, bigint] } = {};
-        for (let N = this.minBands; N <= maxN; N++) {
-            res[N] = [_n2_arr[N - this.minBands], _n1_arr[N - this.minBands]];
+        for (let N = this.market.minBands; N <= maxN; N++) {
+            res[N] = [_n2_arr[N - this.market.minBands], _n1_arr[N - this.market.minBands]];
         }
 
         return res;
@@ -132,7 +128,7 @@ export class LoanV1Module {
         const _bandsAllRanges = await this._createLoanBandsAllRanges(collateral, debt);
 
         const bandsAllRanges: { [index: number]: [number, number] | null } = {};
-        for (let N = this.minBands; N <= this.maxBands; N++) {
+        for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
             if (_bandsAllRanges[N]) {
                 bandsAllRanges[N] = _bandsAllRanges[N].map(Number) as [number, number];
             } else {
@@ -153,7 +149,7 @@ export class LoanV1Module {
         const _bandsAllRanges = await this._createLoanBandsAllRanges(collateral, debt);
 
         const pricesAllRanges: { [index: number]: [string, string] | null } = {};
-        for (let N = this.minBands; N <= this.maxBands; N++) {
+        for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
             if (_bandsAllRanges[N]) {
                 pricesAllRanges[N] = await this._calcPrices(..._bandsAllRanges[N]);
             } else {
@@ -165,10 +161,10 @@ export class LoanV1Module {
     }
 
     public async createLoanHealth(collateral: number | string, debt: number | string, range: number, full = true): Promise<string> {
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const _debt = parseUnits(debt, this.borrowed_token.decimals);
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
+        const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
 
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         let _health = await contract.health_calculator(this.llamalend.constants.ZERO_ADDRESS, _collateral, _debt, full, range, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
@@ -176,24 +172,24 @@ export class LoanV1Module {
     }
 
     public async createLoanIsApproved(collateral: number | string): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.collateral_token.address], [collateral], this.llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
     private async createLoanApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.collateral_token.address], [collateral], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.market.addresses.controller);
     }
 
     public async createLoanApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.collateral_token.address], [collateral], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.market.addresses.controller);
     }
 
     private async _createLoan(collateral: number | string, debt: number | string, range: number, estimateGas: boolean): Promise<string | TGas> {
         if (await this.userLoanExists()) throw Error("Loan already created");
         this._checkRange(range);
 
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const _debt = parseUnits(debt, this.borrowed_token.decimals);
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
+        const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = await contract.create_loan.estimateGas(_collateral, _debt, range, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
@@ -216,20 +212,20 @@ export class LoanV1Module {
 
     public async borrowMoreMaxRecv(collateralAmount: number | string): Promise<string> {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState();
-        const _collateral = _currentCollateral + parseUnits(collateralAmount, this.collateral_token.decimals);
+        const _collateral = _currentCollateral + parseUnits(collateralAmount, this.market.collateral_token.decimals);
 
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _debt: bigint = await contract.max_borrowable(_collateral, _N, _currentDebt, this.llamalend.constantOptions);
 
-        return formatUnits(_debt - _currentDebt, this.borrowed_token.decimals);
+        return formatUnits(_debt - _currentDebt, this.market.borrowed_token.decimals);
     }
 
     private async _borrowMoreBands(collateral: number | string, debt: number | string): Promise<[bigint, bigint]> {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState();
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
 
-        const _collateral = _currentCollateral + parseUnits(collateral, this.collateral_token.decimals);
-        const _debt = _currentDebt + parseUnits(debt, this.borrowed_token.decimals);
+        const _collateral = _currentCollateral + parseUnits(collateral, this.market.collateral_token.decimals);
+        const _debt = _currentDebt + parseUnits(debt, this.market.borrowed_token.decimals);
 
         const _n1 = await this._calcN1(_collateral, _debt, Number(_N));
         const _n2 = _n1 + _N - BigInt(1);
@@ -251,10 +247,10 @@ export class LoanV1Module {
 
     public async borrowMoreHealth(collateral: number | string, debt: number | string, full = true, address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const _debt = parseUnits(debt, this.borrowed_token.decimals);
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
+        const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
 
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         let _health = await contract.health_calculator(address, _collateral, _debt, full, 0, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
@@ -262,25 +258,25 @@ export class LoanV1Module {
     }
 
     public async borrowMoreIsApproved(collateral: number | string): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
     private async borrowMoreApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller);
     }
 
     public async borrowMoreApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller);
     }
 
     private async _borrowMore(collateral: number | string, debt: number | string, estimateGas: boolean): Promise<string | TGas> {
-        const { borrowed, debt: currentDebt } = await this.userState();
+        const { borrowed, debt: currentDebt } = await this.market.userState();
         if (Number(currentDebt) === 0) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
         if (Number(borrowed) > 0) throw Error(`User ${this.llamalend.signerAddress} is already in liquidation mode`);
 
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const _debt = parseUnits(debt, this.borrowed_token.decimals);
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
+        const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = await contract.borrow_more.estimateGas(_collateral, _debt, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
@@ -306,7 +302,7 @@ export class LoanV1Module {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState(address);
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${address} does not exist`);
 
-        const _collateral = _currentCollateral + parseUnits(collateral, this.collateral_token.decimals);
+        const _collateral = _currentCollateral + parseUnits(collateral, this.market.collateral_token.decimals);
         const _n1 = await this._calcN1(_collateral, _currentDebt, Number(_N));
         const _n2 = _n1 + _N - BigInt(1);
 
@@ -327,9 +323,9 @@ export class LoanV1Module {
 
     public async addCollateralHealth(collateral: number | string, full = true, address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
 
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         let _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
@@ -337,24 +333,24 @@ export class LoanV1Module {
     }
 
     public async addCollateralIsApproved(collateral: number | string): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
     private async addCollateralApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller);
     }
 
     public async addCollateralApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.addresses.collateral_token], [collateral], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller);
     }
 
     private async _addCollateral(collateral: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
-        const { borrowed, debt: currentDebt } = await this.userState(address);
+        const { borrowed, debt: currentDebt } = await this.market.userState(address);
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
         if (Number(borrowed) > 0) throw Error(`User ${address} is already in liquidation mode`);
 
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = await contract.add_collateral.estimateGas(_collateral, address, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
@@ -378,8 +374,8 @@ export class LoanV1Module {
     public async addCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
         const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            this.userState(userAddress),
+            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.market.addresses.controller, userAddress),
+            this.market.userState(userAddress),
         ]);
 
         const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
@@ -391,16 +387,16 @@ export class LoanV1Module {
 
     public async maxRemovable(): Promise<string> {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState();
-        const _requiredCollateral = await this.llamalend.contracts[this.addresses.controller].contract.min_collateral(_currentDebt, _N, this.llamalend.constantOptions)
+        const _requiredCollateral = await this.llamalend.contracts[this.market.addresses.controller].contract.min_collateral(_currentDebt, _N, this.llamalend.constantOptions)
 
-        return formatUnits(_currentCollateral - _requiredCollateral, this.collateral_token.decimals);
+        return formatUnits(_currentCollateral - _requiredCollateral, this.market.collateral_token.decimals);
     }
 
     private async _removeCollateralBands(collateral: number | string): Promise<[bigint, bigint]> {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this._userState();
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
 
-        const _collateral = _currentCollateral - parseUnits(collateral, this.collateral_token.decimals);
+        const _collateral = _currentCollateral - parseUnits(collateral, this.market.collateral_token.decimals);
         const _n1 = await this._calcN1(_collateral, _currentDebt, Number(_N));
         const _n2 = _n1 + _N - BigInt(1);
 
@@ -421,9 +417,9 @@ export class LoanV1Module {
 
     public async removeCollateralHealth(collateral: number | string, full = true, address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals) * BigInt(-1);
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals) * BigInt(-1);
 
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         let _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
@@ -431,12 +427,12 @@ export class LoanV1Module {
     }
 
     private async _removeCollateral(collateral: number | string, estimateGas: boolean): Promise<string | TGas> {
-        const { borrowed, debt: currentDebt } = await this.userState();
+        const { borrowed, debt: currentDebt } = await this.market.userState();
         if (Number(currentDebt) === 0) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
         if (Number(borrowed) > 0) throw Error(`User ${this.llamalend.signerAddress} is already in liquidation mode`);
 
-        const _collateral = parseUnits(collateral, this.collateral_token.decimals);
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = await contract.remove_collateral.estimateGas(_collateral, this.llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
@@ -456,8 +452,8 @@ export class LoanV1Module {
     public async removeCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
         const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            this.userState(userAddress),
+            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.market.addresses.controller, userAddress),
+            this.market.userState(userAddress),
         ]);
 
         const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
@@ -472,7 +468,7 @@ export class LoanV1Module {
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${address} does not exist`);
         if (_borrowed > BigInt(0)) return await this._userBands(address) as [bigint, bigint];
 
-        const _debt = _currentDebt - parseUnits(debt, this.borrowed_token.decimals);
+        const _debt = _currentDebt - parseUnits(debt, this.market.borrowed_token.decimals);
         const _n1 = await this._calcN1(_currentCollateral, _debt, Number(_N));
         const _n2 = _n1 + _N - BigInt(1);
 
@@ -492,22 +488,22 @@ export class LoanV1Module {
     }
 
     public async repayIsApproved(debt: number | string): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.borrowed_token.address], [debt], this.llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
     private async repayApproveEstimateGas (debt: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.borrowed_token.address], [debt], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.market.addresses.controller);
     }
 
     public async repayApprove(debt: number | string): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.borrowed_token.address], [debt], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.market.addresses.controller);
     }
 
     public async repayHealth(debt: number | string, full = true, address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const _debt = parseUnits(debt) * BigInt(-1);
 
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         let _health = await contract.health_calculator(address, 0, _debt, full, 0, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
@@ -516,13 +512,13 @@ export class LoanV1Module {
 
     private async _repay(debt: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
         address = _getAddress.call(this.llamalend, address);
-        const { debt: currentDebt } = await this.userState(address);
+        const { debt: currentDebt } = await this.market.userState(address);
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
 
         const _debt = parseUnits(debt);
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
-        const [, n1] = await this.userBands(address);
-        const { borrowed } = await this.userState(address);
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
+        const [, n1] = await this.market.userBands(address);
+        const { borrowed } = await this.market.userState(address);
         const n = (BN(borrowed).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;  // In liquidation mode it doesn't matter if active band moves
         const gas = await contract.repay.estimateGas(_debt, address, n, this.llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
@@ -546,7 +542,7 @@ export class LoanV1Module {
 
     private async _fullRepayAmount(address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
-        const { debt } = await this.userState(address);
+        const { debt } = await this.market.userState(address);
         return BN(debt).times(1.0001).toString();
     }
 
@@ -586,8 +582,8 @@ export class LoanV1Module {
 
     public async maxSwappable(i: number, j: number): Promise<string> {
         if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-        const inDecimals = this.coinDecimals[i];
-        const contract = this.llamalend.contracts[this.addresses.amm].contract;
+        const inDecimals = this.market.coinDecimals[i];
+        const contract = this.llamalend.contracts[this.market.addresses.amm].contract;
         const [_inAmount, _outAmount] = await contract.get_dxdy(i, j, MAX_ALLOWANCE, this.llamalend.constantOptions) as bigint[];
         if (_outAmount === BigInt(0)) return "0";
 
@@ -595,12 +591,12 @@ export class LoanV1Module {
     }
 
     private async _swapExpected(i: number, j: number, _amount: bigint): Promise<bigint> {
-        return await this.llamalend.contracts[this.addresses.amm].contract.get_dy(i, j, _amount, this.llamalend.constantOptions) as bigint;
+        return await this.llamalend.contracts[this.market.addresses.amm].contract.get_dy(i, j, _amount, this.llamalend.constantOptions) as bigint;
     }
 
     public async swapExpected(i: number, j: number, amount: number | string): Promise<string> {
         if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-        const [inDecimals, outDecimals] = this.coinDecimals;
+        const [inDecimals, outDecimals] = this.market.coinDecimals;
         const _amount = parseUnits(amount, inDecimals);
         const _expected = await this._swapExpected(i, j, _amount);
 
@@ -609,16 +605,16 @@ export class LoanV1Module {
 
     public async swapRequired(i: number, j: number, outAmount: number | string): Promise<string> {
         if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-        const [inDecimals, outDecimals] = this.coinDecimals;
+        const [inDecimals, outDecimals] = this.market.coinDecimals;
         const _amount = parseUnits(outAmount, outDecimals);
-        const _expected = await this.llamalend.contracts[this.addresses.amm].contract.get_dx(i, j, _amount, this.llamalend.constantOptions) as bigint;
+        const _expected = await this.llamalend.contracts[this.market.addresses.amm].contract.get_dx(i, j, _amount, this.llamalend.constantOptions) as bigint;
 
         return formatUnits(_expected, inDecimals)
     }
 
     public async swapPriceImpact(i: number, j: number, amount: number | string): Promise<string> {
         if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-        const [inDecimals, outDecimals] = this.coinDecimals;
+        const [inDecimals, outDecimals] = this.market.coinDecimals;
         const _amount = parseUnits(amount, inDecimals);
         const _output = await this._swapExpected(i, j, _amount);
 
@@ -652,30 +648,30 @@ export class LoanV1Module {
     public async swapIsApproved(i: number, amount: number | string): Promise<boolean> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await hasAllowance.call(this.llamalend, [this.coinAddresses[i]], [amount], this.llamalend.signerAddress, this.addresses.amm);
+        return await hasAllowance.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.llamalend.signerAddress, this.market.addresses.amm);
     }
 
     private async swapApproveEstimateGas (i: number, amount: number | string): Promise<TGas> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.coinAddresses[i]], [amount], this.addresses.amm);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.market.addresses.amm);
     }
 
     public async swapApprove(i: number, amount: number | string): Promise<string[]> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await ensureAllowance.call(this.llamalend, [this.coinAddresses[i]], [amount], this.addresses.amm);
+        return await ensureAllowance.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.market.addresses.amm);
     }
 
     private async _swap(i: number, j: number, amount: number | string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
         if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
 
-        const [inDecimals, outDecimals] = [this.coinDecimals[i], this.coinDecimals[j]];
+        const [inDecimals, outDecimals] = [this.market.coinDecimals[i], this.market.coinDecimals[j]];
         const _amount = parseUnits(amount, inDecimals);
         const _expected = await this._swapExpected(i, j, _amount);
         const minRecvAmountBN: BigNumber = toBN(_expected, outDecimals).times(100 - slippage).div(100);
         const _minRecvAmount = fromBN(minRecvAmountBN, outDecimals);
-        const contract = this.llamalend.contracts[this.addresses.amm].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.amm].contract;
         const gas = await contract.exchange.estimateGas(i, j, _amount, _minRecvAmount, this.llamalend.constantOptions);
         if (estimateGas) return smartNumber(gas);
 
@@ -698,8 +694,8 @@ export class LoanV1Module {
 
     public async tokensToLiquidate(address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
-        const _tokens = await this.llamalend.contracts[this.addresses.controller].contract.tokens_to_liquidate(address, this.llamalend.constantOptions) as bigint;
-        return formatUnits(_tokens, this.borrowed_token.decimals)
+        const _tokens = await this.llamalend.contracts[this.market.addresses.controller].contract.tokens_to_liquidate(address, this.llamalend.constantOptions) as bigint;
+        return formatUnits(_tokens, this.market.borrowed_token.decimals)
     }
 
     public async calcPartialFrac(amount: TAmount, address = ""): Promise<IPartialFrac> {
@@ -726,21 +722,21 @@ export class LoanV1Module {
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await hasAllowance.call(this.llamalend, [this.addresses.borrowed_token], [tokensToLiquidate], this.llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [tokensToLiquidate], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
     private async liquidateApproveEstimateGas (address = ""): Promise<TGas> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.borrowed_token], [tokensToLiquidate], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [tokensToLiquidate], this.market.addresses.controller);
     }
 
     public async liquidateApprove(address = ""): Promise<string[]> {
         const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowance.call(this.llamalend, [this.addresses.borrowed_token], [tokensToLiquidate], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [tokensToLiquidate], this.market.addresses.controller);
     }
 
     private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
-        const { borrowed, debt: currentDebt } = await this.userState(address);
+        const { borrowed, debt: currentDebt } = await this.market.userState(address);
         if (slippage <= 0) throw Error("Slippage must be > 0");
         if (slippage > 100) throw Error("Slippage must be <= 100");
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
@@ -748,7 +744,7 @@ export class LoanV1Module {
 
         const minAmountBN: BigNumber = BN(borrowed).times(100 - slippage).div(100);
         const _minAmount = fromBN(minAmountBN);
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = (await contract.liquidate.estimateGas(address, _minAmount, this.llamalend.constantOptions))
         if (estimateGas) return smartNumber(gas);
 
@@ -758,7 +754,7 @@ export class LoanV1Module {
     }
 
     private async _partialLiquidate(address: string, partialFrac: IPartialFrac, slippage: number, estimateGas: boolean): Promise<string | TGas> {
-        const { borrowed, debt: currentDebt } = await this.userState(address);
+        const { borrowed, debt: currentDebt } = await this.market.userState(address);
         if (slippage <= 0) throw Error("Slippage must be > 0");
         if (slippage > 100) throw Error("Slippage must be <= 100");
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
@@ -772,7 +768,7 @@ export class LoanV1Module {
         const minAmountBN = expectedBorrowedBN.times(100 - slippage).div(100);
         const _minAmount = fromBN(minAmountBN);
 
-        const contract = this.llamalend.contracts[this.addresses.controller].contract;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = (await contract.liquidate_extended.estimateGas(
             address,
             _minAmount,
@@ -833,15 +829,15 @@ export class LoanV1Module {
     // ---------------- PARTIAL SELF-LIQUIDATE ----------------
 
     public async partialSelfLiquidateIsApproved(partialFrac: IPartialFrac): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.addresses.borrowed_token], [partialFrac.amount], this.llamalend.signerAddress, this.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [partialFrac.amount], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
     private async partialSelfLiquidateApproveEstimateGas(partialFrac: IPartialFrac): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.addresses.borrowed_token], [partialFrac.amount], this.addresses.controller);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [partialFrac.amount], this.market.addresses.controller);
     }
 
     public async partialSelfLiquidateApprove(partialFrac: IPartialFrac): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.addresses.borrowed_token], [partialFrac.amount], this.addresses.controller);
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [partialFrac.amount], this.market.addresses.controller);
     }
 
     public async partialSelfLiquidateEstimateGas(partialFrac: IPartialFrac, slippage = 0.1): Promise<TGas> {

@@ -1,4 +1,4 @@
-import {IReward, TAmount, TGas} from "../../interfaces";
+import {IReward, TAmount, TGas} from "../../../interfaces.js";
 
 export interface IVaultV1 {
     maxDeposit: (address?: string) => Promise<string>,
