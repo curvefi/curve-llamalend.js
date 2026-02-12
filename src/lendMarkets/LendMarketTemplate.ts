@@ -3226,7 +3226,7 @@ export class LendMarketTemplate {
         stateCollateral: TAmount,
         userCollateral: TAmount,
         userBorrowed: TAmount,
-        userAddress = '',
+        userAddress = ''
     ): Promise<string> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
         this._checkLeverageZap();
