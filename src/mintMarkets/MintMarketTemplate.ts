@@ -926,6 +926,24 @@ export class MintMarketTemplate {
         return await this._borrowMore(collateral, debt, false) as string;
     }
 
+    public async borrowMoreFutureLeverage(collateral: number | string, debt: number | string, userAddress = ''): Promise<string> {
+        if (!this.isDeleverageSupported) throw Error("This market does not support borrowMoreFutureLeverage");
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
+            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise ?? userCollateralData.total_deposit_precise;
+
+        const collateralFromDebt = await this.swapExpected(0, 1, debt);
+
+        const futureCollateralState = BN(stateCollateral).plus(collateralFromDebt);
+        const futureTotalDepositFromUserPrecise = BN(totalDepositFromUser).plus(collateral);
+        
+        return futureCollateralState.div(futureTotalDepositFromUserPrecise).toString();
+    }
+
     // ---------------- ADD COLLATERAL ----------------
 
     private async _addCollateralBands(collateral: number | string, address = ""): Promise<[bigint, bigint]> {
@@ -1173,6 +1191,24 @@ export class MintMarketTemplate {
     public async repay(debt: number | string, address = ""): Promise<string> {
         await this.repayApprove(debt);
         return await this._repay(debt, address, false) as string;
+    }
+
+    public async repayFutureLeverage(debt: number | string, userAddress = ''): Promise<string> {
+        if (!this.isDeleverageSupported) throw Error("This market does not support repayFutureLeverage");
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
+            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise ?? userCollateralData.total_deposit_precise;
+
+        const collateralFromDebt = await this.swapExpected(0, 1, debt);
+
+        const futureCollateralState = BN(stateCollateral);
+        const futureTotalDepositFromUserPrecise = BN(totalDepositFromUser).plus(collateralFromDebt);
+
+        return futureCollateralState.div(futureTotalDepositFromUserPrecise).toString();
     }
 
     // ---------------- FULL REPAY ----------------
