@@ -418,6 +418,7 @@ export class LendMarketTemplate {
             borrowMoreApprove: leverageZapV2.leverageCreateLoanApprove.bind(leverageZapV2),
             borrowMoreExpectedMetrics: leverageZapV2.leverageBorrowMoreExpectedMetrics.bind(leverageZapV2),
             borrowMore: leverageZapV2.leverageBorrowMore.bind(leverageZapV2),
+            borrowMoreFutureLeverage: leverageZapV2.leverageBorrowMoreFutureLeverage.bind(leverageZapV2),
 
             repayExpectedBorrowed: leverageZapV2.leverageRepayExpectedBorrowed.bind(leverageZapV2),
             repayIsFull: leverageZapV2.leverageRepayIsFull.bind(leverageZapV2),
@@ -426,6 +427,7 @@ export class LendMarketTemplate {
             repayIsApproved: leverageZapV2.leverageRepayIsApproved.bind(leverageZapV2),
             repayApprove: leverageZapV2.leverageRepayApprove.bind(leverageZapV2),
             repay: leverageZapV2.leverageRepay.bind(leverageZapV2),
+            repayFutureLeverage: leverageZapV2.leverageRepayFutureLeverage.bind(leverageZapV2),
 
             estimateGas: {
                 createLoanApprove: leverageZapV2.leverageCreateLoanApproveEstimateGas.bind(leverageZapV2),

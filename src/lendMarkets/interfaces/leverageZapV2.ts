@@ -190,6 +190,13 @@ export interface ILeverageZapV2 {
         router: string,
         calldata: string
     }) => Promise<string>,
+    borrowMoreFutureLeverage: ({ userCollateral, userBorrowed, debt, quote, address }: {
+        userCollateral: TAmount,
+        userBorrowed: TAmount,
+        debt: TAmount,
+        quote: IQuote,
+        address?: string
+    }) => Promise<string>,
 
     repayExpectedBorrowed: ({ stateCollateral, userCollateral, userBorrowed, quote }: {
         stateCollateral: TAmount,
@@ -239,6 +246,13 @@ export interface ILeverageZapV2 {
         userBorrowed: TAmount,
         router: string,
         calldata: string
+    }) => Promise<string>,
+    repayFutureLeverage: ({ stateCollateral, userCollateral, userBorrowed, quote, address }: {
+        stateCollateral: TAmount,
+        userCollateral: TAmount,
+        userBorrowed: TAmount,
+        quote: IQuote,
+        address?: string
     }) => Promise<string>,
 
     estimateGas: {

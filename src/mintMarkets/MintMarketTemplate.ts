@@ -238,6 +238,7 @@ export class MintMarketTemplate {
             borrowMoreApprove: leverageV2.leverageCreateLoanApprove.bind(leverageV2),
             borrowMoreRouteImage: leverageV2.leverageBorrowMoreRouteImage.bind(leverageV2),
             borrowMore: leverageV2.leverageBorrowMore.bind(leverageV2),
+            borrowMoreFutureLeverage: leverageV2.leverageBorrowMoreFutureLeverage.bind(leverageV2),
 
             repayExpectedBorrowed: leverageV2.leverageRepayExpectedBorrowed.bind(leverageV2),
             repayPriceImpact: leverageV2.leverageRepayPriceImpact.bind(leverageV2),
@@ -250,6 +251,7 @@ export class MintMarketTemplate {
             repayApprove: leverageV2.leverageRepayApprove.bind(leverageV2),
             repayRouteImage: leverageV2.leverageRepayRouteImage.bind(leverageV2),
             repay: leverageV2.leverageRepay.bind(leverageV2),
+            repayFutureLeverage: leverageV2.leverageRepayFutureLeverage.bind(leverageV2),
 
             estimateGas: {
                 createLoanApprove: leverageV2.leverageCreateLoanApproveEstimateGas.bind(leverageV2),
