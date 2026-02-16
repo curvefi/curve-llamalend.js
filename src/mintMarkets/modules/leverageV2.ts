@@ -17,7 +17,7 @@ import {
     _mulBy1_3,
     DIGas,
 } from "../../utils.js";
-import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral } from "../../external-api.js";
+import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos } from "../../external-api.js";
 import {Llamalend} from "../../llamalend.js";
 
 /**
@@ -714,12 +714,7 @@ export class LeverageV2Module {
         userAddress = _getAddress.call(this.llamalend, userAddress);
         this._checkLeverageZap();
 
-        const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.market.controller, userAddress),
-            this.market.userState(userAddress),
-        ]);
-
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise;
+        const { stateCollateral, totalDepositFromUser } = await this.market._getCurrentLeverageParams(userAddress);
 
         const expected = await this.leverageBorrowMoreExpectedCollateral(userCollateral, userBorrowed, debt, slippage, userAddress);
 
@@ -964,12 +959,7 @@ export class LeverageV2Module {
         userAddress = _getAddress.call(this.llamalend, userAddress);
         this._checkLeverageZap();
 
-        const [userCollateralData, { collateral: currentStateCollateral }] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.market.controller, userAddress),
-            this.market.userState(userAddress),
-        ]);
-
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise;
+        const { stateCollateral: currentStateCollateral, totalDepositFromUser } = await this.market._getCurrentLeverageParams(userAddress);
 
         const collateralFromUserBorrowed = await this.market.swapExpected(0, 1, userBorrowed);
 

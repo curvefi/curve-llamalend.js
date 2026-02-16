@@ -926,15 +926,22 @@ export class MintMarketTemplate {
         return await this._borrowMore(collateral, debt, false) as string;
     }
 
-    public async borrowMoreFutureLeverage(collateral: number | string, debt: number | string, userAddress = ''): Promise<string> {
-        if (!this.isDeleverageSupported) throw Error("This market does not support borrowMoreFutureLeverage");
-        userAddress = _getAddress.call(this.llamalend, userAddress);
+    public async _getCurrentLeverageParams(userAddress: string) {
         const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
             _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
             this.userState(userAddress),
         ]);
 
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise ?? userCollateralData.total_deposit_precise;
+        return {
+            stateCollateral,
+            totalDepositFromUser: userCollateralData.total_deposit_from_user_precise ?? userCollateralData.total_deposit_precise,
+        };
+    }
+
+    public async borrowMoreFutureLeverage(collateral: number | string, debt: number | string, userAddress = ''): Promise<string> {
+        if (!this.isDeleverageSupported) throw Error("This market does not support borrowMoreFutureLeverage");
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
         const collateralFromDebt = await this.swapExpected(0, 1, debt);
 
@@ -1025,14 +1032,9 @@ export class MintMarketTemplate {
     public async addCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
         this._checkLeverageForStats();
         userAddress = _getAddress.call(this.llamalend, userAddress);
-        const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
-            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
-            this.userState(userAddress),
-        ]);
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
-        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise ?? userCollateral.total_deposit_precise;
-
-        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'add');
+        return calculateFutureLeverage(stateCollateral, totalDepositFromUser, collateral, 'add');
     }
 
     // ---------------- REMOVE COLLATERAL ----------------
@@ -1106,14 +1108,9 @@ export class MintMarketTemplate {
     public async removeCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
         this._checkLeverageForStats();
         userAddress = _getAddress.call(this.llamalend, userAddress);
-        const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
-            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
-            this.userState(userAddress),
-        ]);
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
-        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise ?? userCollateral.total_deposit_precise;
-
-        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'remove');
+        return calculateFutureLeverage(stateCollateral, totalDepositFromUser, collateral, 'remove');
     }
 
     // ---------------- REPAY ----------------
@@ -1196,12 +1193,7 @@ export class MintMarketTemplate {
     public async repayFutureLeverage(debt: number | string, userAddress = ''): Promise<string> {
         if (!this.isDeleverageSupported) throw Error("This market does not support repayFutureLeverage");
         userAddress = _getAddress.call(this.llamalend, userAddress);
-        const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
-            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
-            this.userState(userAddress),
-        ]);
-
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise ?? userCollateralData.total_deposit_precise;
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
         const collateralFromDebt = await this.swapExpected(0, 1, debt);
 
@@ -1949,14 +1941,9 @@ export class MintMarketTemplate {
         this._checkLeverageForStats();
         userAddress = _getAddress.call(this.llamalend, userAddress);
         
-        const [userCollateral, {collateral}] = await Promise.all([
-            _getUserCollateralCrvUsdFull(this.llamalend.constants.NETWORK_NAME, this.controller, userAddress),
-            this.userState(userAddress),
-        ]);
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
-        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise ?? userCollateral.total_deposit_precise;
-
-        return BN(collateral).div(total_deposit_from_user).toString();
+        return BN(stateCollateral).div(totalDepositFromUser).toString();
     }
 
     public async currentPnL(userAddress = ''): Promise<Record<string, string>> {

@@ -19,7 +19,6 @@ import {
 } from "../../utils.js";
 import {Llamalend} from "../../llamalend.js";
 import BigNumber from "bignumber.js";
-import { _getUserCollateral } from "../../external-api.js";
 
 /**
  * LeverageZapV2 module for LendMarketTemplate
@@ -751,12 +750,7 @@ export class LeverageZapV2Module {
         address = _getAddress.call(this.llamalend, address);
         this._checkLeverageZap();
 
-        const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.market.addresses.controller, address),
-            this.market.userState(address),
-        ]);
-
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise;
+        const { stateCollateral, totalDepositFromUser } = await this.market._getCurrentLeverageParams(address);
 
         const expected = await this.leverageBorrowMoreExpectedCollateral({
             userCollateral,
@@ -1030,12 +1024,7 @@ export class LeverageZapV2Module {
         address = _getAddress.call(this.llamalend, address);
         this._checkLeverageZap();
 
-        const [userCollateralData, { collateral: currentStateCollateral }] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.market.addresses.controller, address),
-            this.market.userState(address),
-        ]);
-
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise;
+        const { stateCollateral: currentStateCollateral, totalDepositFromUser } = await this.market._getCurrentLeverageParams(address);
 
         const collateralFromUserBorrowed = await this.market.swapExpected(0, 1, userBorrowed);
 

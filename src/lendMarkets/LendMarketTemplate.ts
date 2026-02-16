@@ -1724,14 +1724,21 @@ export class LendMarketTemplate {
         return await this._borrowMore(collateral, debt, false) as string;
     }
 
-    public async borrowMoreFutureLeverage(collateral: number | string, debt: number | string, userAddress = ''): Promise<string> {
-        userAddress = _getAddress.call(this.llamalend, userAddress);
+    public async _getCurrentLeverageParams(userAddress: string) {
         const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
             _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
             this.userState(userAddress),
         ]);
 
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise;
+        return {
+            stateCollateral,
+            totalDepositFromUser: userCollateralData.total_deposit_from_user_precise,
+        };
+    }
+
+    public async borrowMoreFutureLeverage(collateral: number | string, debt: number | string, userAddress = ''): Promise<string> {
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
         const collateralFromDebt = await this.swapExpected(0, 1, debt);
 
@@ -1819,14 +1826,9 @@ export class LendMarketTemplate {
 
     public async addCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
-        const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            this.userState(userAddress),
-        ]);
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
-        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
-
-        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'add');
+        return calculateFutureLeverage(stateCollateral, totalDepositFromUser, collateral, 'add');
     }
 
     // ---------------- REMOVE COLLATERAL ----------------
@@ -1897,14 +1899,9 @@ export class LendMarketTemplate {
 
     public async removeCollateralFutureLeverage(collateral: number | string, userAddress = ''): Promise<string> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
-        const [userCollateral, {collateral: currentCollateral}] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            this.userState(userAddress),
-        ]);
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
-        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
-
-        return calculateFutureLeverage(currentCollateral, total_deposit_from_user, collateral, 'remove');
+        return calculateFutureLeverage(stateCollateral, totalDepositFromUser, collateral, 'remove');
     }
 
     // ---------------- REPAY ----------------
@@ -1986,12 +1983,7 @@ export class LendMarketTemplate {
 
     public async repayFutureLeverage(debt: number | string, userAddress = ''): Promise<string> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
-        const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            this.userState(userAddress),
-        ]);
-
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise;
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
         const collateralFromDebt = await this.swapExpected(0, 1, debt);
 
@@ -2980,12 +2972,7 @@ export class LendMarketTemplate {
         userAddress = _getAddress.call(this.llamalend, userAddress);
         this._checkLeverageZap();
 
-        const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            this.userState(userAddress),
-        ]);
-
-        const totalDepositFromUser = userCollateralData.total_deposit_from_user_precise;
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
         const expected = await this.leverageBorrowMoreExpectedCollateral(
             userCollateral,
@@ -3250,14 +3237,9 @@ export class LendMarketTemplate {
 
     public async currentLeverage(userAddress = ''): Promise<string> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
-        const [userCollateral, {collateral}] = await Promise.all([
-            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.addresses.controller, userAddress),
-            this.userState(userAddress),
-        ]);
+        const { stateCollateral, totalDepositFromUser } = await this._getCurrentLeverageParams(userAddress);
 
-        const total_deposit_from_user = userCollateral.total_deposit_from_user_precise;
-
-        return BN(collateral).div(total_deposit_from_user).toString();
+        return BN(stateCollateral).div(totalDepositFromUser).toString();
     }
 
     public async currentPnL(userAddress = ''): Promise<Record<string, string>> {
