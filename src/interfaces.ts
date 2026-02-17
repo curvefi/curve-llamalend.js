@@ -249,3 +249,10 @@ export type GetExpectedFn = (
     amountIn: bigint,
     blacklist: string | string[],
 ) => Promise<IQuote>;
+
+export interface IRates {
+    borrowApr: string;
+    lendApr: string;
+    borrowApy: string;
+    lendApy: string;
+}

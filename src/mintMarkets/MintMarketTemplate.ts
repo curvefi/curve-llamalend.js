@@ -21,7 +21,7 @@ import {
     DIGas,
     calculateFutureLeverage,
 } from "../utils.js";
-import {IDict, ILlamma, TGas} from "../interfaces.js";
+import {IDict, ILlamma, TGas, IRates} from "../interfaces.js";
 import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
 import { ILeverageV2 } from "./interfaces/leverage.js";
 import { LeverageV2Module } from "./modules/index.js";
@@ -71,8 +71,8 @@ export class MintMarketTemplate {
         parameters: () => Promise<{
             fee: string, // %
             admin_fee: string, // %
-            rate: string, // %
-            future_rate: string, // %
+            rates: IRates,
+            future_rates: IRates,
             liquidation_discount: string, // %
             loan_discount: string, // %
         }>,
@@ -282,11 +282,23 @@ export class MintMarketTemplate {
 
     // ---------------- STATS ----------------
 
+    private _buildRatesObject(rate: bigint): IRates {
+        const borrowApr = toBN(rate).times(365).times(86400).times(100).toString();
+        // borrowApy = e**(rate*365*86400) - 1
+        const borrowApy = String(((2.718281828459 ** (toBN(rate).times(365).times(86400)).toNumber()) - 1) * 100);
+        return {
+            borrowApr,
+            borrowApy,
+            lendApr: "0",
+            lendApy: "0",
+        };
+    }
+
     public statsParameters = memoize(async (): Promise<{
         fee: string, // %
         admin_fee: string, // %
-        rate: string, // %
-        future_rate: string, // %
+        rates: IRates,
+        future_rates: IRates,
         liquidation_discount: string, // %
         loan_discount: string, // %
     }> => {
@@ -307,11 +319,10 @@ export class MintMarketTemplate {
         const [fee, admin_fee, liquidation_discount, loan_discount] = [_fee, _admin_fee, _liquidation_discount, _loan_discount]
             .map((x) => formatUnits(x * BigInt(100)));
 
-        // (1+rate)**(365*86400)-1 ~= (e**(rate*365*86400))-1
-        const rate = String(((2.718281828459 ** Number((toBN(_rate).times(365).times(86400)))) - 1) * 100);
-        const future_rate = String(((2.718281828459 ** Number((toBN(_mp_rate).times(365).times(86400)))) - 1) * 100);
+        const rates = this._buildRatesObject(_rate);
+        const future_rates = this._buildRatesObject(_mp_rate);
 
-        return { fee, admin_fee, rate, future_rate, liquidation_discount, loan_discount }
+        return { fee, admin_fee, rates, future_rates, liquidation_discount, loan_discount }
     },
     {
         promise: true,
