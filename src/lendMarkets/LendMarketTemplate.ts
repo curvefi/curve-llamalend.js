@@ -23,7 +23,7 @@ import {
     smartNumber,
     calculateFutureLeverage,
 } from "../utils.js";
-import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket, IPartialFrac} from "../interfaces.js";
+import {IDict, TGas, TAmount, IReward, IQuoteOdos, IOneWayMarket, IPartialFrac, IRates} from "../interfaces.js";
 import { _getExpectedOdos, _getQuoteOdos, _assembleTxOdos, _getUserCollateral, _getUserCollateralForce, _getMarketsData } from "../external-api.js";
 import ERC20Abi from '../constants/abis/ERC20.json' with {type: 'json'};
 import {cacheKey, cacheStats} from "../cache/index.js";
@@ -1016,7 +1016,7 @@ export class LendMarketTemplate {
         return await mpContract.future_rate(this.addresses.controller, _dReserves, _dDebt);
     }
 
-    private async statsRates(isGetter = true, useAPI = false): Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}> {
+    private async statsRates(isGetter = true, useAPI = false): Promise<IRates> {
         if(useAPI) {
             const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
 
@@ -1052,7 +1052,7 @@ export class LendMarketTemplate {
         }
     }
 
-    private async statsFutureRates(dReserves: TAmount, dDebt: TAmount, useAPI = true): Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}> {
+    private async statsFutureRates(dReserves: TAmount, dDebt: TAmount, useAPI = true): Promise<IRates> {
         const _dReserves = parseUnits(dReserves, this.borrowed_token.decimals);
         const _dDebt = parseUnits(dDebt, this.borrowed_token.decimals);
         const _rate = await this._getFutureRate(_dReserves, _dDebt);
