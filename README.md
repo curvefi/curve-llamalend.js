@@ -891,6 +891,20 @@ import llamalend from "@curvefi/llamalend-api";
 })()
 ```
 
+### Future Leverage methods for lendMarket
+
+Estimate future leverage after an operation
+
+```ts
+    await lendMarket.borrowMoreFutureLeverage(0.1, 500);
+    
+    await lendMarket.repayFutureLeverage(1000);
+    
+    await lendMarket.leverage.borrowMoreFutureLeverage(userCollateral, userBorrowed, debt);
+
+    await lendMarket.leverage.repayFutureLeverage(stateCollateral, userCollateral, userBorrowed);
+```
+
 ### Force Update User State for lendMarket
 
 After executing certain transactions, it's recommended to force update the user's state in the cache to ensure data consistency:
