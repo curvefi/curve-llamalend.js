@@ -5,14 +5,13 @@ import {
     _getAddress,
     parseUnits,
     BN,
-    toBN,
     ensureAllowance,
     hasAllowance,
     ensureAllowanceEstimateGas,
     formatUnits,
     smartNumber,
     _mulBy1_3,
-    DIGas, calculateFutureLeverage, MAX_ACTIVE_BAND, MAX_ALLOWANCE, fromBN, _cutZeros,
+    DIGas, calculateFutureLeverage, MAX_ACTIVE_BAND, fromBN,
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
@@ -38,6 +37,7 @@ export class LoanV1Module implements ILoanV1 {
         const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
 
+        // TODO: currentDebt is no longer passed - now we pass user address or zero address, currentDebt is calculated under the hood
         return formatUnits(await contract.max_borrowable(_collateral, range, 0, this.llamalend.constantOptions), this.market.borrowed_token.decimals);
     }
 
@@ -46,6 +46,7 @@ export class LoanV1Module implements ILoanV1 {
 
         const calls = [];
         for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
+            // TODO: currentDebt is no longer passed - now we pass user address or zero address, currentDebt is calculated under the hood
             calls.push(this.llamalend.contracts[this.market.addresses.controller].multicallContract.max_borrowable(_collateral, N, 0));
         }
         const _amounts = await this.llamalend.multicallProvider.all(calls) as bigint[];
@@ -73,11 +74,13 @@ export class LoanV1Module implements ILoanV1 {
 
     private async _calcN1(_collateral: bigint, _debt: bigint, range: number): Promise<bigint> {
         this._checkRange(range);
+        // TODO: add 4th parameter - user address in calculate_debt_n1
         return await this.llamalend.contracts[this.market.addresses.controller].contract.calculate_debt_n1(_collateral, _debt, range, this.llamalend.constantOptions);
     }
 
     private async _calcN1AllRanges(_collateral: bigint, _debt: bigint, maxN: number): Promise<bigint[]> {
         const calls = [];
+        // TODO: add 4th parameter - user address in calculate_debt_n1
         for (let N = this.market.minBands; N <= maxN; N++) {
             calls.push(this.llamalend.contracts[this.market.addresses.controller].multicallContract.calculate_debt_n1(_collateral, _debt, N));
         }
@@ -154,6 +157,7 @@ export class LoanV1Module implements ILoanV1 {
         const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
+        // TODO: verify parameters
         let _health = await contract.health_calculator(this.llamalend.constants.ZERO_ADDRESS, _collateral, _debt, full, range, this.llamalend.constantOptions) as bigint;
         _health = _health * BigInt(100);
 
@@ -184,6 +188,7 @@ export class LoanV1Module implements ILoanV1 {
 
         await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
+        // TODO: ABI has changed (see docs)
         return (await contract.create_loan(_collateral, _debt, range, { ...this.llamalend.options, gasLimit })).hash
     }
 
@@ -205,7 +210,7 @@ export class LoanV1Module implements ILoanV1 {
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _debt: bigint = await contract.max_borrowable(_collateral, _N, _currentDebt, this.llamalend.constantOptions);
-
+        // TODO: max_borrowable(deltaCollateral, _N, user) - debt is now calculated under the hood, return as is
         return formatUnits(_debt - _currentDebt, this.market.borrowed_token.decimals);
     }
 
@@ -451,12 +456,14 @@ export class LoanV1Module implements ILoanV1 {
     }
 
     // ---------------- REPAY ----------------
-
+    // TODO: add shrink: bool parameter
+    // If bool is true, _N = n2 - n1 + 1 -> _N = n2 - activeBand
     private async _repayBands(debt: number | string, address: string): Promise<[bigint, bigint]> {
         const { _collateral: _currentCollateral, _borrowed, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt(address);
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${address} does not exist`);
+        // && shrink === false
         if (_borrowed > BigInt(0)) return await this.market.userPosition.userBandsBigInt(address) as [bigint, bigint];
-
+        // If shrink == true, then _debt = _currentDebt - parseUnits(debt, this.market.borrowed_token.decimals) - _borrowed
         const _debt = _currentDebt - parseUnits(debt, this.market.borrowed_token.decimals);
         const _n1 = await this._calcN1(_currentCollateral, _debt, Number(_N));
         const _n2 = _n1 + _N - BigInt(1);
@@ -514,6 +521,7 @@ export class LoanV1Module implements ILoanV1 {
 
         await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
+        // TODO: shrink parameter is added, which changes bands calculation
         return (await contract.repay(_debt, address, n, { ...this.llamalend.options, gasLimit })).hash
     }
 
@@ -531,6 +539,7 @@ export class LoanV1Module implements ILoanV1 {
 
     private async _fullRepayAmount(address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
+        // TODO: now debt is _borrowed
         const { debt } = await this.market.userPosition.userState(address);
         return BN(debt).times(1.0001).toString();
     }
@@ -565,118 +574,6 @@ export class LoanV1Module implements ILoanV1 {
         const fullRepayAmount = await this._fullRepayAmount(address);
         await this.repayApprove(fullRepayAmount);
         return await this._repay(fullRepayAmount, address, false) as string;
-    }
-
-    // ---------------- SWAP ----------------
-
-    public async maxSwappable(i: number, j: number): Promise<string> {
-        if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-        const inDecimals = this.market.coinDecimals[i];
-        const contract = this.llamalend.contracts[this.market.addresses.amm].contract;
-        const [_inAmount, _outAmount] = await contract.get_dxdy(i, j, MAX_ALLOWANCE, this.llamalend.constantOptions) as bigint[];
-        if (_outAmount === BigInt(0)) return "0";
-
-        return formatUnits(_inAmount, inDecimals)
-    }
-
-    private async _swapExpected(i: number, j: number, _amount: bigint): Promise<bigint> {
-        return await this.llamalend.contracts[this.market.addresses.amm].contract.get_dy(i, j, _amount, this.llamalend.constantOptions) as bigint;
-    }
-
-    public async swapExpected(i: number, j: number, amount: number | string): Promise<string> {
-        if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-        const [inDecimals, outDecimals] = this.market.coinDecimals;
-        const _amount = parseUnits(amount, inDecimals);
-        const _expected = await this._swapExpected(i, j, _amount);
-
-        return formatUnits(_expected, outDecimals)
-    }
-
-    public async swapRequired(i: number, j: number, outAmount: number | string): Promise<string> {
-        if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-        const [inDecimals, outDecimals] = this.market.coinDecimals;
-        const _amount = parseUnits(outAmount, outDecimals);
-        const _expected = await this.llamalend.contracts[this.market.addresses.amm].contract.get_dx(i, j, _amount, this.llamalend.constantOptions) as bigint;
-
-        return formatUnits(_expected, inDecimals)
-    }
-
-    public async swapPriceImpact(i: number, j: number, amount: number | string): Promise<string> {
-        if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-        const [inDecimals, outDecimals] = this.market.coinDecimals;
-        const _amount = parseUnits(amount, inDecimals);
-        const _output = await this._swapExpected(i, j, _amount);
-
-        // Find k for which x * k = 10^15 or y * k = 10^15: k = max(10^15 / x, 10^15 / y)
-        // For coins with d (decimals) <= 15: k = min(k, 0.2), and x0 = min(x * k, 10^d)
-        // x0 = min(x * min(max(10^15 / x, 10^15 / y), 0.2), 10^d), if x0 == 0 then priceImpact = 0
-        const target = BN(10 ** 15);
-        const amountIntBN = BN(amount).times(10 ** inDecimals);
-        const outputIntBN = toBN(_output, 0);
-        const k = BigNumber.min(BigNumber.max(target.div(amountIntBN), target.div(outputIntBN)), 0.2);
-        const smallAmountIntBN = BigNumber.min(amountIntBN.times(k), BN(10 ** inDecimals));
-        if (smallAmountIntBN.toFixed(0) === '0') return '0';
-
-        const _smallAmount = fromBN(smallAmountIntBN.div(10 ** inDecimals), inDecimals);
-        const _smallOutput = await this._swapExpected(i, j, _smallAmount);
-
-        const amountBN = BN(amount);
-        const outputBN = toBN(_output, outDecimals);
-        const smallAmountBN = toBN(_smallAmount, inDecimals);
-        const smallOutputBN = toBN(_smallOutput, outDecimals);
-
-        const rateBN = outputBN.div(amountBN);
-        const smallRateBN = smallOutputBN.div(smallAmountBN);
-        if (rateBN.gt(smallRateBN)) return "0";
-
-        const slippageBN = BN(1).minus(rateBN.div(smallRateBN)).times(100);
-
-        return _cutZeros(slippageBN.toFixed(6));
-    }
-
-    public async swapIsApproved(i: number, amount: number | string): Promise<boolean> {
-        if (i !== 0 && i !== 1) throw Error("Wrong index");
-
-        return await hasAllowance.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.llamalend.signerAddress, this.market.addresses.amm);
-    }
-
-    private async swapApproveEstimateGas (i: number, amount: number | string): Promise<TGas> {
-        if (i !== 0 && i !== 1) throw Error("Wrong index");
-
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.market.addresses.amm);
-    }
-
-    public async swapApprove(i: number, amount: number | string): Promise<string[]> {
-        if (i !== 0 && i !== 1) throw Error("Wrong index");
-
-        return await ensureAllowance.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.market.addresses.amm);
-    }
-
-    private async _swap(i: number, j: number, amount: number | string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
-        if (!(i === 0 && j === 1) && !(i === 1 && j === 0)) throw Error("Wrong index");
-
-        const [inDecimals, outDecimals] = [this.market.coinDecimals[i], this.market.coinDecimals[j]];
-        const _amount = parseUnits(amount, inDecimals);
-        const _expected = await this._swapExpected(i, j, _amount);
-        const minRecvAmountBN: BigNumber = toBN(_expected, outDecimals).times(100 - slippage).div(100);
-        const _minRecvAmount = fromBN(minRecvAmountBN, outDecimals);
-        const contract = this.llamalend.contracts[this.market.addresses.amm].contract;
-        const gas = await contract.exchange.estimateGas(i, j, _amount, _minRecvAmount, this.llamalend.constantOptions);
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.exchange(i, j, _amount, _minRecvAmount, { ...this.llamalend.options, gasLimit })).hash
-    }
-
-    public async swapEstimateGas(i: number, j: number, amount: number | string, slippage = 0.1): Promise<TGas> {
-        if (!(await this.swapIsApproved(i, amount))) throw Error("Approval is needed for gas estimation");
-        return await this._swap(i, j, amount, slippage, true) as TGas;
-    }
-
-    public async swap(i: number, j: number, amount: number | string, slippage = 0.1): Promise<string> {
-        await this.swapApprove(i, amount);
-        return await this._swap(i, j, amount, slippage, false) as string;
     }
 
     // ---------------- LIQUIDATE ----------------
@@ -846,7 +743,6 @@ export class LoanV1Module implements ILoanV1 {
         removeCollateral: this.removeCollateralEstimateGas.bind(this),
         repay: this.repayEstimateGas.bind(this),
         fullRepay: this.fullRepayEstimateGas.bind(this),
-        swap: this.swapEstimateGas.bind(this),
         liquidate: this.liquidateEstimateGas.bind(this),
         selfLiquidate: this.selfLiquidateEstimateGas.bind(this),
         partialSelfLiquidate: this.partialSelfLiquidateEstimateGas.bind(this),

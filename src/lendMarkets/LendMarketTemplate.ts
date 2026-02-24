@@ -1,7 +1,7 @@
 import type { Llamalend } from "../llamalend.js";
 import {IDict, IQuoteOdos, IOneWayMarket} from "../interfaces.js";
 import {ILeverageZapV2} from "./interfaces/leverageZapV2.js";
-import {IStatsV1, IWalletV1, IVaultV1, IPricesV1, ILoanV1, IUserPositionV1, ILeverageV1} from "./interfaces/v1";
+import {IStatsV1, IWalletV1, IVaultV1, IPricesV1, ILoanV1, IUserPositionV1, ILeverageV1, IAmmV1} from "./interfaces/v1";
 import {
     LeverageZapV1Module,
     LeverageZapV2Module,
@@ -11,13 +11,15 @@ import {
     UserPositionV1Module,
     PricesV1Module,
     LoanV1Module,
+    AmmV1Module,
 } from "./modules/v1";
 
 
 export class LendMarketTemplate {
     private llamalend: Llamalend;
     id: string;
-    name: string
+    name: string;
+    version: 'v1' | 'v2';
     addresses: {
         amm: string,
         controller: string,
@@ -50,6 +52,7 @@ export class LendMarketTemplate {
     wallet: IWalletV1;
     prices: IPricesV1;
     loan: ILoanV1;
+    amm: IAmmV1;
     userPosition: IUserPositionV1;
     leverage: ILeverageV1;
     leverageZapV2: ILeverageZapV2;
@@ -57,6 +60,7 @@ export class LendMarketTemplate {
 
     constructor(id: string, marketData: IOneWayMarket, llamalend: Llamalend) {
         this.llamalend = llamalend;
+        this.version = marketData.version || 'v1';
         this.id = id;
         this.name = marketData.name;
         this.addresses = marketData.addresses;
@@ -104,7 +108,7 @@ export class LendMarketTemplate {
 
         const wallet = new WalletV1Module(this)
         this.wallet = {
-            balances: wallet.walletBalances.bind(this),
+            balances: wallet.balances.bind(this),
         }
 
         const prices = new PricesV1Module(this)
@@ -120,6 +124,18 @@ export class LendMarketTemplate {
             getPrices: prices.getPrices.bind(prices),
             calcPrices: prices.getPrices.bind(prices),
             checkRange: prices.checkRange.bind(prices),
+        }
+
+        const amm = new AmmV1Module(this)
+
+        this.amm = {
+            maxSwappable: amm.maxSwappable.bind(amm),
+            swapExpected: amm.swapExpected.bind(amm),
+            swapRequired: amm.swapRequired.bind(amm),
+            swapPriceImpact: amm.swapPriceImpact.bind(amm),
+            swapIsApproved: amm.swapIsApproved.bind(amm),
+            swapApprove: amm.swapApprove.bind(amm),
+            swap: amm.swap.bind(amm),
         }
 
         this.loan = {
@@ -169,14 +185,6 @@ export class LendMarketTemplate {
             fullRepayApprove: loan.fullRepayApprove.bind(loan),
             fullRepay: loan.fullRepay.bind(loan),
 
-            maxSwappable: loan.maxSwappable.bind(loan),
-            swapExpected: loan.swapExpected.bind(loan),
-            swapRequired: loan.swapRequired.bind(loan),
-            swapPriceImpact: loan.swapPriceImpact.bind(loan),
-            swapIsApproved: loan.swapIsApproved.bind(loan),
-            swapApprove: loan.swapApprove.bind(loan),
-            swap: loan.swap.bind(loan),
-
             tokensToLiquidate: loan.tokensToLiquidate.bind(loan),
             calcPartialFrac: loan.calcPartialFrac.bind(loan),
             liquidateIsApproved: loan.liquidateIsApproved.bind(loan),
@@ -198,7 +206,6 @@ export class LendMarketTemplate {
                 removeCollateral: loan.removeCollateralEstimateGas.bind(loan),
                 repay: loan.repayEstimateGas.bind(loan),
                 fullRepay: loan.fullRepayEstimateGas.bind(loan),
-                swap: loan.swapEstimateGas.bind(loan),
                 liquidate: loan.liquidateEstimateGas.bind(loan),
                 selfLiquidate: loan.selfLiquidateEstimateGas.bind(loan),
                 partialSelfLiquidate: loan.partialSelfLiquidateEstimateGas.bind(loan),

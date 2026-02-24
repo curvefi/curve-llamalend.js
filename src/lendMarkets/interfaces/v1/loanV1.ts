@@ -47,14 +47,6 @@ export interface ILoanV1 {
     fullRepayApprove: (address?: string) => Promise<string[]>;
     fullRepay: (address?: string) => Promise<string>;
 
-    maxSwappable: (i: number, j: number) => Promise<string>;
-    swapExpected: (i: number, j: number, amount: TAmount) => Promise<string>;
-    swapRequired: (i: number, j: number, outAmount: TAmount) => Promise<string>;
-    swapPriceImpact: (i: number, j: number, amount: TAmount) => Promise<string>;
-    swapIsApproved: (i: number, amount: TAmount) => Promise<boolean>;
-    swapApprove: (i: number, amount: TAmount) => Promise<string[]>;
-    swap: (i: number, j: number, amount: TAmount, slippage?: number) => Promise<string>;
-
     tokensToLiquidate: (address?: string) => Promise<string>;
     calcPartialFrac: (amount: TAmount, address?: string) => Promise<IPartialFrac>;
     liquidateIsApproved: (address?: string) => Promise<boolean>;
@@ -76,7 +68,6 @@ export interface ILoanV1 {
         removeCollateral: (collateral: TAmount) => Promise<TGas>;
         repay: (debt: TAmount, address?: string) => Promise<TGas>;
         fullRepay: (address?: string) => Promise<TGas>;
-        swap: (i: number, j: number, amount: TAmount, slippage?: number) => Promise<TGas>;
         liquidate: (address: string, slippage?: number) => Promise<TGas>;
         selfLiquidate: (slippage?: number) => Promise<TGas>;
         partialSelfLiquidate: (partialFrac: IPartialFrac, slippage?: number) => Promise<TGas>;

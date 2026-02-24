@@ -54,6 +54,7 @@ export interface ICoin {
 
 export interface IOneWayMarket {
     name: string,
+    version: 'v1' | 'v2',
     addresses: {
         amm: string,
         controller: string,

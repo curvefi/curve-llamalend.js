@@ -34,7 +34,7 @@ export class StatsV1Module {
 
         const calls = [
             llammaContract.fee(),
-            llammaContract.admin_fee(),
+            llammaContract.admin_fee(), // TODO: removed
             controllerContract.liquidation_discount(),
             controllerContract.loan_discount(),
             llammaContract.get_base_price(),
@@ -133,8 +133,8 @@ export class StatsV1Module {
         const calls = [
             borrowedContract.balanceOf(this.market.addresses.amm),
             collateralContract.balanceOf(this.market.addresses.amm),
-            ammContract.admin_fees_x(),
-            ammContract.admin_fees_y(),
+            ammContract.admin_fees_x(), // TODO: always 0
+            ammContract.admin_fees_y(), // TODO: always 0
         ]
         const [_borrowedBalance, _collateralBalance, _borrowedAdminFees, _collateralAdminFees]: bigint[] = await this.llamalend.multicallProvider.all(calls);
 
@@ -243,7 +243,7 @@ export class StatsV1Module {
             const collateralContract = this.llamalend.contracts[this.market.addresses.collateral_token].multicallContract;
             const ammContract = this.llamalend.contracts[this.market.addresses.amm].multicallContract;
 
-            let _balance_x, _fee_x, _balance_y, _fee_y;
+            let _balance_x, _fee_x, _balance_y, _fee_y; // TODO: fees are always 0
             if(isGetter) {
                 [_balance_x, _fee_x, _balance_y, _fee_y] = [
                     cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm)),
@@ -290,7 +290,7 @@ export class StatsV1Module {
             const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
 
             let _cap, _available;
-            if(isGetter) {
+            if(isGetter) { // TODO: should call controller.available_balance() instead of borrowed_token.balanceOf(controller)
                 _cap = cacheStats.get(cacheKey(this.market.addresses.vault, 'totalAssets', this.market.addresses.controller));
                 _available = cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.controller));
             } else {
@@ -306,6 +306,8 @@ export class StatsV1Module {
                 cap: this.llamalend.formatUnits(_cap, this.market.borrowed_token.decimals),
                 available: this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals),
             }
+            // cap -> totalAssets
+            // add cap: controller.borrow_cap() // Display
         }
     }
 }

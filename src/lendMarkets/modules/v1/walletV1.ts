@@ -3,8 +3,9 @@ import {
     getBalances,
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
+import {IWalletV1} from "../../interfaces/v1";
 
-export class WalletV1Module {
+export class WalletV1Module implements IWalletV1 {
     private market: LendMarketTemplate;
     private llamalend: Llamalend;
 
@@ -13,7 +14,7 @@ export class WalletV1Module {
         this.llamalend = market.getLlamalend();
     }
 
-    public async walletBalances(address = ""): Promise<{ collateral: string, borrowed: string, vaultShares: string, gauge: string }> {
+    public async balances(address = ""): Promise<{ collateral: string, borrowed: string, vaultShares: string, gauge: string }> {
         if (this.market.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             const [collateral, borrowed, vaultShares] =
                 await getBalances.call(this.llamalend, [this.market.collateral_token.address, this.market.borrowed_token.address, this.market.addresses.vault], address);

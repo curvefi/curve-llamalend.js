@@ -19,7 +19,6 @@ export const createCall = (contract: ICurveContract, name: string, params: any[]
     const func = _abi.find((f: JsonFragment) => f.name === _name)
     const inputs = func?.inputs || [];
     const outputs = func?.outputs || [];
-
     return {
         contract: {
             address: contract.address,

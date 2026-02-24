@@ -13,6 +13,7 @@ import {
 } from "./interfaces.js";
 // OneWayMarket ABIs
 import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: 'json'};
+import OneWayLendingFactoryV2ABI from "./constants/abis/OneWayLendingFactoryV2ABI.json" with {type: 'json'};
 import ERC20ABI from './constants/abis/ERC20.json' with {type: 'json'};
 import ERC4626ABI from './constants/abis/ERC4626.json' with {type: 'json'};
 import LlammaABI from './constants/abis/Llamma.json' with {type: 'json'};
@@ -110,6 +111,7 @@ class Llamalend implements ILlamalend {
     L1WeightedGasPrice?: number;
     constants: {
         ONE_WAY_MARKETS: IDict<IOneWayMarket>,
+        ONE_WAY_MARKETS_V2: IDict<IOneWayMarket>,
         DECIMALS: IDict<number>;
         NETWORK_NAME: INetworkName;
         ALIASES: Record<string, string>;
@@ -138,6 +140,7 @@ class Llamalend implements ILlamalend {
         this.options = {};
         this.constants = {
             ONE_WAY_MARKETS: {},
+            ONE_WAY_MARKETS_V2: {},
             LLAMMAS: {},
             COINS: {},
             DECIMALS: {},
@@ -173,6 +176,7 @@ class Llamalend implements ILlamalend {
         this.options = {};
         this.constants = {
             ONE_WAY_MARKETS: {},
+            ONE_WAY_MARKETS_V2: {},
             LLAMMAS: {...LLAMMAS},
             COINS: {},
             DECIMALS: {},
@@ -269,6 +273,9 @@ class Llamalend implements ILlamalend {
 
         // oneWayMarkets contracts
         this.setContract(this.constants.ALIASES['one_way_factory'], OneWayLendingFactoryABI);
+        if(this.constants.ALIASES['one_way_factory_v2'] && this.constants.ALIASES['one_way_factory_v2'] !== this.constants.ZERO_ADDRESS) {
+            this.setContract(this.constants.ALIASES['one_way_factory_v2'], OneWayLendingFactoryV2ABI);
+        }
         this.setContract(this.constants.ALIASES['gauge_controller'], GaugeControllerABI);
         this.setContract(this.constants.ALIASES['leverage_zap'], LeverageZapABI);
         this.setContract(this.constants.ALIASES['leverage_zap_v2'], LeverageZapABI);
@@ -464,13 +471,26 @@ class Llamalend implements ILlamalend {
         return Object.fromEntries(Object.entries(markets).filter(([id]) => !hiddenMarkets.includes(id))) as IDict<IOneWayMarket>;
     }
 
-    getLendMarketList = () => Object.keys(this.constants.ONE_WAY_MARKETS);
+    getLendMarketList = () => Object.keys({...this.constants.ONE_WAY_MARKETS, ...this.constants.ONE_WAY_MARKETS_V2});
 
     getMintMarketList = () => Object.keys(this.constants.LLAMMAS);
 
-    getFactoryMarketData = async () => {
-        const factory = this.contracts[this.constants.ALIASES['one_way_factory']];
-        const factoryContract = this.contracts[this.constants.ALIASES['one_way_factory']].contract;
+    getFactoryMarketData = async (version: 'v1' | 'v2' = 'v1') => {
+        return version === 'v2' 
+            ? await this._getFactoryMarketDataV2()
+            : await this._getFactoryMarketDataV1();
+    }
+
+    private _getFactoryMarketDataV1 = async () => {
+        const factoryAlias = 'one_way_factory';
+        
+        if (!this.constants.ALIASES[factoryAlias] || this.constants.ALIASES[factoryAlias] === this.constants.ZERO_ADDRESS) {
+            throw new Error(`Factory v1 is not available for network ${this.constants.NETWORK_NAME}`);
+        }
+        
+        const factoryAddress = this.constants.ALIASES[factoryAlias];
+        const factory = this.contracts[factoryAddress];
+        const factoryContract = factory.contract;
         const markets_count = await factoryContract.market_count();
         const callsMap = ['names', 'amms', 'controllers', 'borrowed_tokens', 'collateral_tokens', 'monetary_policies', 'vaults', 'gauges']
 
@@ -483,6 +503,62 @@ class Llamalend implements ILlamalend {
         const res = (await this.multicallProvider.all(calls) as string[]).map((addr) => addr.toLowerCase());
 
         return handleMultiCallResponse(callsMap, res)
+    }
+
+    private _getFactoryMarketDataV2 = async () => {
+        const factoryAlias = 'one_way_factory_v2';
+        
+        if (!this.constants.ALIASES[factoryAlias] || this.constants.ALIASES[factoryAlias] === this.constants.ZERO_ADDRESS) {
+            throw new Error(`Factory v2 is not available for network ${this.constants.NETWORK_NAME}`);
+        }
+        
+        const factoryAddress = this.constants.ALIASES['factoryAlias'];
+        const factory = this.contracts[factoryAddress];
+        const factoryContract = factory.contract;
+        const markets_count = await factoryContract.market_count();
+
+        const calls: Call[] = [];
+        
+        for (let i = 0; i < markets_count; i++) {
+            calls.push(createCall(factory, 'markets', [i]));
+            calls.push(createCall(factory, 'names', [i]));
+        }
+
+        const res = await this.multicallProvider.all(calls);
+
+        const names: string[] = [];
+        const vaults: string[] = [];
+        const controllers: string[] = [];
+        const amms: string[] = [];
+        const collateral_tokens: string[] = [];
+        const borrowed_tokens: string[] = [];
+        const monetary_policies: string[] = [];
+        const gauges: string[] = [];
+
+        for (let i = 0; i < markets_count; i++) {
+            const marketData = res[i * 2] as any;
+            const name = res[(i * 2) + 1] as string;
+
+            vaults.push(marketData[0].toLowerCase());
+            controllers.push(marketData[1].toLowerCase());
+            amms.push(marketData[2].toLowerCase());
+            collateral_tokens.push(marketData[3].toLowerCase());
+            borrowed_tokens.push(marketData[4].toLowerCase());
+            monetary_policies.push(marketData[6].toLowerCase());
+            names.push(name);
+            gauges.push(this.constants.ZERO_ADDRESS);
+        }
+
+        return {
+            names,
+            amms,
+            controllers,
+            borrowed_tokens,
+            collateral_tokens,
+            monetary_policies,
+            vaults,
+            gauges,
+        };
     }
 
     getFactoryMarketDataByAPI = async () => {
@@ -571,49 +647,68 @@ class Llamalend implements ILlamalend {
     }
 
 
-    fetchStats = async (amms: string[], controllers: string[], vaults: string[], borrowed_tokens: string[], collateral_tokens: string[]) => {
+    fetchStats = async (amms: string[], controllers: string[], vaults: string[], borrowed_tokens: string[], collateral_tokens: string[], version: 'v1' | 'v2' = 'v1') => {
         cacheStats.clear();
 
         const marketCount = controllers.length;
+        console.log(controllers.length)
 
         const calls: Call[] = [];
 
         for (let i = 0; i < marketCount; i++) {
             calls.push(createCall(this.contracts[controllers[i]], 'total_debt', []));
-            calls.push(createCall(this.contracts[vaults[i]], 'totalAssets', [controllers[i]]));
+            calls.push(createCall(this.contracts[vaults[i]], 'totalAssets', []));
             calls.push(createCall(this.contracts[borrowed_tokens[i]], 'balanceOf', [controllers[i]]));
             calls.push(createCall(this.contracts[amms[i]], 'rate', []));
             calls.push(createCall(this.contracts[borrowed_tokens[i]], 'balanceOf', [amms[i]]));
-            calls.push(createCall(this.contracts[amms[i]], 'admin_fees_x', []));
-            calls.push(createCall(this.contracts[amms[i]], 'admin_fees_y', []));
+
+            if (version === 'v1') {
+                calls.push(createCall(this.contracts[amms[i]], 'admin_fees_x', []));
+                calls.push(createCall(this.contracts[amms[i]], 'admin_fees_y', []));
+            }
+            
             calls.push(createCall(this.contracts[collateral_tokens[i]], 'balanceOf', [amms[i]]));
         }
 
         const res = await this.multicallProvider.all(calls);
 
         for (let i = 0; i < marketCount; i++) {
-            cacheStats.set(cacheKey(controllers[i], 'total_debt'), res[(i * 8) + 0]);
-            cacheStats.set(cacheKey(vaults[i], 'totalAssets', controllers[i]), res[(i * 8) + 1]);
-            cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', controllers[i]), res[(i * 8) + 2]);
-            cacheStats.set(cacheKey(amms[i], 'rate'), res[(i * 8) + 3]);
-            cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 4]);
-            cacheStats.set(cacheKey(amms[i], 'admin_fees_x'), res[(i * 8) + 5]);
-            cacheStats.set(cacheKey(amms[i], 'admin_fees_y'), res[(i * 8) + 6]);
-            cacheStats.set(cacheKey(collateral_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 7]);
+            if (version === 'v1') {
+                cacheStats.set(cacheKey(controllers[i], 'total_debt'), res[(i * 8) + 0]);
+                cacheStats.set(cacheKey(vaults[i], 'totalAssets', controllers[i]), res[(i * 8) + 1]);
+                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', controllers[i]), res[(i * 8) + 2]);
+                cacheStats.set(cacheKey(amms[i], 'rate'), res[(i * 8) + 3]);
+                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 4]);
+                cacheStats.set(cacheKey(amms[i], 'admin_fees_x'), res[(i * 8) + 5]);
+                cacheStats.set(cacheKey(amms[i], 'admin_fees_y'), res[(i * 8) + 6]);
+                cacheStats.set(cacheKey(collateral_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 7]);
+            } else {
+                cacheStats.set(cacheKey(controllers[i], 'total_debt'), res[(i * 6) + 0]);
+                cacheStats.set(cacheKey(vaults[i], 'totalAssets', controllers[i]), res[(i * 6) + 1]);
+                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', controllers[i]), res[(i * 6) + 2]);
+                cacheStats.set(cacheKey(amms[i], 'rate'), res[(i * 6) + 3]);
+                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', amms[i]), res[(i * 6) + 4]);
+                cacheStats.set(cacheKey(amms[i], 'admin_fees_x'), BigInt(0)); // Always 0 for v2
+                cacheStats.set(cacheKey(amms[i], 'admin_fees_y'), BigInt(0)); // Always 0 for v2
+                cacheStats.set(cacheKey(collateral_tokens[i], 'balanceOf', amms[i]), res[(i * 6) + 5]);
+            }
         }
     };
 
-
-    fetchLendMarkets = async (useAPI = true) => {
+    fetchLendMarkets = async (useAPI = true, version: 'v1' | 'v2' = 'v1') => {
+        if(version === 'v2' && useAPI) {
+            throw new Error('API fetch is not supported for v2 markets yet. Please use fetchLendMarkets(false, "v2") to fetch from blockchain.');
+        }
+        
         if(useAPI) {
-            await this._fetchOneWayMarketsByAPI()
+            await this._fetchOneWayMarketsByAPI(version)
         } else {
-            await this._fetchOneWayMarketsByBlockchain()
+            await this._fetchOneWayMarketsByBlockchain(version)
         }
     }
 
-    _fetchOneWayMarketsByBlockchain = async () => {
-        const {names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges} = await this.getFactoryMarketData()
+    _fetchOneWayMarketsByBlockchain = async (version: 'v1' | 'v2' = 'v1') => {
+        const {names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges} = await this.getFactoryMarketData(version)
         const COIN_DATA = await this.getCoins(collateral_tokens, borrowed_tokens);
         for (const c in COIN_DATA) {
             this.constants.DECIMALS[c] = COIN_DATA[c].decimals;
@@ -639,8 +734,10 @@ class Llamalend implements ILlamalend {
             };
             this.constants.DECIMALS[vaults[index]] = 18;
             this.constants.DECIMALS[gauges[index]] = 18;
-            this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = {
+            
+            const marketData = {
                 name: names[index],
+                version: version,
                 addresses: {
                     amm: amms[index],
                     controller: controllers[index],
@@ -652,15 +749,25 @@ class Llamalend implements ILlamalend {
                 },
                 borrowed_token: COIN_DATA[borrowed_tokens[index]],
                 collateral_token: COIN_DATA[collateral_tokens[index]],
+            };
+            
+            if (version === 'v2') {
+                this.constants.ONE_WAY_MARKETS_V2[`one-way-market-v2-${index}`] = marketData;
+            } else {
+                this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = marketData;
             }
         })
 
-        this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
+        if (version === 'v2') {
+            this.constants.ONE_WAY_MARKETS_V2 = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS_V2);
+        } else {
+            this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
+        }
 
-        await this.fetchStats(amms, controllers, vaults, borrowed_tokens, collateral_tokens);
+        await this.fetchStats(amms, controllers, vaults, borrowed_tokens, collateral_tokens, version);
     }
 
-    _fetchOneWayMarketsByAPI = async () => {
+    _fetchOneWayMarketsByAPI = async (version: 'v1' | 'v2' = 'v1') => {
         const {names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges} = await this.getFactoryMarketDataByAPI()
         const COIN_DATA = await this.getCoins(collateral_tokens, borrowed_tokens, true);
         for (const c in COIN_DATA) {
@@ -689,8 +796,10 @@ class Llamalend implements ILlamalend {
             };
             this.constants.DECIMALS[vaults[index]] = 18;
             this.constants.DECIMALS[gauges[index]] = 18;
-            this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = {
+            
+            const marketData = {
                 name: names[index],
+                version: version,
                 addresses: {
                     amm: amms[index],
                     controller: controllers[index],
@@ -702,10 +811,20 @@ class Llamalend implements ILlamalend {
                 },
                 borrowed_token: COIN_DATA[borrowed_tokens[index]],
                 collateral_token: COIN_DATA[collateral_tokens[index]],
+            };
+            
+            if (version === 'v2') {
+                this.constants.ONE_WAY_MARKETS_V2[`one-way-market-v2-${index}`] = marketData;
+            } else {
+                this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = marketData;
             }
         })
 
-        this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
+        if (version === 'v2') {
+            this.constants.ONE_WAY_MARKETS_V2 = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS_V2);
+        } else {
+            this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
+        }
     }
 
     formatUnits(value: BigNumberish, unit?: string | Numeric): string {

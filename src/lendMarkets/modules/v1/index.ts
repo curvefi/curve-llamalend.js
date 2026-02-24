@@ -6,3 +6,4 @@ export { WalletV1Module } from './walletV1.js';
 export { StatsV1Module } from './statsV1.js';
 export { UserPositionV1Module } from './userPositionV1.js';
 export { PricesV1Module } from './pricesV1.js';
+export { AmmV1Module } from './ammV1.js';
