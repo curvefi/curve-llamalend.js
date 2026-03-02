@@ -410,6 +410,7 @@ export class LendMarketTemplate {
             createLoanIsApproved: leverageZapV2.leverageCreateLoanIsApproved.bind(leverageZapV2),
             createLoanApprove: leverageZapV2.leverageCreateLoanApprove.bind(leverageZapV2),
             createLoanExpectedMetrics: leverageZapV2.leverageCreateLoanExpectedMetrics.bind(leverageZapV2),
+            calcMinRecv: leverageZapV2.calcMinRecv.bind(leverageZapV2),
             createLoan: leverageZapV2.leverageCreateLoan.bind(leverageZapV2),
 
             borrowMoreMaxRecv: leverageZapV2.leverageBorrowMoreMaxRecv.bind(leverageZapV2),

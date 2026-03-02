@@ -986,15 +986,15 @@ interface ILeverageMetrics {
 }
 ```
 
-**2. Final methods now require `router` and `calldata` parameters**
+**2. Final methods now require `router`, `calldata` and `minRecv` parameters**
 - **Before**: `createLoan(userCollateral, userBorrowed, debt, range)`
-- **Now**: `createLoan(userCollateral, userBorrowed, debt, range, router, calldata)`
+- **Now**: `createLoan(userCollateral, userBorrowed, debt, range, minRecv, router, calldata)`
 - **Before**: `borrowMore(userCollateral, userBorrowed, debt, slippage)`
-- **Now**: `borrowMore(userCollateral, userBorrowed, debt, router, calldata)`
+- **Now**: `borrowMore(userCollateral, userBorrowed, debt, minRecv, router, calldata)`
 - **Before**: `repay(stateCollateral, userCollateral, userBorrowed, slippage)`
-- **Now**: `repay(stateCollateral, userCollateral, userBorrowed, router, calldata)`
+- **Now**: `repay(stateCollateral, userCollateral, userBorrowed, minRecv, router, calldata)`
 
-where `router` - address of router, `calldata` - calldata byte code
+where `router` - address of router, `calldata` - calldata byte code, `minRecv` - minimum amount of tokens to receive (see [Security Improvements](#security-improvements))
 
 #### Understanding Callback Functions and Quotes
 
@@ -1035,6 +1035,24 @@ interface IQuote {
 **For repay:**
 - Get quote for swapping `(stateCollateral + userCollateral)` collateral tokens → borrowed tokens
 - Example: For stateCollateral=2 and userCollateral=1, get quote for swapping 3 collateral tokens to borrowed tokens
+
+
+#### Security Improvements
+
+Execution methods (`createLoan`, `borrowMore`, `repay`) accept a `minRecv` parameter that guarantees the minimum amount of tokens received after the swap. This protects the user from slippage and frontrunning.
+
+Use `calcMinRecv(expected, slippage)` to compute the minimum acceptable amount:
+
+**Formula:** `minRecv = expected * (100 - slippage) / 100`
+
+- `expected` — expected amount of tokens from the swap
+- `slippage` — allowed slippage in percent (e.g. `0.5` for 0.5%)
+
+```ts
+// quote.outAmount — the expected amount from your router (computed on your side)
+const minRecv = lendMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
+await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, range, minRecv, router, calldata });
+```
 
 
 #### Leverage operations with routers
@@ -1120,8 +1138,12 @@ interface IQuote {
     // ]
 
     
+    // Calculate minRecv with slippage protection (see Security Improvements)
+    // expected — amount from your router quote
+    const minRecv = lendMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
+
     // Create loan, passing router address and calldata from router
-    await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, range, router, calldata });
+    await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, range, minRecv, router, calldata });
     // 0xeb1b7a92bcb02598f00dc8bbfe8fa3a554e7a2b1ca764e0ee45e2bf583edf731
 
     await lendMarket.wallet.balances();
@@ -1207,8 +1229,11 @@ interface IQuote {
     await lendMarket.leverageZapV2.borrowMoreApprove({ userCollateral, userBorrowed });
     // []
 
+    // Calculate minRecv with slippage protection (see Security Improvements)
+    const minRecvBM = lendMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
+
     // Execute borrowMore, passing router address and calldata from router
-    await lendMarket.leverageZapV2.borrowMore({ userCollateral, userBorrowed, debt, router, calldata });
+    await lendMarket.leverageZapV2.borrowMore({ userCollateral, userBorrowed, debt, minRecv: minRecvBM, router, calldata });
     // 0x6357dd6ea7250d7adb2344cd9295f8255fd8fbbe85f00120fbcd1ebf139e057c
 
     await lendMarket.wallet.balances();
@@ -1292,8 +1317,11 @@ interface IQuote {
     await lendMarket.leverageZapV2.repayApprove({ userCollateral, userBorrowed });
     // ['0xd8a8d3b3f67395e1a4f4d4f95b041edcaf1c9f7bab5eb8a8a767467678295498']
 
+    // Calculate minRecv with slippage protection (see Security Improvements)
+    const minRecvRepay = lendMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
+
     // Execute repay, passing router address and calldata from router
-    await lendMarket.leverageZapV2.repay({ stateCollateral, userCollateral, userBorrowed, router, calldata });
+    await lendMarket.leverageZapV2.repay({ stateCollateral, userCollateral, userBorrowed, minRecv: minRecvRepay, router, calldata });
     // 0xe48a97fef1c54180a2c7d104d210a95ac1a516fdd22109682179f1582da23a82
 
     await lendMarket.wallet.balances();
