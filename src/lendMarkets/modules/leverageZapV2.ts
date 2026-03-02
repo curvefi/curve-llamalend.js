@@ -70,6 +70,11 @@ export class LeverageZapV2Module {
         return BN(1).div(BN(1).minus(k_effective_BN)).toString()
     }
 
+    public calcMinRecv(expected: TAmount, slippage: number): string {
+        if (slippage < 0 || slippage > 100) throw Error("Slippage must be between 0 and 100");
+        return BN(expected).times(BN(100).minus(slippage)).div(100).toString();
+    }
+
     public async leverageCreateLoanMaxRecv({ userCollateral, userBorrowed, range, getExpected }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
@@ -484,6 +489,7 @@ export class LeverageZapV2Module {
         userBorrowed: TAmount,
         debt: TAmount,
         range: number,
+        minRecv: TAmount,
         router: string,
         calldata: string,
         estimateGas: boolean
@@ -494,6 +500,7 @@ export class LeverageZapV2Module {
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.market.borrowed_token.decimals);
         const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
+        const _minRecv = parseUnits(minRecv, this.market.collateral_token.decimals);
 
 
         const zapCalldata = buildCalldataForLeverageZapV2(router, calldata)
@@ -503,7 +510,7 @@ export class LeverageZapV2Module {
             _debt,
             range,
             this.llamalend.constants.ALIASES.leverage_zap_v2,
-            [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
+            [0, parseUnits(this._getMarketId(), 0), _userBorrowed, _minRecv],
             zapCalldata,
             { ...this.llamalend.constantOptions }
         );
@@ -516,36 +523,38 @@ export class LeverageZapV2Module {
             _debt,
             range,
             this.llamalend.constants.ALIASES.leverage_zap_v2,
-            [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
+            [0, parseUnits(this._getMarketId(), 0), _userBorrowed, _minRecv],
             zapCalldata,
             { ...this.llamalend.options, gasLimit }
         )).hash
     }
 
-    public async leverageCreateLoanEstimateGas({ userCollateral, userBorrowed, debt, range, router, calldata }: {
+    public async leverageCreateLoanEstimateGas({ userCollateral, userBorrowed, debt, range, minRecv, router, calldata }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
         debt: TAmount,
         range: number,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }): Promise<number> {
         this._checkLeverageZap();
         if (!(await this.leverageCreateLoanIsApproved({ userCollateral, userBorrowed }))) throw Error("Approval is needed for gas estimation");
-        return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, router, calldata,  true) as number;
+        return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, minRecv, router, calldata,  true) as number;
     }
 
-    public async leverageCreateLoan({ userCollateral, userBorrowed, debt, range, router, calldata }: {
+    public async leverageCreateLoan({ userCollateral, userBorrowed, debt, range, minRecv, router, calldata }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
         debt: TAmount,
         range: number,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }): Promise<string> {
         this._checkLeverageZap();
         await this.leverageCreateLoanApprove({ userCollateral, userBorrowed });
-        return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, router, calldata, false) as string;
+        return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, minRecv, router, calldata, false) as string;
     }
 
     // ---------------- LEVERAGE BORROW MORE ----------------
@@ -667,6 +676,7 @@ export class LeverageZapV2Module {
         userCollateral: TAmount,
         userBorrowed: TAmount,
         debt: TAmount,
+        minRecv: TAmount,
         router: string,
         calldata: string,
         estimateGas: boolean
@@ -675,6 +685,7 @@ export class LeverageZapV2Module {
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.market.borrowed_token.decimals);
         const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
+        const _minRecv = parseUnits(minRecv, this.market.collateral_token.decimals);
 
         const zapCalldata = buildCalldataForLeverageZapV2(router, calldata);
 
@@ -683,7 +694,7 @@ export class LeverageZapV2Module {
             _userCollateral,
             _debt,
             this.llamalend.constants.ALIASES.leverage_zap_v2,
-            [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
+            [0, parseUnits(this._getMarketId(), 0), _userBorrowed, _minRecv],
             zapCalldata,
             { ...this.llamalend.constantOptions }
         );
@@ -696,7 +707,7 @@ export class LeverageZapV2Module {
             _userCollateral,
             _debt,
             this.llamalend.constants.ALIASES.leverage_zap_v2,
-            [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
+            [0, parseUnits(this._getMarketId(), 0), _userBorrowed, _minRecv],
             zapCalldata,
             { ...this.llamalend.options, gasLimit }
         )).hash
@@ -716,28 +727,30 @@ export class LeverageZapV2Module {
         return await this.leverageCreateLoanApprove({ userCollateral, userBorrowed });
     }
 
-    public async leverageBorrowMoreEstimateGas({ userCollateral, userBorrowed, debt, router, calldata }: {
+    public async leverageBorrowMoreEstimateGas({ userCollateral, userBorrowed, debt, minRecv, router, calldata }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
         debt: TAmount,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }): Promise<number> {
         this._checkLeverageZap();
         if (!(await this.leverageCreateLoanIsApproved({ userCollateral, userBorrowed }))) throw Error("Approval is needed for gas estimation");
-        return await this._leverageBorrowMore(userCollateral, userBorrowed, debt, router, calldata,  true) as number;
+        return await this._leverageBorrowMore(userCollateral, userBorrowed, debt, minRecv, router, calldata,  true) as number;
     }
 
-    public async leverageBorrowMore({ userCollateral, userBorrowed, debt, router, calldata }: {
+    public async leverageBorrowMore({ userCollateral, userBorrowed, debt, minRecv, router, calldata }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
         debt: TAmount,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }): Promise<string> {
         this._checkLeverageZap();
         await this.leverageCreateLoanApprove({ userCollateral, userBorrowed });
-        return await this._leverageBorrowMore(userCollateral, userBorrowed, debt, router, calldata, false) as string;
+        return await this._leverageBorrowMore(userCollateral, userBorrowed, debt, minRecv, router, calldata, false) as string;
     }
 
     public async leverageBorrowMoreFutureLeverage({ userCollateral, userBorrowed, debt, quote, address = "" }: {
@@ -959,6 +972,7 @@ export class LeverageZapV2Module {
         stateCollateral: TAmount,
         userCollateral: TAmount,
         userBorrowed: TAmount,
+        minRecv: TAmount,
         router: string,
         calldata: string,
         estimateGas: boolean
@@ -967,6 +981,8 @@ export class LeverageZapV2Module {
         const _stateCollateral = parseUnits(stateCollateral, this.market.collateral_token.decimals);
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
         const _userBorrowed = parseUnits(userBorrowed, this.market.borrowed_token.decimals);
+        const _minRecv = parseUnits(minRecv, this.market.borrowed_token.decimals);
+
         let zapCalldata = buildCalldataForLeverageZapV2(router, "0x");
         if (_stateCollateral + _userCollateral > BigInt(0)) {
             zapCalldata = buildCalldataForLeverageZapV2(router, calldata)
@@ -975,7 +991,7 @@ export class LeverageZapV2Module {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = await contract.repay_extended.estimateGas(
             this.llamalend.constants.ALIASES.leverage_zap_v2,
-            [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed],
+            [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed, _minRecv],
             zapCalldata
         );
         if (estimateGas) return smartNumber(gas);
@@ -985,34 +1001,36 @@ export class LeverageZapV2Module {
 
         return (await contract.repay_extended(
             this.llamalend.constants.ALIASES.leverage_zap_v2,
-            [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed],
+            [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed, _minRecv],
             zapCalldata,
             { ...this.llamalend.options, gasLimit }
         )).hash
     }
 
-    public async leverageRepayEstimateGas({ stateCollateral, userCollateral, userBorrowed, router, calldata }: {
+    public async leverageRepayEstimateGas({ stateCollateral, userCollateral, userBorrowed, minRecv, router, calldata }: {
         stateCollateral: TAmount,
         userCollateral: TAmount,
         userBorrowed: TAmount,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }): Promise<number> {
         this._checkLeverageZap();
         if (!(await this.leverageRepayIsApproved({ userCollateral, userBorrowed }))) throw Error("Approval is needed for gas estimation");
-        return await this._leverageRepay(stateCollateral, userCollateral, userBorrowed, router, calldata, true) as number;
+        return await this._leverageRepay(stateCollateral, userCollateral, userBorrowed, minRecv, router, calldata, true) as number;
     }
 
-    public async leverageRepay({ stateCollateral, userCollateral, userBorrowed, router, calldata }: {
+    public async leverageRepay({ stateCollateral, userCollateral, userBorrowed, minRecv, router, calldata }: {
         stateCollateral: TAmount,
         userCollateral: TAmount,
         userBorrowed: TAmount,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }): Promise<string> {
         this._checkLeverageZap();
         await this.leverageRepayApprove({ userCollateral, userBorrowed });
-        return await this._leverageRepay(stateCollateral, userCollateral, userBorrowed, router, calldata, false) as string;
+        return await this._leverageRepay(stateCollateral, userCollateral, userBorrowed, minRecv, router, calldata, false) as string;
     }
 
     public async leverageRepayFutureLeverage({ stateCollateral, userCollateral, userBorrowed, address = "" }: {

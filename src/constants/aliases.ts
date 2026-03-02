@@ -49,7 +49,7 @@ export const ALIASES_ARBITRUM = lowerCaseValues({
     "gauge_factory": "0xabC000d88f23Bb45525E447528DBF656A9D55bf5",
     // "leverage_zap": "0x61C404B60ee9c5fB09F70F9A645DD38fE5b3A956", // 1inch
     "leverage_zap": "0xFE02553d3Ba4c3f39F36a4632F91404DF94b9AE2", // odos v3
-    "leverage_zap_v2": "0x5b07Db9a85992c877b9fBeA6DCC4F79292577640",
+    "leverage_zap_v2": "0x9577086c6E38d38359872F903Da201f1bdCc0323",
     "leverage_markets_start_id": "9",
 });
 

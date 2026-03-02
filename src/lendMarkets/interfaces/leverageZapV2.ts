@@ -125,11 +125,13 @@ export interface ILeverageZapV2 {
         userCollateral: TAmount,
         userBorrowed: TAmount
     }) => Promise<string[]>,
+    calcMinRecv: (expected: TAmount, slippage: number) => string,
     createLoan: ({
         userCollateral,
         userBorrowed,
         debt,
         range,
+        minRecv,
         router,
         calldata,
     }: {
@@ -137,6 +139,7 @@ export interface ILeverageZapV2 {
         userBorrowed: TAmount,
         debt: TAmount,
         range: number,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }) => Promise<string>,
@@ -183,10 +186,11 @@ export interface ILeverageZapV2 {
         userCollateral: TAmount,
         userBorrowed: TAmount
     }) => Promise<string[]>,
-    borrowMore: ({ userCollateral, userBorrowed, debt, router, calldata }: {
+    borrowMore: ({ userCollateral, userBorrowed, debt, minRecv, router, calldata }: {
         userCollateral: TAmount,
         userBorrowed: TAmount,
         debt: TAmount,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }) => Promise<string>,
@@ -240,10 +244,11 @@ export interface ILeverageZapV2 {
         userCollateral: TAmount,
         userBorrowed: TAmount
     }) => Promise<string[]>,
-    repay: ({ stateCollateral, userCollateral, userBorrowed, router, calldata }: {
+    repay: ({ stateCollateral, userCollateral, userBorrowed, minRecv, router, calldata }: {
         stateCollateral: TAmount,
         userCollateral: TAmount,
         userBorrowed: TAmount,
+        minRecv: TAmount,
         router: string,
         calldata: string
     }) => Promise<string>,
@@ -260,11 +265,12 @@ export interface ILeverageZapV2 {
             userCollateral: TAmount,
             userBorrowed: TAmount
         }) => Promise<TGas>,
-        createLoan: ({ userCollateral, userBorrowed, debt, range, router, calldata }: {
+        createLoan: ({ userCollateral, userBorrowed, debt, range, minRecv, router, calldata }: {
             userCollateral: TAmount,
             userBorrowed: TAmount,
             debt: TAmount,
             range: number,
+            minRecv: TAmount,
             router: string,
             calldata: string
         }) => Promise<number>,
@@ -273,10 +279,11 @@ export interface ILeverageZapV2 {
             userCollateral: TAmount,
             userBorrowed: TAmount
         }) => Promise<TGas>,
-        borrowMore: ({ userCollateral, userBorrowed, debt, router, calldata }: {
+        borrowMore: ({ userCollateral, userBorrowed, debt, minRecv, router, calldata }: {
             userCollateral: TAmount,
             userBorrowed: TAmount,
             debt: TAmount,
+            minRecv: TAmount,
             router: string,
             calldata: string
         }) => Promise<number>,
@@ -285,10 +292,11 @@ export interface ILeverageZapV2 {
             userCollateral: TAmount,
             userBorrowed: TAmount
         }) => Promise<TGas>,
-        repay: ({ stateCollateral, userCollateral, userBorrowed, router, calldata }: {
+        repay: ({ stateCollateral, userCollateral, userBorrowed, minRecv, router, calldata }: {
             stateCollateral: TAmount,
             userCollateral: TAmount,
             userBorrowed: TAmount,
+            minRecv: TAmount,
             router: string,
             calldata: string
         }) => Promise<number>,
