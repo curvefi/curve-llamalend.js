@@ -9,19 +9,13 @@ import {
     ICurveContract,
     IOneWayMarket,
     ICoin,
-    IMarketDataAPI,
+
 } from "./interfaces.js";
 // OneWayMarket ABIs
 import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: 'json'};
 import OneWayLendingFactoryV2ABI from "./constants/abis/OneWayLendingFactoryV2ABI.json" with {type: 'json'};
 import ERC20ABI from './constants/abis/ERC20.json' with {type: 'json'};
 import ERC4626ABI from './constants/abis/ERC4626.json' with {type: 'json'};
-import LlammaABI from './constants/abis/Llamma.json' with {type: 'json'};
-import ControllerABI from './constants/abis/Controller.json' with {type: 'json'};
-import MonetaryPolicyABI from './constants/abis/MonetaryPolicy.json' with {type: 'json'};
-import VaultABI from './constants/abis/Vault.json' with {type: 'json'};
-import GaugeABI from './constants/abis/GaugeV5.json' with {type: 'json'};
-import SidechainGaugeABI from './constants/abis/SidechainGauge.json' with {type: 'json'};
 import GaugeControllerABI from './constants/abis/GaugeController.json' with {type: 'json'};
 import GaugeFactoryMainnetABI from './constants/abis/GaugeFactoryMainnet.json' with {type: 'json'};
 import GaugeFactorySidechainABI from './constants/abis/GaugeFactorySidechain.json' with {type: 'json'};
@@ -62,6 +56,7 @@ import {_getMarketsData, _getHiddenPools} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
 import {MintMarketTemplate} from "./mintMarkets";
 import {LendMarketTemplate} from "./lendMarkets";
+import {fetchOneWayMarketsByBlockchain, fetchOneWayMarketsByAPI} from "./lendMarkets/fetch/fetchLendMarkets.js";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
@@ -475,118 +470,16 @@ class Llamalend implements ILlamalend {
 
     getMintMarketList = () => Object.keys(this.constants.LLAMMAS);
 
-    getFactoryMarketData = async (version: 'v1' | 'v2' = 'v1') => {
-        return version === 'v2' 
-            ? await this._getFactoryMarketDataV2()
-            : await this._getFactoryMarketDataV1();
-    }
-
-    private _getFactoryMarketDataV1 = async () => {
-        const factoryAlias = 'one_way_factory';
-        
-        if (!this.constants.ALIASES[factoryAlias] || this.constants.ALIASES[factoryAlias] === this.constants.ZERO_ADDRESS) {
-            throw new Error(`Factory v1 is not available for network ${this.constants.NETWORK_NAME}`);
+    fetchLendMarkets = async ({ useApi = true, version = 'v1' }: { useApi?: boolean, version?: 'v1' | 'v2' } = {}) => {
+        if(version === 'v2' && useApi) {
+            throw new Error('API fetch is not supported for v2 markets yet. Please use fetchMarkets({ useApi: false, version: "v2" }) to fetch from blockchain.');
         }
         
-        const factoryAddress = this.constants.ALIASES[factoryAlias];
-        const factory = this.contracts[factoryAddress];
-        const factoryContract = factory.contract;
-        const markets_count = await factoryContract.market_count();
-        const callsMap = ['names', 'amms', 'controllers', 'borrowed_tokens', 'collateral_tokens', 'monetary_policies', 'vaults', 'gauges']
-
-        const calls: Call[] = [];
-        for (let i = 0; i < markets_count; i++) {
-            callsMap.forEach((item) => {
-                calls.push(createCall(factory,item, [i]))
-            })
+        if(useApi) {
+            await fetchOneWayMarketsByAPI(this, version)
+        } else {
+            await fetchOneWayMarketsByBlockchain(this, version)
         }
-        const res = (await this.multicallProvider.all(calls) as string[]).map((addr) => addr.toLowerCase());
-
-        return handleMultiCallResponse(callsMap, res)
-    }
-
-    private _getFactoryMarketDataV2 = async () => {
-        const factoryAlias = 'one_way_factory_v2';
-        
-        if (!this.constants.ALIASES[factoryAlias] || this.constants.ALIASES[factoryAlias] === this.constants.ZERO_ADDRESS) {
-            throw new Error(`Factory v2 is not available for network ${this.constants.NETWORK_NAME}`);
-        }
-        
-        const factoryAddress = this.constants.ALIASES['factoryAlias'];
-        const factory = this.contracts[factoryAddress];
-        const factoryContract = factory.contract;
-        const markets_count = await factoryContract.market_count();
-
-        const calls: Call[] = [];
-        
-        for (let i = 0; i < markets_count; i++) {
-            calls.push(createCall(factory, 'markets', [i]));
-            calls.push(createCall(factory, 'names', [i]));
-        }
-
-        const res = await this.multicallProvider.all(calls);
-
-        const names: string[] = [];
-        const vaults: string[] = [];
-        const controllers: string[] = [];
-        const amms: string[] = [];
-        const collateral_tokens: string[] = [];
-        const borrowed_tokens: string[] = [];
-        const monetary_policies: string[] = [];
-        const gauges: string[] = [];
-
-        for (let i = 0; i < markets_count; i++) {
-            const marketData = res[i * 2] as any;
-            const name = res[(i * 2) + 1] as string;
-
-            vaults.push(marketData[0].toLowerCase());
-            controllers.push(marketData[1].toLowerCase());
-            amms.push(marketData[2].toLowerCase());
-            collateral_tokens.push(marketData[3].toLowerCase());
-            borrowed_tokens.push(marketData[4].toLowerCase());
-            monetary_policies.push(marketData[6].toLowerCase());
-            names.push(name);
-            gauges.push(this.constants.ZERO_ADDRESS);
-        }
-
-        return {
-            names,
-            amms,
-            controllers,
-            borrowed_tokens,
-            collateral_tokens,
-            monetary_policies,
-            vaults,
-            gauges,
-        };
-    }
-
-    getFactoryMarketDataByAPI = async () => {
-        const apiData = (await _getMarketsData(this.constants.NETWORK_NAME)).lendingVaultData;
-
-        const result: Record<string, string[]> = {
-            names: [],
-            amms: [],
-            controllers: [],
-            borrowed_tokens: [],
-            collateral_tokens: [],
-            monetary_policies: [],
-            vaults: [],
-            gauges: [],
-        };
-
-        apiData.forEach((market: IMarketDataAPI) => {
-            result.names.push(market.name);
-            result.amms.push(market.ammAddress.toLowerCase());
-            result.controllers.push(market.controllerAddress.toLowerCase());
-            result.borrowed_tokens.push(market.assets.borrowed.address.toLowerCase());
-            result.collateral_tokens.push(market.assets.collateral.address.toLowerCase());
-            result.monetary_policies.push(market.monetaryPolicyAddress.toLowerCase());
-            result.vaults.push(market.address.toLowerCase());
-            result.gauges.push(market.gaugeAddress?.toLowerCase() || this.constants.ZERO_ADDRESS);
-        });
-
-        return result;
     }
 
     getCoins = async (collateral_tokens: string[], borrowed_tokens: string[], useApi = false): Promise<IDict<ICoin>> => {
@@ -694,138 +587,6 @@ class Llamalend implements ILlamalend {
             }
         }
     };
-
-    fetchLendMarkets = async ({ useApi = true, version = 'v1' }: { useApi?: boolean, version?: 'v1' | 'v2' } = {}) => {
-        if(version === 'v2' && useApi) {
-            throw new Error('API fetch is not supported for v2 markets yet. Please use fetchMarkets({ useApi: false, version: "v2" }) to fetch from blockchain.');
-        }
-        
-        if(useApi) {
-            await this._fetchOneWayMarketsByAPI(version)
-        } else {
-            await this._fetchOneWayMarketsByBlockchain(version)
-        }
-    }
-
-    _fetchOneWayMarketsByBlockchain = async (version: 'v1' | 'v2' = 'v1') => {
-        const {names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges} = await this.getFactoryMarketData(version)
-        const COIN_DATA = await this.getCoins(collateral_tokens, borrowed_tokens);
-        for (const c in COIN_DATA) {
-            this.constants.DECIMALS[c] = COIN_DATA[c].decimals;
-        }
-
-        amms.forEach((amm: string, index: number) => {
-            this.setContract(amm, LlammaABI);
-            this.setContract(controllers[index], ControllerABI);
-            this.setContract(monetary_policies[index], MonetaryPolicyABI);
-            this.setContract(vaults[index], VaultABI);
-            this.setContract(gauges[index], this.chainId === 1 ? GaugeABI : SidechainGaugeABI);
-            COIN_DATA[vaults[index]] = {
-                address: vaults[index],
-                decimals: 18,
-                name: "Curve Vault for " + COIN_DATA[borrowed_tokens[index]].name,
-                symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol,
-            };
-            COIN_DATA[gauges[index]] = {
-                address: gauges[index],
-                decimals: 18,
-                name: "curve.finance " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
-                symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol + "-gauge",
-            };
-            this.constants.DECIMALS[vaults[index]] = 18;
-            this.constants.DECIMALS[gauges[index]] = 18;
-            
-            const marketData = {
-                name: names[index],
-                version: version,
-                addresses: {
-                    amm: amms[index],
-                    controller: controllers[index],
-                    borrowed_token: borrowed_tokens[index],
-                    collateral_token: collateral_tokens[index],
-                    monetary_policy: monetary_policies[index],
-                    vault: vaults[index],
-                    gauge: gauges[index],
-                },
-                borrowed_token: COIN_DATA[borrowed_tokens[index]],
-                collateral_token: COIN_DATA[collateral_tokens[index]],
-            };
-            
-            if (version === 'v2') {
-                this.constants.ONE_WAY_MARKETS_V2[`one-way-market-v2-${index}`] = marketData;
-            } else {
-                this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = marketData;
-            }
-        })
-
-        if (version === 'v2') {
-            this.constants.ONE_WAY_MARKETS_V2 = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS_V2);
-        } else {
-            this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
-        }
-
-        await this.fetchStats(amms, controllers, vaults, borrowed_tokens, collateral_tokens, version);
-    }
-
-    _fetchOneWayMarketsByAPI = async (version: 'v1' | 'v2' = 'v1') => {
-        const {names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges} = await this.getFactoryMarketDataByAPI()
-        const COIN_DATA = await this.getCoins(collateral_tokens, borrowed_tokens, true);
-        for (const c in COIN_DATA) {
-            this.constants.DECIMALS[c] = COIN_DATA[c].decimals;
-        }
-
-        amms.forEach((amm: string, index: number) => {
-            this.setContract(amms[index], LlammaABI);
-            this.setContract(controllers[index], ControllerABI);
-            this.setContract(monetary_policies[index], MonetaryPolicyABI);
-            this.setContract(vaults[index], VaultABI);
-            if(gauges[index]){
-                this.setContract(gauges[index], this.chainId === 1 ? GaugeABI : SidechainGaugeABI);
-            }
-            COIN_DATA[vaults[index]] = {
-                address: vaults[index],
-                decimals: 18,
-                name: "Curve Vault for " + COIN_DATA[borrowed_tokens[index]].name,
-                symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol,
-            };
-            COIN_DATA[gauges[index]] = {
-                address: gauges[index],
-                decimals: 18,
-                name: "curve.finance " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
-                symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol + "-gauge",
-            };
-            this.constants.DECIMALS[vaults[index]] = 18;
-            this.constants.DECIMALS[gauges[index]] = 18;
-            
-            const marketData = {
-                name: names[index],
-                version: version,
-                addresses: {
-                    amm: amms[index],
-                    controller: controllers[index],
-                    borrowed_token: borrowed_tokens[index],
-                    collateral_token: collateral_tokens[index],
-                    monetary_policy: monetary_policies[index],
-                    vault: vaults[index],
-                    gauge: gauges[index],
-                },
-                borrowed_token: COIN_DATA[borrowed_tokens[index]],
-                collateral_token: COIN_DATA[collateral_tokens[index]],
-            };
-            
-            if (version === 'v2') {
-                this.constants.ONE_WAY_MARKETS_V2[`one-way-market-v2-${index}`] = marketData;
-            } else {
-                this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = marketData;
-            }
-        })
-
-        if (version === 'v2') {
-            this.constants.ONE_WAY_MARKETS_V2 = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS_V2);
-        } else {
-            this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
-        }
-    }
 
     formatUnits(value: BigNumberish, unit?: string | Numeric): string {
         return ethers.formatUnits(value, unit);
