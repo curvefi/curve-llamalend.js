@@ -12,17 +12,17 @@ Previously, lend markets were fetched using:
 await llamalend.lendMarkets.fetchMarkets()
 ```
 
-Starting from v2, the market version must be explicitly specified:
+Starting from v2, the method accepts a named parameters object. The market version must be explicitly specified:
 
 ```ts
 // Fetch legacy (v1) markets
-await llamalend.lendMarkets.fetchMarkets(false, 'v1')
+await llamalend.lendMarkets.fetchMarkets({ useApi: false, version: 'v1' })
 
 // Fetch new (v2) markets
-await llamalend.lendMarkets.fetchMarkets(false, 'v2')
+await llamalend.lendMarkets.fetchMarkets({ useApi: false, version: 'v2' })
 ```
 
-At the moment there is no backend implementation for v2. All methods operate fully on-chain. Therefore, all `useAPI` flags must temporarily be set to `false`. API mode should not be enabled until backend support is introduced.
+At the moment there is no backend implementation for v2. All methods operate fully on-chain. Therefore, `useApi` must temporarily be set to `false`. API mode should not be enabled until backend support is introduced.
 
 ---
 
@@ -35,7 +35,7 @@ await llamalend.lendMarkets.fetchMarkets()
 Currently behaves the same as:
 
 ```ts
-await llamalend.lendMarkets.fetchMarkets(false, 'v1')
+await llamalend.lendMarkets.fetchMarkets({ useApi: true, version: 'v1' })
 ```
 
 However, it is strongly recommended to explicitly specify the market version (`'v1'` or `'v2'`) to avoid ambiguity and future issues.
@@ -43,7 +43,7 @@ However, it is strongly recommended to explicitly specify the market version (`'
 For new integrations targeting v2 markets, use:
 
 ```ts
-await llamalend.lendMarkets.fetchMarkets(false, 'v2')
+await llamalend.lendMarkets.fetchMarkets({ useApi: false, version: 'v2' })
 ```
 
 ---
@@ -81,7 +81,7 @@ This allows frontend applications to explicitly determine which market version t
 The majority of methods and metrics remain unchanged in v2.  
 For frontend integration, **no significant changes are required**.
 
-All tables above include every method exposed by `lendMarket`.  
+All tables below include every method exposed by `lendMarket`.  
 In most cases, the following aspects remain identical:
 
 - Business logic (from an external perspective)

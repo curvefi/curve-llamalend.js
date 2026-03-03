@@ -695,12 +695,12 @@ class Llamalend implements ILlamalend {
         }
     };
 
-    fetchLendMarkets = async (useAPI = true, version: 'v1' | 'v2' = 'v1') => {
-        if(version === 'v2' && useAPI) {
-            throw new Error('API fetch is not supported for v2 markets yet. Please use fetchLendMarkets(false, "v2") to fetch from blockchain.');
+    fetchLendMarkets = async ({ useApi = true, version = 'v1' }: { useApi?: boolean, version?: 'v1' | 'v2' } = {}) => {
+        if(version === 'v2' && useApi) {
+            throw new Error('API fetch is not supported for v2 markets yet. Please use fetchMarkets({ useApi: false, version: "v2" }) to fetch from blockchain.');
         }
         
-        if(useAPI) {
+        if(useApi) {
             await this._fetchOneWayMarketsByAPI(version)
         } else {
             await this._fetchOneWayMarketsByBlockchain(version)
