@@ -333,6 +333,7 @@ This document tracks feature support across market versions.
 | repayApprove() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | repayHealth() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | repay() | ✅ | ✅ | ❌ | ❌ | ❌ |
+| repayFutureLeverage() | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### Repay (Full)
 
@@ -388,6 +389,7 @@ This document tracks feature support across market versions.
 | currentPnL() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | userBoost() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | forceUpdateUserState() | ✅ | ✅ | ✅ | ✅ | ✅ |
+| getCurrentLeverageParams() | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ---
 

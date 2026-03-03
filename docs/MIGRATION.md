@@ -206,7 +206,7 @@ This guide is required for developers migrating from **version 1.X.X → 2.X.X**
 | `market.borrowMoreIsApproved()`          | `market.loan.borrowMoreIsApproved()`          | Yes ⚠️      |
 | `market.borrowMoreApprove()`             | `market.loan.borrowMoreApprove()`             | Yes ⚠️      |
 | `market.borrowMore()`                    | `market.loan.borrowMore()`                    | Yes ⚠️      |
-| `market.borrowMoreFutureLeverage()`      | `market.loan.borrowMoreFutureLeverage()`      | NEED TO ADD |
+| `market.borrowMoreFutureLeverage()`      | `market.loan.borrowMoreFutureLeverage()`      | Yes 🆕      |
 | `market.estimateGas.borrowMoreApprove()` | `market.loan.estimateGas.borrowMoreApprove()` | Yes ⚠️      |
 | `market.estimateGas.borrowMore()`        | `market.loan.estimateGas.borrowMore()`        | Yes ⚠️      |
 
@@ -246,6 +246,7 @@ This guide is required for developers migrating from **version 1.X.X → 2.X.X**
 | `market.repayApprove()`             | `market.loan.repayApprove()`      | Yes ⚠️      |
 | `market.repayHealth()`              | `market.loan.repayHealth()`       | Yes ⚠️      |
 | `market.repay()`                    | `market.loan.repay()`             | Yes ⚠️      |
+| —                                   | `market.loan.repayFutureLeverage()`           | Yes 🆕      |
 | `market.estimateGas.repayApprove()` | `market.loan.estimateGas.repayApprove()`     | Yes ⚠️      |
 | `market.estimateGas.repay()`        | `market.loan.estimateGas.repay()` | Yes ⚠️      |
 
@@ -312,6 +313,7 @@ This guide is required for developers migrating from **version 1.X.X → 2.X.X**
 | `market.currentPnL()`              | `market.userPosition.currentPnL()`           | Yes ⚠️      |
 | `market.userBoost()`               | `market.userPosition.userBoost()`            | Yes ⚠️      |
 | `market.forceUpdateUserState()`    | `market.userPosition.forceUpdateUserState()` | Yes ⚠️      |
+| —                                  | `market.userPosition.getCurrentLeverageParams()` | Yes 🆕      |
 
 ## Leverage Module (`market.leverage`)
 

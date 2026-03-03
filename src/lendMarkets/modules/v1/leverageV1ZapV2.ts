@@ -767,7 +767,7 @@ export class LeverageZapV2Module {
         address = _getAddress.call(this.llamalend, address);
         this._checkLeverageZap();
 
-        const { stateCollateral, totalDepositFromUser } = await this.market._getCurrentLeverageParams(address);
+        const { stateCollateral, totalDepositFromUser } = await this.market.userPosition.getCurrentLeverageParams(address);
 
         const expected = await this.leverageBorrowMoreExpectedCollateral({
             userCollateral,
@@ -1046,9 +1046,9 @@ export class LeverageZapV2Module {
         address = _getAddress.call(this.llamalend, address);
         this._checkLeverageZap();
 
-        const { stateCollateral: currentStateCollateral, totalDepositFromUser } = await this.market._getCurrentLeverageParams(address);
+        const { stateCollateral: currentStateCollateral, totalDepositFromUser } = await this.market.userPosition.getCurrentLeverageParams(address);
 
-        const collateralFromUserBorrowed = await this.market.swapExpected(0, 1, userBorrowed);
+        const collateralFromUserBorrowed = await this.market.amm.swapExpected(0, 1, userBorrowed);
 
         const futureCollateralState = BN(currentStateCollateral).minus(stateCollateral);
         const futureTotalDepositFromUserPrecise = BN(totalDepositFromUser).plus(userCollateral).plus(collateralFromUserBorrowed);

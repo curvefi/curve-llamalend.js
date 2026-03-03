@@ -217,6 +217,18 @@ export class UserPositionV1Module implements IUserPositionV1 {
         return boostBN.toFixed(4).replace(/([0-9])0+$/, '$1');
     }
 
+    public async getCurrentLeverageParams(userAddress: string): Promise<{ stateCollateral: string, totalDepositFromUser: string }> {
+        const [userCollateralData, { collateral: stateCollateral }] = await Promise.all([
+            _getUserCollateral(this.llamalend.constants.NETWORK_NAME, this.market.addresses.controller, userAddress),
+            this.userState(userAddress),
+        ]);
+
+        return {
+            stateCollateral,
+            totalDepositFromUser: String(userCollateralData.total_deposit_from_user_precise),
+        };
+    }
+
     public async forceUpdateUserState(newTx: string, userAddress?: string): Promise<void> {
         const address = userAddress || this.llamalend.signerAddress;
         if (!address) throw Error("Need to connect wallet or pass address into args");

@@ -20,4 +20,5 @@ export interface IUserPositionV1 {
     currentPnL: (userAddress?: string) => Promise<Record<string, string>>,
     userBoost: (address?: string) => Promise<string>,
     forceUpdateUserState: (newTx: string, userAddress?: string) => Promise<void>,
+    getCurrentLeverageParams: (userAddress: string) => Promise<{ stateCollateral: string, totalDepositFromUser: string }>,
 }

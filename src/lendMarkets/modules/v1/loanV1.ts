@@ -289,6 +289,18 @@ export class LoanV1Module implements ILoanV1 {
         return await this._borrowMore(collateral, debt, false) as string;
     }
 
+    public async borrowMoreFutureLeverage(collateral: number | string, debt: number | string, userAddress = ''): Promise<string> {
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const { stateCollateral, totalDepositFromUser } = await this.market.userPosition.getCurrentLeverageParams(userAddress);
+
+        const collateralFromDebt = await this.market.amm.swapExpected(0, 1, debt);
+
+        const futureCollateralState = BN(stateCollateral).plus(collateralFromDebt);
+        const futureTotalDepositFromUserPrecise = BN(totalDepositFromUser).plus(collateral);
+
+        return futureCollateralState.div(futureTotalDepositFromUserPrecise).toString();
+    }
+
     // ---------------- ADD COLLATERAL ----------------
 
     private async _addCollateralBands(collateral: number | string, address = ""): Promise<[bigint, bigint]> {
@@ -533,6 +545,18 @@ export class LoanV1Module implements ILoanV1 {
     public async repay(debt: number | string, address = ""): Promise<string> {
         await this.repayApprove(debt);
         return await this._repay(debt, address, false) as string;
+    }
+
+    public async repayFutureLeverage(debt: number | string, userAddress = ''): Promise<string> {
+        userAddress = _getAddress.call(this.llamalend, userAddress);
+        const { stateCollateral, totalDepositFromUser } = await this.market.userPosition.getCurrentLeverageParams(userAddress);
+
+        const collateralFromDebt = await this.market.amm.swapExpected(0, 1, debt);
+
+        const futureCollateralState = BN(stateCollateral);
+        const futureTotalDepositFromUserPrecise = BN(totalDepositFromUser).plus(collateralFromDebt);
+
+        return futureCollateralState.div(futureTotalDepositFromUserPrecise).toString();
     }
 
     // ---------------- FULL REPAY ----------------

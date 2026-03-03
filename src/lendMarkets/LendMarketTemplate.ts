@@ -90,6 +90,7 @@ export class LendMarketTemplate {
             currentPnL: userPosition.currentPnL.bind(userPosition),
             userBoost: userPosition.userBoost.bind(userPosition),
             forceUpdateUserState: userPosition.forceUpdateUserState.bind(userPosition),
+            getCurrentLeverageParams: userPosition.getCurrentLeverageParams.bind(userPosition),
         }
 
         const stats = new StatsV1Module(this)
@@ -158,6 +159,7 @@ export class LendMarketTemplate {
             borrowMoreIsApproved: loan.borrowMoreIsApproved.bind(loan),
             borrowMoreApprove: loan.borrowMoreApprove.bind(loan),
             borrowMore: loan.borrowMore.bind(loan),
+            borrowMoreFutureLeverage: loan.borrowMoreFutureLeverage.bind(loan),
 
             addCollateralBands: loan.addCollateralBands.bind(loan),
             addCollateralPrices: loan.addCollateralPrices.bind(loan),
@@ -180,6 +182,7 @@ export class LendMarketTemplate {
             repayApprove: loan.repayApprove.bind(loan),
             repayHealth: loan.repayHealth.bind(loan),
             repay: loan.repay.bind(loan),
+            repayFutureLeverage: loan.repayFutureLeverage.bind(loan),
 
             fullRepayIsApproved: loan.fullRepayIsApproved.bind(loan),
             fullRepayApprove: loan.fullRepayApprove.bind(loan),
