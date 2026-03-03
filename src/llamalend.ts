@@ -716,12 +716,6 @@ class Llamalend implements ILlamalend {
             };
             this.constants.DECIMALS[vaults[index]] = 18;
             this.constants.DECIMALS[gauges[index]] = 18;
-        })
-
-        const oracleCalls: Call[] = amms.map((amm: string) => createCall(this.contracts[amm], 'price_oracle_contract', []));
-        const oracles = (await this.multicallProvider.all(oracleCalls) as string[]).map((addr) => addr.toLowerCase());
-
-        amms.forEach((_amm: string, index: number) => {
             this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = {
                 name: names[index],
                 addresses: {
@@ -732,7 +726,6 @@ class Llamalend implements ILlamalend {
                     monetary_policy: monetary_policies[index],
                     vault: vaults[index],
                     gauge: gauges[index],
-                    oracle: oracles[index],
                 },
                 borrowed_token: COIN_DATA[borrowed_tokens[index]],
                 collateral_token: COIN_DATA[collateral_tokens[index]],
@@ -773,12 +766,6 @@ class Llamalend implements ILlamalend {
             };
             this.constants.DECIMALS[vaults[index]] = 18;
             this.constants.DECIMALS[gauges[index]] = 18;
-        })
-
-        const oracleCalls: Call[] = amms.map((amm: string) => createCall(this.contracts[amm], 'price_oracle_contract', []));
-        const oracles = (await this.multicallProvider.all(oracleCalls) as string[]).map((addr) => addr.toLowerCase());
-
-        amms.forEach((_amm: string, index: number) => {
             this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = {
                 name: names[index],
                 addresses: {
@@ -789,7 +776,6 @@ class Llamalend implements ILlamalend {
                     monetary_policy: monetary_policies[index],
                     vault: vaults[index],
                     gauge: gauges[index],
-                    oracle: oracles[index],
                 },
                 borrowed_token: COIN_DATA[borrowed_tokens[index]],
                 collateral_token: COIN_DATA[collateral_tokens[index]],

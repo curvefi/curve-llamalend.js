@@ -62,7 +62,6 @@ export interface IOneWayMarket {
         monetary_policy: string,
         vault: string,
         gauge: string,
-        oracle: string,
     },
     borrowed_token: ICoin,
     collateral_token: ICoin,
