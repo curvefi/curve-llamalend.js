@@ -1288,7 +1288,7 @@ export class LendMarketTemplate {
 
     public oracleAddress = memoize(async (): Promise<string> => {
         const _address = await this.llamalend.contracts[this.addresses.amm].contract.price_oracle_contract(this.llamalend.constantOptions) as string;
-        return _address.toLowerCase();
+        return _address;
     },
     {
         promise: true,
