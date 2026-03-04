@@ -8,9 +8,10 @@ import {
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
 import {TGas} from "../../../interfaces";
-import {IAmmV1} from "../../interfaces/v1/ammV1";
+import {IAmm} from "../../interfaces/common";
 
-export class AmmV1Module implements IAmmV1 {
+
+export class AmmModule implements IAmm {
     private market: LendMarketTemplate;
     private llamalend: Llamalend;
 

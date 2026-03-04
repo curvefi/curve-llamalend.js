@@ -27,7 +27,7 @@ import BigNumber from "bignumber.js";
  * - prices
  * - userPosition
  */
-export class LeverageZapV2Module {
+export class LeverageV1ZapV2Module {
     private market: LendMarketTemplate;
     private llamalend: Llamalend;
 

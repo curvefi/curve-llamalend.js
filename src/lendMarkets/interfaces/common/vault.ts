@@ -1,6 +1,6 @@
-import {IReward, TAmount, TGas} from "../../../interfaces.js";
+import {IReward, TAmount, TGas} from "../../../interfaces";
 
-export interface IVaultV1 {
+export interface IVault {
     maxDeposit: (address?: string) => Promise<string>,
     previewDeposit: (amount: TAmount) => Promise<string>,
     depositIsApproved: (borrowed: TAmount) => Promise<boolean>

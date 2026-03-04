@@ -1,6 +1,6 @@
 import {TAmount} from "../../../interfaces";
 
-export interface IAmmV1 {
+export interface IAmm {
     maxSwappable: (i: number, j: number) => Promise<string>;
     swapExpected: (i: number, j: number, amount: TAmount) => Promise<string>;
     swapRequired: (i: number, j: number, outAmount: TAmount) => Promise<string>;

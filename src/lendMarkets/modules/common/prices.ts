@@ -7,9 +7,10 @@ import {
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
-import {IPricesV1} from "../../interfaces/v1/pricesV1";
+import {IPrices} from "../../interfaces/common";
 
-export class PricesV1Module implements IPricesV1 {
+
+export class PricesModule implements IPrices {
     private market: LendMarketTemplate;
     private llamalend: Llamalend;
 

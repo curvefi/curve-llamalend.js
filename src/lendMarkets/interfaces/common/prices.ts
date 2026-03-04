@@ -1,4 +1,4 @@
-export interface IPricesV1 {
+export interface IPrices {
     A: () => Promise<string>;
     basePrice: () => Promise<string>;
     oraclePrice: () => Promise<string>;

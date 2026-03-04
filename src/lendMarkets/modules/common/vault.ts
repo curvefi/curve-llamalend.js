@@ -22,7 +22,7 @@ import { _getMarketsData } from "../../../external-api";
 import ERC20Abi from '../../../constants/abis/ERC20.json' with {type: 'json'};
 import {WEEK} from "../../../constants/utils";
 
-export class VaultV1Module {
+export class VaultModule {
     private market: LendMarketTemplate;
     private llamalend: Llamalend;
 

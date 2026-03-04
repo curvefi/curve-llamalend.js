@@ -23,7 +23,7 @@ import {_assembleTxOdos, _getExpectedOdos, _getQuoteOdos} from "../../../externa
 /**
  * LeverageZapV2 module for LendMarketTemplate
  */
-export class LeverageV1ZapV1Module {
+export class LeverageV2ZapV1Module {
     private market: LendMarketTemplate;
     private llamalend: Llamalend;
 

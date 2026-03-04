@@ -1,6 +1,6 @@
 import {IDict} from "../../../interfaces";
 
-export interface IUserPositionV1 {
+export interface IUserPosition {
     userLoanExists: (address?: string) => Promise<boolean>,
     userStateBigInt: (address?: string) => Promise<{ _collateral: bigint, _borrowed: bigint, _debt: bigint, _N: bigint }>,
     userBandsBigInt:(address: string) => Promise<bigint[]>,

@@ -3,9 +3,9 @@ import {
     getBalances,
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
-import {IWalletV1} from "../../interfaces/v1";
+import {IWallet} from "../../interfaces/common";
 
-export class WalletV1Module implements IWalletV1 {
+export class WalletModule implements IWallet {
     private market: LendMarketTemplate;
     private llamalend: Llamalend;
 

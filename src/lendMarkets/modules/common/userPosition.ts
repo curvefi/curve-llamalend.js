@@ -8,9 +8,9 @@ import {
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import {_getUserCollateral, _getUserCollateralForce} from "../../../external-api";
-import {IUserPositionV1} from "../../interfaces/v1/index.js";
+import {IUserPosition} from "../../interfaces/common";
 
-export class UserPositionV1Module implements IUserPositionV1 {
+export class UserPositionModule implements IUserPosition {
     private market: LendMarketTemplate;
     private llamalend: Llamalend;
 

@@ -1,19 +1,77 @@
 import type { Llamalend } from "../llamalend.js";
 import {IDict, IQuoteOdos, IOneWayMarket} from "../interfaces.js";
 import {ILeverageZapV2} from "./interfaces/leverageZapV2.js";
-import {IStatsV1, IWalletV1, IVaultV1, IPricesV1, ILoanV1, IUserPositionV1, ILeverageV1, IAmmV1} from "./interfaces/v1";
+import {IUserPosition, IWallet, IPrices, IAmm, IVault} from "./interfaces/common";
+import {IStatsV1, ILoanV1, ILeverageV1} from "./interfaces/v1";
+import {IStatsV2, ILoanV2, ILeverageV2} from "./interfaces/v2";
 import {
-    LeverageZapV1Module,
-    LeverageZapV2Module,
-    VaultV1Module,
-    WalletV1Module,
+    LeverageV1ZapV1Module,
+    LeverageV1ZapV2Module,
     StatsV1Module,
-    UserPositionV1Module,
-    PricesV1Module,
     LoanV1Module,
-    AmmV1Module,
 } from "./modules/v1";
+import {
+    LeverageV2ZapV1Module,
+    LeverageV2ZapV2Module,
+    StatsV2Module,
+    LoanV2Module,
+} from "./modules/v2";
+import {
+    UserPositionModule,
+    WalletModule,
+    PricesModule,
+    AmmModule,
+    VaultModule,
+} from "./modules/common";
 
+type V1ModuleConstructors = {
+    UserPosition: typeof UserPositionModule;
+    Stats: typeof StatsV1Module;
+    Wallet: typeof WalletModule;
+    Prices: typeof PricesModule;
+    Amm: typeof AmmModule;
+    Vault: typeof VaultModule;
+    Loan: typeof LoanV1Module;
+    Leverage: typeof LeverageV1ZapV1Module;
+    LeverageZapV2: typeof LeverageV1ZapV2Module;
+};
+
+type V2ModuleConstructors = {
+    UserPosition: typeof UserPositionModule;
+    Wallet: typeof WalletModule;
+    Prices: typeof PricesModule;
+    Amm: typeof AmmModule;
+    Vault: typeof VaultModule;
+    Stats: typeof StatsV2Module;
+    Loan: typeof LoanV2Module;
+    Leverage: typeof LeverageV2ZapV1Module;
+    LeverageZapV2: typeof LeverageV2ZapV2Module;
+};
+
+const versionModules: { v1: V1ModuleConstructors; v2: V2ModuleConstructors } = {
+    v1: {
+        UserPosition: UserPositionModule,
+        Wallet: WalletModule,
+        Prices: PricesModule,
+        Amm: AmmModule,
+        Vault: VaultModule,
+        Stats: StatsV1Module,
+        Loan: LoanV1Module,
+        Leverage: LeverageV1ZapV1Module,
+        LeverageZapV2: LeverageV1ZapV2Module,
+    },
+    v2: {
+        UserPosition: UserPositionModule,
+        Wallet: WalletModule,
+        Prices: PricesModule,
+        Amm: AmmModule,
+        Vault: VaultModule,
+        Stats: StatsV2Module,
+        Loan: LoanV2Module,
+        Leverage: LeverageV2ZapV1Module,
+        LeverageZapV2: LeverageV2ZapV2Module,
+    },
+};
 
 export class LendMarketTemplate {
     private llamalend: Llamalend;
@@ -48,15 +106,15 @@ export class LendMarketTemplate {
     maxBands: number
     swapDataCache: IDict<IQuoteOdos> = {}
 
-    stats: IStatsV1;
-    wallet: IWalletV1;
-    prices: IPricesV1;
-    loan: ILoanV1;
-    amm: IAmmV1;
-    userPosition: IUserPositionV1;
-    leverage: ILeverageV1;
+    userPosition: IUserPosition;
+    wallet: IWallet;
+    prices: IPrices;
+    amm: IAmm;
+    vault: IVault;
+    stats: IStatsV1 | IStatsV2;
+    loan: ILoanV1 | ILoanV2;
+    leverage: ILeverageV1 | ILeverageV2;
     leverageZapV2: ILeverageZapV2;
-    vault: IVaultV1;
 
     constructor(id: string, marketData: IOneWayMarket, llamalend: Llamalend) {
         this.llamalend = llamalend;
@@ -72,9 +130,19 @@ export class LendMarketTemplate {
         this.minBands = 4
         this.maxBands = 50
         
-        const loan = new LoanV1Module(this)
-        
-        const userPosition = new UserPositionV1Module(this);
+        const modules = versionModules[this.version];
+
+        const userPosition = new modules.UserPosition(this);
+        const stats = new modules.Stats(this);
+        const wallet = new modules.Wallet(this);
+        const prices = new modules.Prices(this);
+        const amm = new modules.Amm(this);
+        const vault = new modules.Vault(this);
+        const loan = new modules.Loan(this);
+        const leverageZapV1 = new modules.Leverage(this);
+        const leverageZapV2 = new modules.LeverageZapV2(this);
+
+
         this.userPosition = {
             userLoanExists: userPosition.userLoanExists.bind(userPosition),
             userStateBigInt: userPosition.userStateBigInt.bind(userPosition),
@@ -93,7 +161,6 @@ export class LendMarketTemplate {
             getCurrentLeverageParams: userPosition.getCurrentLeverageParams.bind(userPosition),
         }
 
-        const stats = new StatsV1Module(this)
         this.stats = {
             parameters: stats.statsParameters.bind(this),
             rates: stats.statsRates.bind(this),
@@ -107,12 +174,10 @@ export class LendMarketTemplate {
             capAndAvailable: stats.statsCapAndAvailable.bind(this),
         }
 
-        const wallet = new WalletV1Module(this)
         this.wallet = {
             balances: wallet.balances.bind(this),
         }
 
-        const prices = new PricesV1Module(this)
         this.prices = {
             A: prices.A.bind(prices),
             basePrice: prices.basePrice.bind(prices),
@@ -127,7 +192,6 @@ export class LendMarketTemplate {
             checkRange: prices.checkRange.bind(prices),
         }
 
-        const amm = new AmmV1Module(this)
 
         this.amm = {
             maxSwappable: amm.maxSwappable.bind(amm),
@@ -215,7 +279,6 @@ export class LendMarketTemplate {
             },
         }
 
-        const vault = new VaultV1Module(this)
         this.vault = {
             maxDeposit: vault.vaultMaxDeposit.bind(vault),
             previewDeposit: vault.vaultPreviewDeposit.bind(vault),
@@ -263,7 +326,6 @@ export class LendMarketTemplate {
             },
         }
 
-        const leverageZapV1 = new LeverageZapV1Module(this);
         this.leverage = {
             hasLeverage: leverageZapV1.hasLeverage.bind(leverageZapV1),
 
@@ -318,8 +380,6 @@ export class LendMarketTemplate {
                 repay: leverageZapV1.leverageRepayEstimateGas.bind(leverageZapV1),
             },
         }
-
-        const leverageZapV2 = new LeverageZapV2Module(this);
 
         this.leverageZapV2 = {
             hasLeverage: leverageZapV2.hasLeverage.bind(leverageZapV2),
