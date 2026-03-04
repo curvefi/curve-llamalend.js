@@ -592,6 +592,14 @@ export class MintMarketTemplate {
         return res
     }
 
+    public oracleAddress = memoize(async (): Promise<string> => {
+        const _address = await this.llamalend.contracts[this.address].contract.price_oracle_contract(this.llamalend.constantOptions) as string;
+        return _address;
+    },
+    {
+        promise: true,
+    });
+
     public async oraclePrice(): Promise<string> {
         const _price = await this.llamalend.contracts[this.address].contract.price_oracle(this.llamalend.constantOptions) as bigint;
         return formatUnits(_price);
