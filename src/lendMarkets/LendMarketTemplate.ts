@@ -1286,6 +1286,14 @@ export class LendMarketTemplate {
         maxAge: 60 * 1000, // 1m
     });
 
+    public oracleAddress = memoize(async (): Promise<string> => {
+        const _address = await this.llamalend.contracts[this.addresses.amm].contract.price_oracle_contract(this.llamalend.constantOptions) as string;
+        return _address;
+    },
+    {
+        promise: true,
+    });
+
     public async oraclePriceBand(): Promise<number> {
         const oraclePriceBN = BN(await this.oraclePrice());
         const basePriceBN = BN(await this.basePrice());
