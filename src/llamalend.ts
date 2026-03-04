@@ -9,18 +9,13 @@ import {
     ICurveContract,
     IOneWayMarket,
     ICoin,
-    IMarketDataAPI,
+
 } from "./interfaces.js";
 // OneWayMarket ABIs
 import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: 'json'};
+import OneWayLendingFactoryV2ABI from "./constants/abis/OneWayLendingFactoryV2ABI.json" with {type: 'json'};
 import ERC20ABI from './constants/abis/ERC20.json' with {type: 'json'};
 import ERC4626ABI from './constants/abis/ERC4626.json' with {type: 'json'};
-import LlammaABI from './constants/abis/Llamma.json' with {type: 'json'};
-import ControllerABI from './constants/abis/Controller.json' with {type: 'json'};
-import MonetaryPolicyABI from './constants/abis/MonetaryPolicy.json' with {type: 'json'};
-import VaultABI from './constants/abis/Vault.json' with {type: 'json'};
-import GaugeABI from './constants/abis/GaugeV5.json' with {type: 'json'};
-import SidechainGaugeABI from './constants/abis/SidechainGauge.json' with {type: 'json'};
 import GaugeControllerABI from './constants/abis/GaugeController.json' with {type: 'json'};
 import GaugeFactoryMainnetABI from './constants/abis/GaugeFactoryMainnet.json' with {type: 'json'};
 import GaugeFactorySidechainABI from './constants/abis/GaugeFactorySidechain.json' with {type: 'json'};
@@ -42,36 +37,14 @@ import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {
 import {
     ALIASES_ETHEREUM,
     ALIASES_OPTIMISM,
-    ALIASES_POLYGON,
-    ALIASES_FANTOM,
-    ALIASES_AVALANCHE,
     ALIASES_ARBITRUM,
-    ALIASES_XDAI,
-    ALIASES_MOONBEAM,
-    ALIASES_AURORA,
-    ALIASES_KAVA,
-    ALIASES_CELO,
-    ALIASES_ZKSYNC,
-    ALIASES_BASE,
-    ALIASES_BSC,
     ALIASES_FRAXTAL,
     ALIASES_SONIC,
 } from "./constants/aliases.js";
 import {
     COINS_ETHEREUM,
     COINS_OPTIMISM,
-    COINS_POLYGON,
-    COINS_FANTOM,
-    COINS_AVALANCHE,
     COINS_ARBITRUM,
-    COINS_XDAI,
-    COINS_MOONBEAM,
-    COINS_AURORA,
-    COINS_KAVA,
-    COINS_CELO,
-    COINS_ZKSYNC,
-    COINS_BASE,
-    COINS_BSC,
     COINS_FRAXTAL,
     COINS_SONIC,
 } from "./constants/coins.js";
@@ -83,6 +56,7 @@ import {_getMarketsData, _getHiddenPools} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
 import {MintMarketTemplate} from "./mintMarkets";
 import {LendMarketTemplate} from "./lendMarkets";
+import {fetchOneWayMarketsByBlockchain, fetchOneWayMarketsByAPI} from "./lendMarkets/fetch/fetchLendMarkets.js";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
@@ -96,76 +70,21 @@ export const NETWORK_CONSTANTS: { [index: number]: any } = {
         ALIASES: ALIASES_OPTIMISM,
         COINS: COINS_OPTIMISM,
     },
-    56: {
-        NAME: 'bsc',
-        ALIASES: ALIASES_BSC,
-        COINS: COINS_BSC,
-    },
-    100: {
-        NAME: 'xdai',
-        ALIASES: ALIASES_XDAI,
-        COINS: COINS_XDAI,
-    },
-    137: {
-        NAME: 'polygon',
-        ALIASES: ALIASES_POLYGON,
-        COINS: COINS_POLYGON,
-    },
     146: {
         NAME: 'sonic',
         ALIASES: ALIASES_SONIC,
         COINS: COINS_SONIC,
-    },
-    250: {
-        NAME: 'fantom',
-        ALIASES: ALIASES_FANTOM,
-        COINS: COINS_FANTOM,
     },
     252: {
         NAME: 'fraxtal',
         ALIASES: ALIASES_FRAXTAL,
         COINS: COINS_FRAXTAL,
     },
-    324: {
-        NAME: 'zksync',
-        ALIASES: ALIASES_ZKSYNC,
-        COINS: COINS_ZKSYNC,
-    },
-    1284: {
-        NAME: 'moonbeam',
-        ALIASES: ALIASES_MOONBEAM,
-        COINS: COINS_MOONBEAM,
-    },
-    2222: {
-        NAME: 'kava',
-        ALIASES: ALIASES_KAVA,
-        COINS: COINS_KAVA,
-    },
-    8453: {
-        NAME: 'base',
-        ALIASES: ALIASES_BASE,
-        COINS: COINS_BASE,
-    },
     42161: {
         NAME: 'arbitrum',
         ALIASES: ALIASES_ARBITRUM,
         COINS: COINS_ARBITRUM,
         EXCLUDED_PROTOCOLS_1INCH: "",
-    },
-    42220: {
-        NAME: 'celo',
-        ALIASES: ALIASES_CELO,
-        COINS: COINS_CELO,
-    },
-    43114: {
-        NAME: 'avalanche',
-        ALIASES: ALIASES_AVALANCHE,
-        COINS: COINS_AVALANCHE,
-    },
-    1313161554: {
-        NAME: 'aurora',
-        ALIASES: ALIASES_AURORA,
-        COINS: COINS_AURORA,
     },
 }
 
@@ -187,6 +106,7 @@ class Llamalend implements ILlamalend {
     L1WeightedGasPrice?: number;
     constants: {
         ONE_WAY_MARKETS: IDict<IOneWayMarket>,
+        ONE_WAY_MARKETS_V2: IDict<IOneWayMarket>,
         DECIMALS: IDict<number>;
         NETWORK_NAME: INetworkName;
         ALIASES: Record<string, string>;
@@ -215,6 +135,7 @@ class Llamalend implements ILlamalend {
         this.options = {};
         this.constants = {
             ONE_WAY_MARKETS: {},
+            ONE_WAY_MARKETS_V2: {},
             LLAMMAS: {},
             COINS: {},
             DECIMALS: {},
@@ -250,6 +171,7 @@ class Llamalend implements ILlamalend {
         this.options = {};
         this.constants = {
             ONE_WAY_MARKETS: {},
+            ONE_WAY_MARKETS_V2: {},
             LLAMMAS: {...LLAMMAS},
             COINS: {},
             DECIMALS: {},
@@ -346,6 +268,9 @@ class Llamalend implements ILlamalend {
 
         // oneWayMarkets contracts
         this.setContract(this.constants.ALIASES['one_way_factory'], OneWayLendingFactoryABI);
+        if(this.constants.ALIASES['one_way_factory_v2'] && this.constants.ALIASES['one_way_factory_v2'] !== this.constants.ZERO_ADDRESS) {
+            this.setContract(this.constants.ALIASES['one_way_factory_v2'], OneWayLendingFactoryV2ABI);
+        }
         this.setContract(this.constants.ALIASES['gauge_controller'], GaugeControllerABI);
         this.setContract(this.constants.ALIASES['leverage_zap'], LeverageZapABI);
         this.setContract(this.constants.ALIASES['leverage_zap_v2'], LeverageZapABI);
@@ -541,53 +466,20 @@ class Llamalend implements ILlamalend {
         return Object.fromEntries(Object.entries(markets).filter(([id]) => !hiddenMarkets.includes(id))) as IDict<IOneWayMarket>;
     }
 
-    getLendMarketList = () => Object.keys(this.constants.ONE_WAY_MARKETS);
+    getLendMarketList = () => Object.keys({...this.constants.ONE_WAY_MARKETS, ...this.constants.ONE_WAY_MARKETS_V2});
 
     getMintMarketList = () => Object.keys(this.constants.LLAMMAS);
 
-    getFactoryMarketData = async () => {
-        const factory = this.contracts[this.constants.ALIASES['one_way_factory']];
-        const factoryContract = this.contracts[this.constants.ALIASES['one_way_factory']].contract;
-        const markets_count = await factoryContract.market_count();
-        const callsMap = ['names', 'amms', 'controllers', 'borrowed_tokens', 'collateral_tokens', 'monetary_policies', 'vaults', 'gauges']
-
-        const calls: Call[] = [];
-        for (let i = 0; i < markets_count; i++) {
-            callsMap.forEach((item) => {
-                calls.push(createCall(factory,item, [i]))
-            })
+    fetchLendMarkets = async ({ useApi = true, version = 'v1' }: { useApi?: boolean, version?: 'v1' | 'v2' } = {}) => {
+        if(version === 'v2' && useApi) {
+            throw new Error('API fetch is not supported for v2 markets yet. Please use fetchMarkets({ useApi: false, version: "v2" }) to fetch from blockchain.');
         }
-        const res = (await this.multicallProvider.all(calls) as string[]).map((addr) => addr.toLowerCase());
-
-        return handleMultiCallResponse(callsMap, res)
-    }
-
-    getFactoryMarketDataByAPI = async () => {
-        const apiData = (await _getMarketsData(this.constants.NETWORK_NAME)).lendingVaultData;
-
-        const result: Record<string, string[]> = {
-            names: [],
-            amms: [],
-            controllers: [],
-            borrowed_tokens: [],
-            collateral_tokens: [],
-            monetary_policies: [],
-            vaults: [],
-            gauges: [],
-        };
-
-        apiData.forEach((market: IMarketDataAPI) => {
-            result.names.push(market.name);
-            result.amms.push(market.ammAddress.toLowerCase());
-            result.controllers.push(market.controllerAddress.toLowerCase());
-            result.borrowed_tokens.push(market.assets.borrowed.address.toLowerCase());
-            result.collateral_tokens.push(market.assets.collateral.address.toLowerCase());
-            result.monetary_policies.push(market.monetaryPolicyAddress.toLowerCase());
-            result.vaults.push(market.address.toLowerCase());
-            result.gauges.push(market.gaugeAddress?.toLowerCase() || this.constants.ZERO_ADDRESS);
-        });
-
-        return result;
+        
+        if(useApi) {
+            await fetchOneWayMarketsByAPI(this, version)
+        } else {
+            await fetchOneWayMarketsByBlockchain(this, version)
+        }
     }
 
     getCoins = async (collateral_tokens: string[], borrowed_tokens: string[], useApi = false): Promise<IDict<ICoin>> => {
@@ -648,142 +540,53 @@ class Llamalend implements ILlamalend {
     }
 
 
-    fetchStats = async (amms: string[], controllers: string[], vaults: string[], borrowed_tokens: string[], collateral_tokens: string[]) => {
+    fetchStats = async (amms: string[], controllers: string[], vaults: string[], borrowed_tokens: string[], collateral_tokens: string[], version: 'v1' | 'v2' = 'v1') => {
         cacheStats.clear();
 
         const marketCount = controllers.length;
+        console.log(controllers.length)
 
         const calls: Call[] = [];
 
         for (let i = 0; i < marketCount; i++) {
             calls.push(createCall(this.contracts[controllers[i]], 'total_debt', []));
-            calls.push(createCall(this.contracts[vaults[i]], 'totalAssets', [controllers[i]]));
+            calls.push(createCall(this.contracts[vaults[i]], 'totalAssets', []));
             calls.push(createCall(this.contracts[borrowed_tokens[i]], 'balanceOf', [controllers[i]]));
             calls.push(createCall(this.contracts[amms[i]], 'rate', []));
             calls.push(createCall(this.contracts[borrowed_tokens[i]], 'balanceOf', [amms[i]]));
-            calls.push(createCall(this.contracts[amms[i]], 'admin_fees_x', []));
-            calls.push(createCall(this.contracts[amms[i]], 'admin_fees_y', []));
+
+            if (version === 'v1') {
+                calls.push(createCall(this.contracts[amms[i]], 'admin_fees_x', []));
+                calls.push(createCall(this.contracts[amms[i]], 'admin_fees_y', []));
+            }
+            
             calls.push(createCall(this.contracts[collateral_tokens[i]], 'balanceOf', [amms[i]]));
         }
 
         const res = await this.multicallProvider.all(calls);
 
         for (let i = 0; i < marketCount; i++) {
-            cacheStats.set(cacheKey(controllers[i], 'total_debt'), res[(i * 8) + 0]);
-            cacheStats.set(cacheKey(vaults[i], 'totalAssets', controllers[i]), res[(i * 8) + 1]);
-            cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', controllers[i]), res[(i * 8) + 2]);
-            cacheStats.set(cacheKey(amms[i], 'rate'), res[(i * 8) + 3]);
-            cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 4]);
-            cacheStats.set(cacheKey(amms[i], 'admin_fees_x'), res[(i * 8) + 5]);
-            cacheStats.set(cacheKey(amms[i], 'admin_fees_y'), res[(i * 8) + 6]);
-            cacheStats.set(cacheKey(collateral_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 7]);
+            if (version === 'v1') {
+                cacheStats.set(cacheKey(controllers[i], 'total_debt'), res[(i * 8) + 0]);
+                cacheStats.set(cacheKey(vaults[i], 'totalAssets', controllers[i]), res[(i * 8) + 1]);
+                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', controllers[i]), res[(i * 8) + 2]);
+                cacheStats.set(cacheKey(amms[i], 'rate'), res[(i * 8) + 3]);
+                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 4]);
+                cacheStats.set(cacheKey(amms[i], 'admin_fees_x'), res[(i * 8) + 5]);
+                cacheStats.set(cacheKey(amms[i], 'admin_fees_y'), res[(i * 8) + 6]);
+                cacheStats.set(cacheKey(collateral_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 7]);
+            } else {
+                cacheStats.set(cacheKey(controllers[i], 'total_debt'), res[(i * 6) + 0]);
+                cacheStats.set(cacheKey(vaults[i], 'totalAssets', controllers[i]), res[(i * 6) + 1]);
+                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', controllers[i]), res[(i * 6) + 2]);
+                cacheStats.set(cacheKey(amms[i], 'rate'), res[(i * 6) + 3]);
+                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', amms[i]), res[(i * 6) + 4]);
+                cacheStats.set(cacheKey(amms[i], 'admin_fees_x'), BigInt(0)); // Always 0 for v2
+                cacheStats.set(cacheKey(amms[i], 'admin_fees_y'), BigInt(0)); // Always 0 for v2
+                cacheStats.set(cacheKey(collateral_tokens[i], 'balanceOf', amms[i]), res[(i * 6) + 5]);
+            }
         }
     };
-
-
-    fetchLendMarkets = async (useAPI = true) => {
-        if(useAPI) {
-            await this._fetchOneWayMarketsByAPI()
-        } else {
-            await this._fetchOneWayMarketsByBlockchain()
-        }
-    }
-
-    _fetchOneWayMarketsByBlockchain = async () => {
-        const {names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges} = await this.getFactoryMarketData()
-        const COIN_DATA = await this.getCoins(collateral_tokens, borrowed_tokens);
-        for (const c in COIN_DATA) {
-            this.constants.DECIMALS[c] = COIN_DATA[c].decimals;
-        }
-
-        amms.forEach((amm: string, index: number) => {
-            this.setContract(amm, LlammaABI);
-            this.setContract(controllers[index], ControllerABI);
-            this.setContract(monetary_policies[index], MonetaryPolicyABI);
-            this.setContract(vaults[index], VaultABI);
-            this.setContract(gauges[index], this.chainId === 1 ? GaugeABI : SidechainGaugeABI);
-            COIN_DATA[vaults[index]] = {
-                address: vaults[index],
-                decimals: 18,
-                name: "Curve Vault for " + COIN_DATA[borrowed_tokens[index]].name,
-                symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol,
-            };
-            COIN_DATA[gauges[index]] = {
-                address: gauges[index],
-                decimals: 18,
-                name: "curve.finance " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
-                symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol + "-gauge",
-            };
-            this.constants.DECIMALS[vaults[index]] = 18;
-            this.constants.DECIMALS[gauges[index]] = 18;
-            this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = {
-                name: names[index],
-                addresses: {
-                    amm: amms[index],
-                    controller: controllers[index],
-                    borrowed_token: borrowed_tokens[index],
-                    collateral_token: collateral_tokens[index],
-                    monetary_policy: monetary_policies[index],
-                    vault: vaults[index],
-                    gauge: gauges[index],
-                },
-                borrowed_token: COIN_DATA[borrowed_tokens[index]],
-                collateral_token: COIN_DATA[collateral_tokens[index]],
-            }
-        })
-
-        this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
-
-        await this.fetchStats(amms, controllers, vaults, borrowed_tokens, collateral_tokens);
-    }
-
-    _fetchOneWayMarketsByAPI = async () => {
-        const {names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges} = await this.getFactoryMarketDataByAPI()
-        const COIN_DATA = await this.getCoins(collateral_tokens, borrowed_tokens, true);
-        for (const c in COIN_DATA) {
-            this.constants.DECIMALS[c] = COIN_DATA[c].decimals;
-        }
-
-        amms.forEach((amm: string, index: number) => {
-            this.setContract(amms[index], LlammaABI);
-            this.setContract(controllers[index], ControllerABI);
-            this.setContract(monetary_policies[index], MonetaryPolicyABI);
-            this.setContract(vaults[index], VaultABI);
-            if(gauges[index]){
-                this.setContract(gauges[index], this.chainId === 1 ? GaugeABI : SidechainGaugeABI);
-            }
-            COIN_DATA[vaults[index]] = {
-                address: vaults[index],
-                decimals: 18,
-                name: "Curve Vault for " + COIN_DATA[borrowed_tokens[index]].name,
-                symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol,
-            };
-            COIN_DATA[gauges[index]] = {
-                address: gauges[index],
-                decimals: 18,
-                name: "curve.finance " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
-                symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol + "-gauge",
-            };
-            this.constants.DECIMALS[vaults[index]] = 18;
-            this.constants.DECIMALS[gauges[index]] = 18;
-            this.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = {
-                name: names[index],
-                addresses: {
-                    amm: amms[index],
-                    controller: controllers[index],
-                    borrowed_token: borrowed_tokens[index],
-                    collateral_token: collateral_tokens[index],
-                    monetary_policy: monetary_policies[index],
-                    vault: vaults[index],
-                    gauge: gauges[index],
-                },
-                borrowed_token: COIN_DATA[borrowed_tokens[index]],
-                collateral_token: COIN_DATA[collateral_tokens[index]],
-            }
-        })
-
-        this.constants.ONE_WAY_MARKETS = await this._filterHiddenMarkets(this.constants.ONE_WAY_MARKETS);
-    }
 
     formatUnits(value: BigNumberish, unit?: string | Numeric): string {
         return ethers.formatUnits(value, unit);
