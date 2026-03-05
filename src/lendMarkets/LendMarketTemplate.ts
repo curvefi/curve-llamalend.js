@@ -267,14 +267,22 @@ export class LendMarketTemplate {
             partialSelfLiquidate: loan.partialSelfLiquidate.bind(loan),
 
             estimateGas: {
+                createLoanApprove: loan.estimateGas.createLoanApprove,
                 createLoan: loan.createLoanEstimateGas.bind(loan),
+                borrowMoreApprove: loan.estimateGas.borrowMoreApprove,
                 borrowMore: loan.borrowMoreEstimateGas.bind(loan),
+                addCollateralApprove: loan.estimateGas.addCollateralApprove,
                 addCollateral: loan.addCollateralEstimateGas.bind(loan),
                 removeCollateral: loan.removeCollateralEstimateGas.bind(loan),
+                repayApprove: loan.estimateGas.repayApprove,
                 repay: loan.repayEstimateGas.bind(loan),
+                fullRepayApprove: loan.estimateGas.fullRepayApprove,
                 fullRepay: loan.fullRepayEstimateGas.bind(loan),
+                liquidateApprove: loan.estimateGas.liquidateApprove,
                 liquidate: loan.liquidateEstimateGas.bind(loan),
+                selfLiquidateApprove: loan.estimateGas.selfLiquidateApprove,
                 selfLiquidate: loan.selfLiquidateEstimateGas.bind(loan),
+                partialSelfLiquidateApprove: loan.estimateGas.partialSelfLiquidateApprove,
                 partialSelfLiquidate: loan.partialSelfLiquidateEstimateGas.bind(loan),
             },
         }

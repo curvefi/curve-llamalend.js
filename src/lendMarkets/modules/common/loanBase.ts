@@ -759,14 +759,22 @@ export class LoanBaseModule {
     }
 
     public estimateGas = {
+        createLoanApprove: this.createLoanApproveEstimateGas.bind(this),
         createLoan: this.createLoanEstimateGas.bind(this),
+        borrowMoreApprove: this.borrowMoreApproveEstimateGas.bind(this),
         borrowMore: this.borrowMoreEstimateGas.bind(this),
+        addCollateralApprove: this.addCollateralApproveEstimateGas.bind(this),
         addCollateral: this.addCollateralEstimateGas.bind(this),
         removeCollateral: this.removeCollateralEstimateGas.bind(this),
+        repayApprove: this.repayApproveEstimateGas.bind(this),
         repay: this.repayEstimateGas.bind(this),
+        fullRepayApprove: this.fullRepayApproveEstimateGas.bind(this),
         fullRepay: this.fullRepayEstimateGas.bind(this),
+        liquidateApprove: this.liquidateApproveEstimateGas.bind(this),
         liquidate: this.liquidateEstimateGas.bind(this),
+        selfLiquidateApprove: this.selfLiquidateApproveEstimateGas.bind(this),
         selfLiquidate: this.selfLiquidateEstimateGas.bind(this),
+        partialSelfLiquidateApprove: this.partialSelfLiquidateApproveEstimateGas.bind(this),
         partialSelfLiquidate: this.partialSelfLiquidateEstimateGas.bind(this),
     };
 

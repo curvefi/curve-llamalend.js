@@ -64,14 +64,22 @@ export interface ILoanV1 {
     partialSelfLiquidate: (partialFrac: IPartialFrac, slippage?: number) => Promise<string>;
 
     estimateGas: {
+        createLoanApprove: (collateral: TAmount) => Promise<TGas>;
         createLoan: (collateral: TAmount, debt: TAmount, range: number) => Promise<TGas>;
+        borrowMoreApprove: (collateral: TAmount) => Promise<TGas>;
         borrowMore: (collateral: TAmount, debt: TAmount) => Promise<TGas>;
+        addCollateralApprove: (collateral: TAmount) => Promise<TGas>;
         addCollateral: (collateral: TAmount, address?: string) => Promise<TGas>;
         removeCollateral: (collateral: TAmount) => Promise<TGas>;
+        repayApprove: (debt: TAmount) => Promise<TGas>;
         repay: (debt: TAmount, address?: string) => Promise<TGas>;
+        fullRepayApprove: (address?: string) => Promise<TGas>;
         fullRepay: (address?: string) => Promise<TGas>;
+        liquidateApprove: (address?: string) => Promise<TGas>;
         liquidate: (address: string, slippage?: number) => Promise<TGas>;
+        selfLiquidateApprove: () => Promise<TGas>;
         selfLiquidate: (slippage?: number) => Promise<TGas>;
+        partialSelfLiquidateApprove: (partialFrac: IPartialFrac) => Promise<TGas>;
         partialSelfLiquidate: (partialFrac: IPartialFrac, slippage?: number) => Promise<TGas>;
     };
 }
