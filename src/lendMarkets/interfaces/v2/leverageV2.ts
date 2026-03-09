@@ -57,6 +57,7 @@ export interface ILeverageV2 {
     borrowMoreApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<string[]>;
     borrowMoreRouteImage: (userBorrowed: TAmount, debt: TAmount) => Promise<string>;
     borrowMore: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage?: number) => Promise<string>;
+    borrowMoreFutureLeverage: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, userAddress?: string, slippage?: number) => Promise<string>;
 
     repayExpectedBorrowed: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, slippage?: number) =>
         Promise<{ totalBorrowed: string, borrowedFromStateCollateral: string, borrowedFromUserCollateral: string, userBorrowed: string, avgPrice: string }>;
@@ -70,6 +71,7 @@ export interface ILeverageV2 {
     repayApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<string[]>;
     repayRouteImage: (stateCollateral: TAmount, userCollateral: TAmount) => Promise<string>;
     repay: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, slippage?: number) => Promise<string>;
+    repayFutureLeverage: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, userAddress?: string, slippage?: number) => Promise<string>,
 
     estimateGas: {
         createLoanApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<TGas>;
