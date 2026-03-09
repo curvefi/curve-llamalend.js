@@ -41,7 +41,7 @@ export interface ILoanV2 {
     repayPrices: (debt: TAmount, address?: string) => Promise<string[]>;
     repayIsApproved: (debt: TAmount) => Promise<boolean>;
     repayApprove: (debt: TAmount) => Promise<string[]>;
-    repayHealth: (debt: TAmount, full?: boolean, address?: string) => Promise<string>;
+    repayHealth: (debt: TAmount, shrink?: boolean, full?: boolean, address?: string) => Promise<string>;
     repay: (debt: TAmount, address?: string) => Promise<string>;
     repayFutureLeverage: (debt: TAmount, userAddress?: string) => Promise<string>;
 
