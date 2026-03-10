@@ -155,11 +155,10 @@ export class LoanBaseModule {
         const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        // TODO: verify parameters
-        let _health = await contract.health_calculator(this.llamalend.constants.ZERO_ADDRESS, _collateral, _debt, full, range, this.llamalend.constantOptions) as bigint;
-        _health = _health * BigInt(100);
 
-        return formatUnits(_health);
+        const _health = await contract.health_calculator(this.llamalend.constants.ZERO_ADDRESS, _collateral, _debt, full, range, this.llamalend.constantOptions) as bigint;
+
+        return formatUnits(_health * BigInt(100));
     }
 
     public async createLoanIsApproved(collateral: number | string): Promise<boolean> {
@@ -243,10 +242,9 @@ export class LoanBaseModule {
         const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, _collateral, _debt, full, 0, this.llamalend.constantOptions) as bigint;
-        _health = _health * BigInt(100);
+        const _health = await contract.health_calculator(address, _collateral, _debt, full, 0, this.llamalend.constantOptions) as bigint;
 
-        return formatUnits(_health);
+        return formatUnits(_health * BigInt(100));
     }
 
     public async borrowMoreIsApproved(collateral: number | string): Promise<boolean> {
@@ -330,10 +328,9 @@ export class LoanBaseModule {
         const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
-        _health = _health * BigInt(100);
+        const _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
 
-        return formatUnits(_health);
+        return formatUnits(_health * BigInt(100));
     }
 
     public async addCollateralIsApproved(collateral: number | string): Promise<boolean> {
@@ -424,10 +421,9 @@ export class LoanBaseModule {
         const _collateral = parseUnits(collateral, this.market.collateral_token.decimals) * BigInt(-1);
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
-        _health = _health * BigInt(100);
+        const _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
 
-        return formatUnits(_health);
+        return formatUnits(_health * BigInt(100));
     }
 
     private async _removeCollateral(collateral: number | string, estimateGas: boolean): Promise<string | TGas> {
@@ -503,17 +499,6 @@ export class LoanBaseModule {
 
     public async repayApprove(debt: number | string): Promise<string[]> {
         return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.market.addresses.controller);
-    }
-
-    public async repayHealth(debt: number | string, full = true, address = ""): Promise<string> {
-        address = _getAddress.call(this.llamalend, address);
-        const _debt = parseUnits(debt) * BigInt(-1);
-
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        let _health = await contract.health_calculator(address, 0, _debt, full, 0, this.llamalend.constantOptions) as bigint;
-        _health = _health * BigInt(100);
-
-        return formatUnits(_health);
     }
 
     private async _repay(debt: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {

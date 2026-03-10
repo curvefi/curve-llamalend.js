@@ -4,10 +4,16 @@ import { getFactoryMarketDataV1, getFactoryMarketDataV2, getFactoryMarketDataByA
 
 import LlammaABI from '../../constants/abis/Llamma.json' with {type: 'json'};
 import ControllerABI from '../../constants/abis/Controller.json' with {type: 'json'};
+import ControllerV2ABI from '../../constants/abis/ControllerV2.json' with {type: 'json'};
 import MonetaryPolicyABI from '../../constants/abis/MonetaryPolicy.json' with {type: 'json'};
 import VaultABI from '../../constants/abis/Vault.json' with {type: 'json'};
 import GaugeABI from '../../constants/abis/GaugeV5.json' with {type: 'json'};
 import SidechainGaugeABI from '../../constants/abis/SidechainGauge.json' with {type: 'json'};
+
+const controllerAbiMap = {
+    'v1' : ControllerABI,
+    'v2' : ControllerV2ABI,
+}
 
 const registerMarkets = (
     llamalend: Llamalend,
@@ -24,7 +30,7 @@ const registerMarkets = (
 ) => {
     amms.forEach((amm: string, index: number) => {
         llamalend.setContract(amms[index], LlammaABI);
-        llamalend.setContract(controllers[index], ControllerABI);
+        llamalend.setContract(controllers[index], controllerAbiMap[version]);
         llamalend.setContract(monetary_policies[index], MonetaryPolicyABI);
         llamalend.setContract(vaults[index], VaultABI);
         if (gauges[index]) {

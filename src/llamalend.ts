@@ -99,7 +99,7 @@ class Llamalend implements ILlamalend {
     chainId: IChainId;
     contracts: { [index: string]: ICurveContract };
     mintMarkets: { [addres: string]: MintMarketTemplate };
-    lendMarkets: { [addres: string]: LendMarketTemplate };
+    lendMarkets: { [address: string]: LendMarketTemplate<'v1'> | LendMarketTemplate<'v2'> };
     feeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number };
     constantOptions: { gasLimit: number };
     options: { gasPrice?: number | bigint, maxFeePerGas?: number | bigint, maxPriorityFeePerGas?: number | bigint };
