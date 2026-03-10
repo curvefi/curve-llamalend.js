@@ -3,7 +3,6 @@ import {TAmount} from "../../../interfaces";
 import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import {
     parseUnits,
-    BN,
     toBN,
     formatUnits,
     formatNumber,
@@ -11,10 +10,14 @@ import {
 import {Llamalend} from "../../../llamalend";
 import {_getMarketsData} from "../../../external-api";
 import {cacheKey, cacheStats} from "../../../cache";
+import { computeRatesFromRate, fetchMarketDataByVault } from "../../utils";
 
-export class StatsBaseModule {
+export abstract class StatsBaseModule {
     protected market: LendMarketTemplate;
     protected llamalend: Llamalend;
+
+    protected abstract _getRate(isGetter: boolean): Promise<bigint>;
+    protected abstract _getFutureRate(_dReserves: bigint, _dDebt: bigint): Promise<bigint>;
 
     constructor(market: LendMarketTemplate) {
         this.market = market;
@@ -53,55 +56,24 @@ export class StatsBaseModule {
         maxAge: 5 * 60 * 1000, // 5m
     });
 
-    private _getRate = async (isGetter = true): Promise<bigint> => {
-        let _rate;
-        if(isGetter) {
-            _rate = cacheStats.get(cacheKey(this.market.addresses.amm, 'rate'));
-        } else {
-            _rate = await this.llamalend.contracts[this.market.addresses.amm].contract.rate(this.llamalend.constantOptions);
-            cacheStats.set(cacheKey(this.market.addresses.controller, 'rate'), _rate);
-        }
-        return _rate;
-    }
-
-    private _getFutureRate = async (_dReserves: bigint, _dDebt: bigint): Promise<bigint> => {
-        const mpContract = this.llamalend.contracts[this.market.addresses.monetary_policy].contract;
-        return await mpContract.future_rate(this.market.addresses.controller, _dReserves, _dDebt);
-    }
-
     public async statsRates(isGetter = true, useAPI = false): Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}> {
         if(useAPI) {
-            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
-
-            const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.market.addresses.vault.toLowerCase())
-
-            if(market) {
-                return {
-                    borrowApr: (market.rates.borrowApr * 100).toString(),
-                    lendApr: (market.rates.lendApr * 100).toString(),
-                    borrowApy: (market.rates.borrowApy * 100).toString(),
-                    lendApy: (market.rates.lendApy * 100).toString(),
-                }
-            } else {
-                throw new Error('Market not found in API')
-            }
+            const market = await fetchMarketDataByVault(
+                this.llamalend.constants.NETWORK_NAME,
+                this.market.addresses.vault,
+                _getMarketsData
+            );
+            return {
+                borrowApr: (market.rates.borrowApr * 100).toString(),
+                lendApr: (market.rates.lendApr * 100).toString(),
+                borrowApy: (market.rates.borrowApy * 100).toString(),
+                lendApy: (market.rates.lendApy * 100).toString(),
+            };
         } else {
             const _rate = await this._getRate(isGetter);
-            const borrowApr =  toBN(_rate).times(365).times(86400).times(100).toString();
-            // borrowApy = e**(rate*365*86400) - 1
-            const borrowApy = String(((2.718281828459 ** (toBN(_rate).times(365).times(86400)).toNumber()) - 1) * 100);
-            let lendApr = "0";
-            let lendApy = "0";
             const debt = await this.statsTotalDebt(isGetter);
-            if (Number(debt) > 0) {
-                const { cap } = await this.statsCapAndAvailable(isGetter);
-                lendApr = toBN(_rate).times(365).times(86400).times(debt).div(cap).times(100).toString();
-                // lendApy = (debt * e**(rate*365*86400) - debt) / cap
-                const debtInAYearBN = BN(debt).times(2.718281828459 ** (toBN(_rate).times(365).times(86400)).toNumber());
-                lendApy = debtInAYearBN.minus(debt).div(cap).times(100).toString();
-            }
-
-            return { borrowApr, lendApr, borrowApy, lendApy }
+            const { cap } = Number(debt) > 0 ? await this.statsCapAndAvailable(isGetter) : { cap: "0" };
+            return computeRatesFromRate(_rate, debt, cap);
         }
     }
 
@@ -109,21 +81,9 @@ export class StatsBaseModule {
         const _dReserves = parseUnits(dReserves, this.market.borrowed_token.decimals);
         const _dDebt = parseUnits(dDebt, this.market.borrowed_token.decimals);
         const _rate = await this._getFutureRate(_dReserves, _dDebt);
-        const borrowApr =  toBN(_rate).times(365).times(86400).times(100).toString();
-        // borrowApy = e**(rate*365*86400) - 1
-        const borrowApy = String(((2.718281828459 ** (toBN(_rate).times(365).times(86400)).toNumber()) - 1) * 100);
-        let lendApr = "0";
-        let lendApy = "0";
         const debt = Number(await this.statsTotalDebt()) + Number(dDebt);
-        if (Number(debt) > 0) {
-            const cap = Number((await this.statsCapAndAvailable(true, useAPI)).cap) + Number(dReserves);
-            lendApr = toBN(_rate).times(365).times(86400).times(debt).div(cap).times(100).toString();
-            // lendApy = (debt * e**(rate*365*86400) - debt) / cap
-            const debtInAYearBN = BN(debt).times(2.718281828459 ** (toBN(_rate).times(365).times(86400)).toNumber());
-            lendApy = debtInAYearBN.minus(debt).div(cap).times(100).toString();
-        }
-
-        return { borrowApr, lendApr, borrowApy, lendApy }
+        const cap = Number((await this.statsCapAndAvailable(true, useAPI)).cap) + Number(dReserves);
+        return computeRatesFromRate(_rate, debt, cap);
     }
 
     public async statsBalances(): Promise<[string, string]> {
@@ -202,15 +162,12 @@ export class StatsBaseModule {
 
     public async statsTotalDebt(isGetter = true, useAPI = true): Promise<string> {
         if(useAPI) {
-            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
-
-            const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.market.addresses.vault.toLowerCase())
-
-            if(market) {
-                return market.borrowed.total.toString();
-            } else {
-                throw new Error('Market not found in API')
-            }
+            const market = await fetchMarketDataByVault(
+                this.llamalend.constants.NETWORK_NAME,
+                this.market.addresses.vault,
+                _getMarketsData
+            );
+            return market.borrowed.total.toString();
         } else {
             let _debt;
             if(isGetter) {
@@ -226,18 +183,15 @@ export class StatsBaseModule {
 
     public statsAmmBalances = async (isGetter = true, useAPI = false): Promise<{ borrowed: string, collateral: string }> => {
         if(useAPI) {
-            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
-
-            const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.market.addresses.vault.toLowerCase())
-
-            if(market) {
-                return {
-                    borrowed: market.ammBalances.ammBalanceBorrowed.toString(),
-                    collateral: market.ammBalances.ammBalanceCollateral.toString(),
-                }
-            } else {
-                throw new Error('Market not found in API')
-            }
+            const market = await fetchMarketDataByVault(
+                this.llamalend.constants.NETWORK_NAME,
+                this.market.addresses.vault,
+                _getMarketsData
+            );
+            return {
+                borrowed: market.ammBalances.ammBalanceBorrowed.toString(),
+                collateral: market.ammBalances.ammBalanceCollateral.toString(),
+            };
         } else {
             const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
             const collateralContract = this.llamalend.contracts[this.market.addresses.collateral_token].multicallContract;
@@ -273,18 +227,15 @@ export class StatsBaseModule {
 
     public async statsCapAndAvailable(isGetter = true, useAPI = false): Promise<{ cap: string, available: string }> {
         if(useAPI) {
-            const response = await _getMarketsData(this.llamalend.constants.NETWORK_NAME);
-
-            const market = response.lendingVaultData.find((item) => item.address.toLowerCase() === this.market.addresses.vault.toLowerCase())
-
-            if(market) {
-                return {
-                    cap: market.totalSupplied.total.toString(),
-                    available: market.availableToBorrow.total.toString(),
-                }
-            } else {
-                throw new Error('Market not found in API')
-            }
+            const market = await fetchMarketDataByVault(
+                this.llamalend.constants.NETWORK_NAME,
+                this.market.addresses.vault,
+                _getMarketsData
+            );
+            return {
+                cap: market.totalSupplied.total.toString(),
+                available: market.availableToBorrow.total.toString(),
+            };
         } else {
             const vaultContract = this.llamalend.contracts[this.market.addresses.vault].multicallContract;
             const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;

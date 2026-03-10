@@ -18,4 +18,5 @@ export interface IStatsV2 {
     totalDebt: (isGetter?: boolean, useAPI?: boolean) => Promise<string>,
     ammBalances: (isGetter?: boolean, useAPI?: boolean) => Promise<{ borrowed: string, collateral: string }>,
     capAndAvailable: (isGetter?: boolean, useAPI?: boolean) => Promise<{ cap: string, available: string }>,
+    adminPercentage: () => Promise<string>,
 }

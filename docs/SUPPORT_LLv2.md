@@ -143,6 +143,12 @@ This document tracks feature support across market versions.
 | ammBalances() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | capAndAvailable() | ✅ | ✅ | ❌ | ✅ | ❌ |
 
+## Stats Module (`market.stats`) new methods
+| Method | v1 | v2 | Same logic | Same params | Same type |
+|--------|----|----|-----------------|----------------------|-----------------------|
+| adminPercentage() | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+
 ---
 
 ## Wallet Module (`market.wallet`)

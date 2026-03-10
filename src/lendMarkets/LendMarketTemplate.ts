@@ -176,6 +176,7 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
             totalDebt: stats.statsTotalDebt.bind(this),
             ammBalances: stats.statsAmmBalances.bind(this),
             capAndAvailable: stats.statsCapAndAvailable.bind(this),
+            adminPercentage: stats.statsAdminPercentage.bind(this),
         } as StatsForVersion<V>
 
         this.wallet = {
