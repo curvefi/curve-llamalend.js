@@ -166,17 +166,17 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
         }
 
         this.stats = {
-            parameters: stats.statsParameters.bind(this),
-            rates: stats.statsRates.bind(this),
-            futureRates: stats.statsFutureRates.bind(this),
-            balances: stats.statsBalances.bind(this),
-            bandsInfo: stats.statsBandsInfo.bind(this),
-            bandBalances: stats.statsBandBalances.bind(this),
-            bandsBalances: stats.statsBandsBalances.bind(this),
-            totalDebt: stats.statsTotalDebt.bind(this),
-            ammBalances: stats.statsAmmBalances.bind(this),
-            capAndAvailable: stats.statsCapAndAvailable.bind(this),
-            adminPercentage: stats.statsAdminPercentage.bind(this),
+            parameters: stats.statsParameters.bind(stats),
+            rates: stats.statsRates.bind(stats),
+            futureRates: stats.statsFutureRates.bind(stats),
+            balances: stats.statsBalances.bind(stats),
+            bandsInfo: stats.statsBandsInfo.bind(stats),
+            bandBalances: stats.statsBandBalances.bind(stats),
+            bandsBalances: stats.statsBandsBalances.bind(stats),
+            totalDebt: stats.statsTotalDebt.bind(stats),
+            ammBalances: stats.statsAmmBalances.bind(stats),
+            capAndAvailable: stats.statsCapAndAvailable.bind(stats),
+            adminPercentage: stats.statsAdminPercentage.bind(stats),
         } as StatsForVersion<V>
 
         this.wallet = {

@@ -11,17 +11,43 @@ import {Llamalend} from "../../../llamalend";
 import {_getMarketsData} from "../../../external-api";
 import {cacheKey, cacheStats} from "../../../cache";
 import { computeRatesFromRate, fetchMarketDataByVault } from "../../utils";
+const PRECISION = BigInt("1000000000000000000"); // 1e18
 
-export abstract class StatsBaseModule {
+export class StatsBaseModule {
     protected market: LendMarketTemplate;
     protected llamalend: Llamalend;
-
-    protected abstract _getRate(isGetter: boolean): Promise<bigint>;
-    protected abstract _getFutureRate(_dReserves: bigint, _dDebt: bigint): Promise<bigint>;
 
     constructor(market: LendMarketTemplate) {
         this.market = market;
         this.llamalend = market.getLlamalend();
+    }
+
+    protected _fetchAdminPercentage = async (): Promise<bigint> => {
+        return BigInt(0)
+    }
+
+    private _getRate = async (isGetter = true): Promise<bigint> => {
+        if (isGetter) {
+            const _rate: bigint = cacheStats.get(cacheKey(this.market.addresses.amm, 'rate'));
+            const _adminPercentage = await this._fetchAdminPercentage();
+            return _rate * (PRECISION - _adminPercentage) / PRECISION;
+        } else {
+            const [_rate, _adminPercentage] = await Promise.all([
+                this.llamalend.contracts[this.market.addresses.amm].contract.rate(this.llamalend.constantOptions),
+                this._fetchAdminPercentage(),
+            ]);
+            cacheStats.set(cacheKey(this.market.addresses.controller, 'rate'), _rate);
+            return _rate * (PRECISION - _adminPercentage) / PRECISION;
+        }
+    }
+
+    private _getFutureRate = async (_dReserves: bigint, _dDebt: bigint): Promise<bigint> => {
+        const mpContract = this.llamalend.contracts[this.market.addresses.monetary_policy].contract;
+        const [_rate, _adminPercentage] = await Promise.all([
+            mpContract.future_rate(this.market.addresses.controller, _dReserves, _dDebt),
+            this._fetchAdminPercentage(),
+        ]);
+        return _rate * (PRECISION - _adminPercentage) / PRECISION;
     }
 
     public statsParameters = memoize(async (): Promise<{
@@ -260,5 +286,10 @@ export abstract class StatsBaseModule {
             // cap -> totalAssets
             // add cap: controller.borrow_cap() // Display
         }
+    }
+
+    public statsAdminPercentage = async (): Promise<string> => {
+        const _adminPercentage = await this._fetchAdminPercentage();
+        return formatUnits(_adminPercentage * BigInt(100));
     }
 }
