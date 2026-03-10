@@ -24,6 +24,10 @@ import {
     VaultModule,
 } from "./modules/common";
 
+type LoanForVersion<V extends 'v1' | 'v2'> = V extends 'v1' ? ILoanV1 : ILoanV2;
+type StatsForVersion<V extends 'v1' | 'v2'> = V extends 'v1' ? IStatsV1 : IStatsV2;
+type LeverageForVersion<V extends 'v1' | 'v2'> = V extends 'v1' ? ILeverageV1 : ILeverageV2;
+
 type V1ModuleConstructors = {
     UserPosition: typeof UserPositionModule;
     Stats: typeof StatsV1Module;
@@ -73,11 +77,11 @@ const versionModules: { v1: V1ModuleConstructors; v2: V2ModuleConstructors } = {
     },
 };
 
-export class LendMarketTemplate {
+export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
     private llamalend: Llamalend;
     id: string;
     name: string;
-    version: 'v1' | 'v2';
+    version: V;
     addresses: {
         amm: string,
         controller: string,
@@ -111,14 +115,14 @@ export class LendMarketTemplate {
     prices: IPrices;
     amm: IAmm;
     vault: IVault;
-    stats: IStatsV1 | IStatsV2;
-    loan: ILoanV1 | ILoanV2;
-    leverage: ILeverageV1 | ILeverageV2;
+    stats: StatsForVersion<V>;
+    loan: LoanForVersion<V>;
+    leverage: LeverageForVersion<V>;
     leverageZapV2: ILeverageZapV2;
 
     constructor(id: string, marketData: IOneWayMarket, llamalend: Llamalend) {
         this.llamalend = llamalend;
-        this.version = marketData.version || 'v1';
+        this.version = (marketData.version || 'v1') as V;
         this.id = id;
         this.name = marketData.name;
         this.addresses = marketData.addresses;
@@ -172,7 +176,7 @@ export class LendMarketTemplate {
             totalDebt: stats.statsTotalDebt.bind(this),
             ammBalances: stats.statsAmmBalances.bind(this),
             capAndAvailable: stats.statsCapAndAvailable.bind(this),
-        }
+        } as StatsForVersion<V>
 
         this.wallet = {
             balances: wallet.balances.bind(this),
@@ -285,7 +289,7 @@ export class LendMarketTemplate {
                 partialSelfLiquidateApprove: loan.estimateGas.partialSelfLiquidateApprove,
                 partialSelfLiquidate: loan.partialSelfLiquidateEstimateGas.bind(loan),
             },
-        }
+        } as LoanForVersion<V>
 
         this.vault = {
             maxDeposit: vault.vaultMaxDeposit.bind(vault),
@@ -389,7 +393,7 @@ export class LendMarketTemplate {
                 repayApprove: leverageZapV1.leverageRepayApproveEstimateGas.bind(leverageZapV1),
                 repay: leverageZapV1.leverageRepayEstimateGas.bind(leverageZapV1),
             },
-        }
+        } as LeverageForVersion<V>
 
         this.leverageZapV2 = {
             hasLeverage: leverageZapV2.hasLeverage.bind(leverageZapV2),
