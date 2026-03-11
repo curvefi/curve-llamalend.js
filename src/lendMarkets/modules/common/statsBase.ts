@@ -274,7 +274,7 @@ export class StatsBaseModule {
         }
     }
 
-    public async statsCapAndAvailable(isGetter = true, useAPI = false): Promise<{ cap: string, available: string }> {
+    public async statsCapAndAvailable(isGetter = true, useAPI = false): Promise<{ cap: string, available: string, totalAssets: string }> {
         if(useAPI) {
             const market = await fetchMarketDataByVault(
                 this.llamalend.constants.NETWORK_NAME,
@@ -282,7 +282,8 @@ export class StatsBaseModule {
                 _getMarketsData
             );
             return {
-                cap: market.totalSupplied.total.toString(),
+                totalAssets: market.totalSupplied.total.toString(),
+                cap: '0',
                 available: market.availableToBorrow.total.toString(),
             };
         } else {
@@ -290,7 +291,7 @@ export class StatsBaseModule {
             const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
 
             let _cap, _available;
-            if(isGetter) { // TODO: should call controller.available_balance() instead of borrowed_token.balanceOf(controller)
+            if(isGetter) {
                 _cap = cacheStats.get(cacheKey(this.market.addresses.vault, 'totalAssets', this.market.addresses.controller));
                 _available = cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.controller));
             } else {
@@ -303,11 +304,10 @@ export class StatsBaseModule {
             }
 
             return {
-                cap: this.llamalend.formatUnits(_cap, this.market.borrowed_token.decimals),
+                totalAssets: this.llamalend.formatUnits(_cap, this.market.borrowed_token.decimals),
+                cap: '0',
                 available: this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals),
             }
-            // cap -> totalAssets
-            // add cap: controller.borrow_cap() // Display
         }
     }
 

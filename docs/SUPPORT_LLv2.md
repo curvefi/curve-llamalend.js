@@ -143,6 +143,45 @@ This document tracks feature support across market versions.
 | ammBalances() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | capAndAvailable() | ✅ | ✅ | ❌ | ✅ | ❌ |
 
+### Update for `capAndAvailable` method
+
+Previously the `capAndAvailable` method returned:
+
+```ts
+{
+  cap: string
+  available: string
+}
+```
+
+Now it returns:
+
+```ts
+{
+  cap: string
+  available: string
+  totalAssets: string
+}
+```
+
+#### Important clarification
+
+Previously the value called **`cap`** was incorrectly named.
+
+On the frontend, the value that we now return as **`totalAssets`** corresponds to what was previously treated as **`cap`**.
+
+### LLv2 markets
+
+For **LLv2 markets**, a new concept should be introduced:
+
+- **`borrowCap`** — should be taken from the `cap` field returned by the method.
+
+#### Summary
+
+- `totalAssets` → what was previously used as `cap` on the frontend  
+- `borrowCap` → should use the new `cap` value for LLv2 markets
+
+
 ## Stats Module (`market.stats`) new methods
 | Method | v1 | v2 | Same logic | Same params | Same type |
 |--------|----|----|-----------------|----------------------|-----------------------|
