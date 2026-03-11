@@ -54,6 +54,6 @@ jobs:
       - name: Publish main as latest
         if: github.ref_name == 'main'
         run: npm publish --tag latest
-      - name: Publish v1 branch as v1
+      - name: Publish v1 branch as legacy
         if: github.ref_name == 'v1'
-        run: npm publish --tag v1
+        run: npm publish --tag legacy
