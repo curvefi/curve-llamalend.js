@@ -24,8 +24,10 @@ export const computeRatesFromRate = (
     const borrowApr = annualFactor.times(100).toString();
     const borrowApy = String((expFactor - 1) * 100);
 
-    const lendApr = annualFactor.times(debt).div(cap).times(100).toString();
-    const lendApy = BN(debt).times(expFactor).minus(debt).div(cap).times(100).toString();
+    const lendAprRaw = annualFactor.times(debt).div(cap).times(100);
+    const lendApr = lendAprRaw.isNaN() ? "0" : lendAprRaw.toString();
+    const lendApyRaw = BN(debt).times(expFactor).minus(debt).div(cap).times(100);
+    const lendApy = lendApyRaw.isNaN() ? "0" : lendApyRaw.toString();
 
     return { borrowApr, lendApr, borrowApy, lendApy };
 }

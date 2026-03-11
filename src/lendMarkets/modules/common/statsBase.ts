@@ -26,6 +26,27 @@ export class StatsBaseModule {
         return BigInt(0)
     }
 
+    protected _fetchAdminFee = async (): Promise<bigint> => {
+        return this.llamalend.contracts[this.market.addresses.amm].contract.admin_fee(this.llamalend.constantOptions);
+    }
+
+    protected async _getAdminFeesXY(isGetter: boolean): Promise<[bigint, bigint]> {
+        if(isGetter) {
+            return [
+                cacheStats.get(cacheKey(this.market.addresses.amm, 'admin_fees_x')),
+                cacheStats.get(cacheKey(this.market.addresses.amm, 'admin_fees_y')),
+            ];
+        }
+        const ammContract = this.llamalend.contracts[this.market.addresses.amm].multicallContract;
+        const [_fee_x, _fee_y] = await this.llamalend.multicallProvider.all([
+            ammContract.admin_fees_x(),
+            ammContract.admin_fees_y(),
+        ]) as [bigint, bigint];
+        cacheStats.set(cacheKey(this.market.addresses.amm, 'admin_fees_x'), _fee_x);
+        cacheStats.set(cacheKey(this.market.addresses.amm, 'admin_fees_y'), _fee_y);
+        return [_fee_x, _fee_y];
+    }
+
     private _getRate = async (isGetter = true): Promise<bigint> => {
         if (isGetter) {
             const _rate: bigint = cacheStats.get(cacheKey(this.market.addresses.amm, 'rate'));
@@ -61,16 +82,17 @@ export class StatsBaseModule {
         const llammaContract = this.llamalend.contracts[this.market.addresses.amm].multicallContract;
         const controllerContract = this.llamalend.contracts[this.market.addresses.controller].multicallContract;
 
-        const calls = [
-            llammaContract.fee(),
-            llammaContract.admin_fee(), // TODO: removed
-            controllerContract.liquidation_discount(),
-            controllerContract.loan_discount(),
-            llammaContract.get_base_price(),
-            llammaContract.A(),
-        ]
+        const [[_fee, _liquidation_discount, _loan_discount, _base_price, _A], _admin_fee] = await Promise.all([
+            this.llamalend.multicallProvider.all([
+                llammaContract.fee(),
+                controllerContract.liquidation_discount(),
+                controllerContract.loan_discount(),
+                llammaContract.get_base_price(),
+                llammaContract.A(),
+            ]),
+            this._fetchAdminFee(),
+        ]) as [bigint[], bigint];
 
-        const [_fee, _admin_fee, _liquidation_discount, _loan_discount, _base_price, _A]: bigint[] = await this.llamalend.multicallProvider.all(calls) as bigint[];
         const A = formatUnits(_A, 0)
         const base_price = formatUnits(_base_price)
         const [fee, admin_fee, liquidation_discount, loan_discount] = [_fee, _admin_fee, _liquidation_discount, _loan_discount]
@@ -97,8 +119,8 @@ export class StatsBaseModule {
             };
         } else {
             const _rate = await this._getRate(isGetter);
-            const debt = await this.statsTotalDebt(isGetter);
-            const { cap } = Number(debt) > 0 ? await this.statsCapAndAvailable(isGetter) : { cap: "0" };
+            const debt = await this.statsTotalDebt(isGetter, false);
+            const { cap } = Number(debt) > 0 ? await this.statsCapAndAvailable(isGetter, false) : { cap: "0" };
             return computeRatesFromRate(_rate, debt, cap);
         }
     }
@@ -115,14 +137,14 @@ export class StatsBaseModule {
     public async statsBalances(): Promise<[string, string]> {
         const borrowedContract = this.llamalend.contracts[this.market.borrowed_token.address].multicallContract;
         const collateralContract = this.llamalend.contracts[this.market.collateral_token.address].multicallContract;
-        const ammContract = this.llamalend.contracts[this.market.addresses.amm].multicallContract;
-        const calls = [
-            borrowedContract.balanceOf(this.market.addresses.amm),
-            collateralContract.balanceOf(this.market.addresses.amm),
-            ammContract.admin_fees_x(), // TODO: always 0
-            ammContract.admin_fees_y(), // TODO: always 0
-        ]
-        const [_borrowedBalance, _collateralBalance, _borrowedAdminFees, _collateralAdminFees]: bigint[] = await this.llamalend.multicallProvider.all(calls);
+
+        const [[_borrowedBalance, _collateralBalance], [_borrowedAdminFees, _collateralAdminFees]] = await Promise.all([
+            this.llamalend.multicallProvider.all([
+                borrowedContract.balanceOf(this.market.addresses.amm),
+                collateralContract.balanceOf(this.market.addresses.amm),
+            ]),
+            this._getAdminFeesXY(false),
+        ]) as [bigint[], [bigint, bigint]];
 
         return [
             formatUnits(_borrowedBalance - _borrowedAdminFees, this.market.borrowed_token.decimals),
@@ -207,6 +229,35 @@ export class StatsBaseModule {
         }
     }
 
+    protected async _statsAmmBalancesOnChain(isGetter: boolean): Promise<{ borrowed: string, collateral: string }> {
+        const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
+        const collateralContract = this.llamalend.contracts[this.market.addresses.collateral_token].multicallContract;
+
+        let _balance_x: bigint, _balance_y: bigint;
+        let _fee_x: bigint, _fee_y: bigint;
+
+        if(isGetter) {
+            _balance_x = cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm));
+            _balance_y = cacheStats.get(cacheKey(this.market.addresses.collateral_token, 'balanceOf', this.market.addresses.amm));
+            [_fee_x, _fee_y] = await this._getAdminFeesXY(true);
+        } else {
+            [[_balance_x, _balance_y], [_fee_x, _fee_y]] = await Promise.all([
+                this.llamalend.multicallProvider.all([
+                    borrowedContract.balanceOf(this.market.addresses.amm),
+                    collateralContract.balanceOf(this.market.addresses.amm),
+                ]),
+                this._getAdminFeesXY(false),
+            ]) as [[bigint, bigint], [bigint, bigint]];
+            cacheStats.set(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm), _balance_x);
+            cacheStats.set(cacheKey(this.market.addresses.collateral_token, 'balanceOf', this.market.addresses.amm), _balance_y);
+        }
+
+        return {
+            borrowed: toBN(_balance_x, this.market.borrowed_token.decimals).minus(toBN(_fee_x, this.market.borrowed_token.decimals)).toString(),
+            collateral: toBN(_balance_y, this.market.collateral_token.decimals).minus(toBN(_fee_y, this.market.collateral_token.decimals)).toString(),
+        }
+    }
+
     public statsAmmBalances = async (isGetter = true, useAPI = false): Promise<{ borrowed: string, collateral: string }> => {
         if(useAPI) {
             const market = await fetchMarketDataByVault(
@@ -219,35 +270,7 @@ export class StatsBaseModule {
                 collateral: market.ammBalances.ammBalanceCollateral.toString(),
             };
         } else {
-            const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
-            const collateralContract = this.llamalend.contracts[this.market.addresses.collateral_token].multicallContract;
-            const ammContract = this.llamalend.contracts[this.market.addresses.amm].multicallContract;
-
-            let _balance_x, _fee_x, _balance_y, _fee_y; // TODO: fees are always 0
-            if(isGetter) {
-                [_balance_x, _fee_x, _balance_y, _fee_y] = [
-                    cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm)),
-                    cacheStats.get(cacheKey(this.market.addresses.amm, 'admin_fees_x')),
-                    cacheStats.get(cacheKey(this.market.addresses.collateral_token, 'balanceOf', this.market.addresses.amm)),
-                    cacheStats.get(cacheKey(this.market.addresses.amm, 'admin_fees_y')),
-                ]
-            } else {
-                [_balance_x, _fee_x, _balance_y, _fee_y] = await this.llamalend.multicallProvider.all([
-                    borrowedContract.balanceOf(this.market.addresses.amm),
-                    ammContract.admin_fees_x(),
-                    collateralContract.balanceOf(this.market.addresses.amm),
-                    ammContract.admin_fees_y(),
-                ]);
-                cacheStats.set(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm), _balance_x);
-                cacheStats.set(cacheKey(this.market.addresses.amm, 'admin_fees_x'), _fee_x);
-                cacheStats.set(cacheKey(this.market.addresses.collateral_token, 'balanceOf', this.market.addresses.amm), _balance_y);
-                cacheStats.set(cacheKey(this.market.addresses.amm, 'admin_fees_y'), _fee_y);
-            }
-
-            return {
-                borrowed: toBN(_balance_x, this.market.borrowed_token.decimals).minus(toBN(_fee_x, this.market.borrowed_token.decimals)).toString(),
-                collateral: toBN(_balance_y, this.market.collateral_token.decimals).minus(toBN(_fee_y, this.market.collateral_token.decimals)).toString(),
-            }
+            return this._statsAmmBalancesOnChain(isGetter);
         }
     }
 

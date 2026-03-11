@@ -8,4 +8,8 @@ export class StatsV2Module extends StatsBaseModule {
         promise: true,
         maxAge: 30 * 60 * 1000, // 30m
     });
+
+    protected _fetchAdminFee = async (): Promise<bigint> => BigInt(0);
+
+    protected _getAdminFeesXY = async (): Promise<[bigint, bigint]> => [BigInt(0), BigInt(0)];
 }
