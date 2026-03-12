@@ -120,8 +120,8 @@ export class StatsBaseModule {
         } else {
             const _rate = await this._getRate(isGetter);
             const debt = await this.statsTotalDebt(isGetter, false);
-            const { cap } = Number(debt) > 0 ? await this.statsCapAndAvailable(isGetter, false) : { cap: "0" };
-            return computeRatesFromRate(_rate, debt, cap);
+            const { totalAssets } = Number(debt) > 0 ? await this.statsCapAndAvailable(isGetter, false) : { totalAssets: "0" };
+            return computeRatesFromRate(_rate, debt, totalAssets);
         }
     }
 
@@ -130,7 +130,7 @@ export class StatsBaseModule {
         const _dDebt = parseUnits(dDebt, this.market.borrowed_token.decimals);
         const _rate = await this._getFutureRate(_dReserves, _dDebt);
         const debt = Number(await this.statsTotalDebt()) + Number(dDebt);
-        const cap = Number((await this.statsCapAndAvailable(true, useAPI)).cap) + Number(dReserves);
+        const cap = Number((await this.statsCapAndAvailable(true, useAPI)).totalAssets) + Number(dReserves);
         return computeRatesFromRate(_rate, debt, cap);
     }
 
@@ -274,7 +274,7 @@ export class StatsBaseModule {
         }
     }
 
-    public async statsCapAndAvailable(isGetter = true, useAPI = false): Promise<{ cap: string, available: string, totalAssets: string }> {
+    public async statsCapAndAvailable(isGetter = true, useAPI = false): Promise<{ borrowCap: string, available: string, totalAssets: string, availableForBorrow: string }> {
         if(useAPI) {
             const market = await fetchMarketDataByVault(
                 this.llamalend.constants.NETWORK_NAME,
@@ -283,8 +283,9 @@ export class StatsBaseModule {
             );
             return {
                 totalAssets: market.totalSupplied.total.toString(),
-                cap: '0',
+                borrowCap: Infinity.toString(),
                 available: market.availableToBorrow.total.toString(),
+                availableForBorrow: market.availableToBorrow.total.toString(),
             };
         } else {
             const vaultContract = this.llamalend.contracts[this.market.addresses.vault].multicallContract;
@@ -305,8 +306,9 @@ export class StatsBaseModule {
 
             return {
                 totalAssets: this.llamalend.formatUnits(_cap, this.market.borrowed_token.decimals),
-                cap: '0',
+                borrowCap: Infinity.toString(),
                 available: this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals),
+                availableForBorrow: this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals),
             }
         }
     }

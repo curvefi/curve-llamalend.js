@@ -193,7 +193,7 @@ export interface IMarketDataAPI {
     totalSupplied: Total;
     borrowed: Total;
     availableToBorrow: Total;
-    cap: Total;
+    borrowCap: Total;
     lendingVaultUrls: LendingVaultUrls;
     usdTotal: number;
     ammBalances: AmmBalances;

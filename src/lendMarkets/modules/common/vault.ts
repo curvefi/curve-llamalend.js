@@ -289,10 +289,10 @@ export class VaultModule {
     }
 
     public async vaultTotalLiquidity(useAPI = true): Promise<string> {
-        const { cap } = await this.market.stats.capAndAvailable(true, useAPI);
+        const { totalAssets } = await this.market.stats.capAndAvailable(true, useAPI);
         const price = await _getUsdRate.call(this.llamalend, this.market.addresses.borrowed_token);
 
-        return BN(cap).times(price).toFixed(6)
+        return BN(totalAssets).times(price).toFixed(6)
     }
 
     private _calcCrvApr = async (futureWorkingSupplyBN: BigNumber | null = null): Promise<[baseApy: number, boostedApy: number]> => {
