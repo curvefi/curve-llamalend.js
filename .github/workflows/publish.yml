@@ -50,4 +50,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npm publish
+      - name: Publish main as latest
+        if: github.ref_name == 'main'
+        run: npm publish --tag latest
+      - name: Publish v1 branch as legacy
+        if: github.ref_name == 'v1'
+        run: npm publish --tag legacy
