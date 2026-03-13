@@ -229,35 +229,6 @@ export class StatsBaseModule {
         }
     }
 
-    protected async _statsAmmBalancesOnChain(isGetter: boolean): Promise<{ borrowed: string, collateral: string }> {
-        const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
-        const collateralContract = this.llamalend.contracts[this.market.addresses.collateral_token].multicallContract;
-
-        let _balance_x: bigint, _balance_y: bigint;
-        let _fee_x: bigint, _fee_y: bigint;
-
-        if(isGetter) {
-            _balance_x = cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm));
-            _balance_y = cacheStats.get(cacheKey(this.market.addresses.collateral_token, 'balanceOf', this.market.addresses.amm));
-            [_fee_x, _fee_y] = await this._getAdminFeesXY(true);
-        } else {
-            [[_balance_x, _balance_y], [_fee_x, _fee_y]] = await Promise.all([
-                this.llamalend.multicallProvider.all([
-                    borrowedContract.balanceOf(this.market.addresses.amm),
-                    collateralContract.balanceOf(this.market.addresses.amm),
-                ]),
-                this._getAdminFeesXY(false),
-            ]) as [[bigint, bigint], [bigint, bigint]];
-            cacheStats.set(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm), _balance_x);
-            cacheStats.set(cacheKey(this.market.addresses.collateral_token, 'balanceOf', this.market.addresses.amm), _balance_y);
-        }
-
-        return {
-            borrowed: toBN(_balance_x, this.market.borrowed_token.decimals).minus(toBN(_fee_x, this.market.borrowed_token.decimals)).toString(),
-            collateral: toBN(_balance_y, this.market.collateral_token.decimals).minus(toBN(_fee_y, this.market.collateral_token.decimals)).toString(),
-        }
-    }
-
     public statsAmmBalances = async (isGetter = true, useAPI = false): Promise<{ borrowed: string, collateral: string }> => {
         if(useAPI) {
             const market = await fetchMarketDataByVault(
@@ -270,7 +241,32 @@ export class StatsBaseModule {
                 collateral: market.ammBalances.ammBalanceCollateral.toString(),
             };
         } else {
-            return this._statsAmmBalancesOnChain(isGetter);
+            const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
+            const collateralContract = this.llamalend.contracts[this.market.addresses.collateral_token].multicallContract;
+
+            let _balance_x: bigint, _balance_y: bigint;
+            let _fee_x: bigint, _fee_y: bigint;
+
+            if(isGetter) {
+                _balance_x = cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm));
+                _balance_y = cacheStats.get(cacheKey(this.market.addresses.collateral_token, 'balanceOf', this.market.addresses.amm));
+                [_fee_x, _fee_y] = await this._getAdminFeesXY(true);
+            } else {
+                [[_balance_x, _balance_y], [_fee_x, _fee_y]] = await Promise.all([
+                    this.llamalend.multicallProvider.all([
+                        borrowedContract.balanceOf(this.market.addresses.amm),
+                        collateralContract.balanceOf(this.market.addresses.amm),
+                    ]),
+                    this._getAdminFeesXY(false),
+                ]) as [[bigint, bigint], [bigint, bigint]];
+                cacheStats.set(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.amm), _balance_x);
+                cacheStats.set(cacheKey(this.market.addresses.collateral_token, 'balanceOf', this.market.addresses.amm), _balance_y);
+            }
+
+            return {
+                borrowed: toBN(_balance_x, this.market.borrowed_token.decimals).minus(toBN(_fee_x, this.market.borrowed_token.decimals)).toString(),
+                collateral: toBN(_balance_y, this.market.collateral_token.decimals).minus(toBN(_fee_y, this.market.collateral_token.decimals)).toString(),
+            }
         }
     }
 
