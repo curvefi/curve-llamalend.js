@@ -143,6 +143,42 @@ This document tracks feature support across market versions.
 | ammBalances() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | capAndAvailable() | ✅ | ✅ | ❌ | ✅ | ❌ |
 
+### Update for `capAndAvailable` method
+
+Previously the `capAndAvailable` method returned:
+
+```ts
+{
+  cap: string
+  available: string
+}
+```
+
+Now it returns:
+
+```ts
+{
+  totalAssets: string
+  borrowCap: string
+  available: string
+  availableForBorrow: string
+}
+```
+
+#### Important clarification
+
+Previously the value called **`cap`** was incorrectly named.
+
+On the frontend, the value that we now return as **`totalAssets`** corresponds to what was previously treated as **`cap`**.
+
+#### Summary
+
+- `totalAssets` → total assets deposited in the vault (what was previously used as `cap` on the frontend)
+- `borrowCap` → maximum total debt allowed by the controller (LLv2 only; `Infinity` for LLv1)
+- `available` → balance of borrowed token available in the controller
+- `availableForBorrow` → effective amount available to borrow: `min(available, borrowCap - totalDebt)`
+
+
 ## Stats Module (`market.stats`) new methods
 | Method | v1 | v2 | Same logic | Same params | Same type |
 |--------|----|----|-----------------|----------------------|-----------------------|

@@ -180,7 +180,7 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
         } as StatsForVersion<V>
 
         this.wallet = {
-            balances: wallet.balances.bind(this),
+            balances: wallet.balances.bind(wallet),
         }
 
         this.prices = {
