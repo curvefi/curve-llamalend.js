@@ -158,9 +158,10 @@ Now it returns:
 
 ```ts
 {
-  cap: string
-  available: string
   totalAssets: string
+  borrowCap: string
+  available: string
+  availableForBorrow: string
 }
 ```
 
@@ -170,16 +171,12 @@ Previously the value called **`cap`** was incorrectly named.
 
 On the frontend, the value that we now return as **`totalAssets`** corresponds to what was previously treated as **`cap`**.
 
-### LLv2 markets
-
-For **LLv2 markets**, a new concept should be introduced:
-
-- **`borrowCap`** — should be taken from the `cap` field returned by the method.
-
 #### Summary
 
-- `totalAssets` → what was previously used as `cap` on the frontend  
-- `borrowCap` → should use the new `cap` value for LLv2 markets
+- `totalAssets` → total assets deposited in the vault (what was previously used as `cap` on the frontend)
+- `borrowCap` → maximum total debt allowed by the controller (LLv2 only; `Infinity` for LLv1)
+- `available` → balance of borrowed token available in the controller
+- `availableForBorrow` → effective amount available to borrow: `min(available, borrowCap - totalDebt)`
 
 
 ## Stats Module (`market.stats`) new methods
