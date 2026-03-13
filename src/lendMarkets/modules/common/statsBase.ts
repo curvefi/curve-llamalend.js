@@ -1,5 +1,5 @@
 import memoize from "memoizee";
-import {TAmount} from "../../../interfaces";
+import {TAmount, IMarketDataAPI} from "../../../interfaces";
 import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import {
     parseUnits,
@@ -20,6 +20,14 @@ export class StatsBaseModule {
     constructor(market: LendMarketTemplate) {
         this.market = market;
         this.llamalend = market.getLlamalend();
+    }
+
+    protected async _fetchMarketDataFromAPI(): Promise<IMarketDataAPI> {
+        return fetchMarketDataByVault(
+            this.llamalend.constants.NETWORK_NAME,
+            this.market.addresses.vault,
+            _getMarketsData
+        );
     }
 
     protected _fetchAdminPercentage = async (): Promise<bigint> => {
@@ -106,11 +114,7 @@ export class StatsBaseModule {
 
     public async statsRates(isGetter = true, useAPI = false): Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}> {
         if(useAPI) {
-            const market = await fetchMarketDataByVault(
-                this.llamalend.constants.NETWORK_NAME,
-                this.market.addresses.vault,
-                _getMarketsData
-            );
+            const market = await this._fetchMarketDataFromAPI();
             return {
                 borrowApr: (market.rates.borrowApr * 100).toString(),
                 lendApr: (market.rates.lendApr * 100).toString(),
@@ -210,11 +214,7 @@ export class StatsBaseModule {
 
     public async statsTotalDebt(isGetter = true, useAPI = true): Promise<string> {
         if(useAPI) {
-            const market = await fetchMarketDataByVault(
-                this.llamalend.constants.NETWORK_NAME,
-                this.market.addresses.vault,
-                _getMarketsData
-            );
+            const market = await this._fetchMarketDataFromAPI();
             return market.borrowed.total.toString();
         } else {
             let _debt;
@@ -231,11 +231,7 @@ export class StatsBaseModule {
 
     public statsAmmBalances = async (isGetter = true, useAPI = false): Promise<{ borrowed: string, collateral: string }> => {
         if(useAPI) {
-            const market = await fetchMarketDataByVault(
-                this.llamalend.constants.NETWORK_NAME,
-                this.market.addresses.vault,
-                _getMarketsData
-            );
+            const market = await this._fetchMarketDataFromAPI();
             return {
                 borrowed: market.ammBalances.ammBalanceBorrowed.toString(),
                 collateral: market.ammBalances.ammBalanceCollateral.toString(),
@@ -270,43 +266,45 @@ export class StatsBaseModule {
         }
     }
 
-    public async statsCapAndAvailable(isGetter = true, useAPI = false): Promise<{ borrowCap: string, available: string, totalAssets: string, availableForBorrow: string }> {
-        if(useAPI) {
-            const market = await fetchMarketDataByVault(
-                this.llamalend.constants.NETWORK_NAME,
-                this.market.addresses.vault,
-                _getMarketsData
-            );
-            return {
-                totalAssets: market.totalSupplied.total.toString(),
-                borrowCap: Infinity.toString(),
-                available: market.availableToBorrow.total.toString(),
-                availableForBorrow: market.availableToBorrow.total.toString(),
-            };
+    protected async _statsCapAndAvailableFromAPI(): Promise<{ borrowCap: string, available: string, totalAssets: string, availableForBorrow: string }> {
+        const market = await this._fetchMarketDataFromAPI();
+        return {
+            totalAssets: market.totalSupplied.total.toString(),
+            borrowCap: Infinity.toString(),
+            available: market.availableToBorrow.total.toString(),
+            availableForBorrow: market.availableToBorrow.total.toString(),
+        };
+    }
+
+    protected async _statsCapAndAvailableOnChain(isGetter: boolean): Promise<{ borrowCap: string, available: string, totalAssets: string, availableForBorrow: string }> {
+        const vaultContract = this.llamalend.contracts[this.market.addresses.vault].multicallContract;
+        const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
+
+        let _cap, _available;
+        if(isGetter) {
+            _cap = cacheStats.get(cacheKey(this.market.addresses.vault, 'totalAssets', this.market.addresses.controller));
+            _available = cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.controller));
         } else {
-            const vaultContract = this.llamalend.contracts[this.market.addresses.vault].multicallContract;
-            const borrowedContract = this.llamalend.contracts[this.market.addresses.borrowed_token].multicallContract;
-
-            let _cap, _available;
-            if(isGetter) {
-                _cap = cacheStats.get(cacheKey(this.market.addresses.vault, 'totalAssets', this.market.addresses.controller));
-                _available = cacheStats.get(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.controller));
-            } else {
-                [_cap, _available] =await this.llamalend.multicallProvider.all([
-                    vaultContract.totalAssets(this.market.addresses.controller),
-                    borrowedContract.balanceOf(this.market.addresses.controller),
-                ]);
-                cacheStats.set(cacheKey(this.market.addresses.vault, 'totalAssets', this.market.addresses.controller), _cap);
-                cacheStats.set(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.controller), _available);
-            }
-
-            return {
-                totalAssets: this.llamalend.formatUnits(_cap, this.market.borrowed_token.decimals),
-                borrowCap: Infinity.toString(),
-                available: this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals),
-                availableForBorrow: this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals),
-            }
+            [_cap, _available] = await this.llamalend.multicallProvider.all([
+                vaultContract.totalAssets(this.market.addresses.controller),
+                borrowedContract.balanceOf(this.market.addresses.controller),
+            ]);
+            cacheStats.set(cacheKey(this.market.addresses.vault, 'totalAssets', this.market.addresses.controller), _cap);
+            cacheStats.set(cacheKey(this.market.addresses.borrowed_token, 'balanceOf', this.market.addresses.controller), _available);
         }
+
+        const available = this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals);
+        return {
+            totalAssets: this.llamalend.formatUnits(_cap, this.market.borrowed_token.decimals),
+            borrowCap: Infinity.toString(),
+            available,
+            availableForBorrow: available,
+        }
+    }
+
+    public async statsCapAndAvailable(isGetter = true, useAPI = false): Promise<{ borrowCap: string, available: string, totalAssets: string, availableForBorrow: string }> {
+        if(useAPI) return this._statsCapAndAvailableFromAPI();
+        return this._statsCapAndAvailableOnChain(isGetter);
     }
 
     public statsAdminPercentage = async (): Promise<string> => {
