@@ -42,7 +42,7 @@ export interface ILoanV1 {
     repayIsApproved: (debt: TAmount) => Promise<boolean>;
     repayApprove: (debt: TAmount) => Promise<string[]>;
     repayHealth: (debt: TAmount, full?: boolean, address?: string) => Promise<string>;
-    repay: (debt: TAmount, address?: string) => Promise<string>;
+    repay: (debt: TAmount, address?: string, shrink?: boolean) => Promise<string>;
     repayFutureLeverage: (debt: TAmount, userAddress?: string) => Promise<string>;
 
     fullRepayIsApproved: (address?: string) => Promise<boolean>;
@@ -72,7 +72,7 @@ export interface ILoanV1 {
         addCollateral: (collateral: TAmount, address?: string) => Promise<TGas>;
         removeCollateral: (collateral: TAmount) => Promise<TGas>;
         repayApprove: (debt: TAmount) => Promise<TGas>;
-        repay: (debt: TAmount, address?: string) => Promise<TGas>;
+        repay: (debt: TAmount, address?: string, shrink?: boolean) => Promise<TGas>;
         fullRepayApprove: (address?: string) => Promise<TGas>;
         fullRepay: (address?: string) => Promise<TGas>;
         liquidateApprove: (address?: string) => Promise<TGas>;
