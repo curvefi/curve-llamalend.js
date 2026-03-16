@@ -311,4 +311,10 @@ export class StatsBaseModule {
         const _adminPercentage = await this._fetchAdminPercentage();
         return formatUnits(_adminPercentage * BigInt(100));
     }
+
+    public oracleAddress = memoize(async (): Promise<string> => {
+        return await this.llamalend.contracts[this.market.addresses.amm].contract.price_oracle_contract(this.llamalend.constantOptions) as string;
+    },{
+        promise: true,
+    });
 }
