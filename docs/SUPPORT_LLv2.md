@@ -130,18 +130,19 @@ This document tracks feature support across market versions.
 
 ## Stats Module (`market.stats`)
 
-| Method | v1 | v2 | Logic Unchanged | Parameters Unchanged | Return Type Unchanged |
-|--------|----|----|-----------------|----------------------|-----------------------|
-| parameters() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| rates() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| futureRates() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| balances() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| bandsInfo() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| bandBalances() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| bandsBalances() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| totalDebt() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ammBalances() | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Method            | v1 | v2 | Logic Unchanged | Parameters Unchanged | Return Type Unchanged |
+|-------------------|----|----|-----------------|----------------------|-----------------------|
+| parameters()      | ✅ | ✅ | ✅ | ✅ | ✅ |
+| rates()           | ✅ | ✅ | ✅ | ✅ | ✅ |
+| futureRates()     | ✅ | ✅ | ✅ | ✅ | ✅ |
+| balances()        | ✅ | ✅ | ✅ | ✅ | ✅ |
+| bandsInfo()       | ✅ | ✅ | ✅ | ✅ | ✅ |
+| bandBalances()    | ✅ | ✅ | ✅ | ✅ | ✅ |
+| bandsBalances()   | ✅ | ✅ | ✅ | ✅ | ✅ |
+| totalDebt()       | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ammBalances()     | ✅ | ✅ | ✅ | ✅ | ✅ |
 | capAndAvailable() | ✅ | ✅ | ❌ | ✅ | ❌ |
+| oracleAddress()   | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### Update for `capAndAvailable` method
 

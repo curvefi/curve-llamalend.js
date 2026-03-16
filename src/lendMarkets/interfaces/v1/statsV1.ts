@@ -19,4 +19,5 @@ export interface IStatsV1 {
     ammBalances: (isGetter?: boolean, useAPI?: boolean) => Promise<{ borrowed: string, collateral: string }>,
     capAndAvailable: (isGetter?: boolean, useAPI?: boolean) => Promise<{ borrowCap: string, available: string, totalAssets: string, availableForBorrow: string }>,
     adminPercentage: () => Promise<string>,
+    oracleAddress: () => Promise<string>,
 }
