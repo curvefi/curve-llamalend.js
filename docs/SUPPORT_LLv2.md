@@ -370,13 +370,48 @@ On the frontend, the value that we now return as **`totalAssets`** corresponds t
 
 | Method | v1 | v2 | Logic Unchanged | Parameters Unchanged | Return Type Unchanged |
 |--------|----|----|-----------------|----------------------|-----------------------|
-| repayBands() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| repayPrices() | ✅ | ✅ | ✅ | ✅ | ✅ |
+| repayBands() | ✅ | ✅ | ❌ | ❌ | ✅ |
+| repayPrices() | ✅ | ✅ | ❌ | ❌ | ✅ |
 | repayIsApproved() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | repayApprove() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| repayHealth() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| repay() | ✅ | ✅ | ❌ | ❌ | ❌ |
+| repayHealth() | ✅ | ✅ | ❌ | ❌ | ✅ |
+| repay() | ✅ | ✅ | ❌ | ❌ | ✅ |
 | repayFutureLeverage() | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+#### Shrink mechanism (v2 only)
+
+In v2, the `repay` operation supports a new **shrink** mode that allows users to exit soft-liquidation by cutting the converted part of their position.
+
+When a user is in soft-liquidation, some bands are converted from collateral to borrowed asset. With `shrink = true`, all borrowed assets within the position are used for debt repayment, and the position shrinks to only the unconverted bands.
+
+**Example:**  
+A position with 10 bands where 3 are fully converted and 1 is partially converted (active band):
+
+Before shrink: `| c | c | c | c | c | c | c_a + b_a | b | b | b |`  
+After shrink (6 bands): `| c + c_a/6 | c + c_a/6 | c + c_a/6 | c + c_a/6 | c + c_a/6 | c + c_a/6 |`
+
+**Constraints:**
+- User must have at least 4 unconverted bands to shrink
+- Additional borrowed tokens may be required (use `tokens_to_shrink` on the controller contract to check)
+
+**Updated method signatures (v2):**
+
+```ts
+// Preview bands/prices after repay (with optional shrink)
+market.loan.repayBands(debt, address?, shrink?)    // shrink?: boolean (default: false)
+market.loan.repayPrices(debt, address?, shrink?)   // shrink?: boolean (default: false)
+
+// Preview health after repay (with optional shrink)
+market.loan.repayHealth(debt, shrink?, full?, address?)  // shrink?: boolean (default: false)
+
+// Execute repay (with optional shrink)
+market.loan.repay(debt, address?, shrink?)          // shrink?: boolean (default: false)
+
+// Estimate gas (with optional shrink)
+market.loan.estimateGas.repay(debt, address?, shrink?)  // shrink?: boolean (default: false)
+```
+
+**Note:** When `shrink = false` (default), v2 repay behaves identically to v1. The `shrink` parameter is only relevant for v2 markets and has no effect on v1.
 
 ### Repay (Full)
 
