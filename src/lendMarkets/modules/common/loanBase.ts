@@ -26,7 +26,7 @@ export class LoanBaseModule {
         this.llamalend = market.getLlamalend();
     }
 
-    protected _maxBorrowable = async (collateralAmount: string | number, range?: number): Promise<bigint> => {
+    protected _maxBorrowable = async (collateralAmount: TAmount, range?: number): Promise<bigint> => {
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt();
         const _collateral = _currentCollateral + parseUnits(collateralAmount, this.market.collateral_token.decimals);
         const N = range ? BigInt(range) : _N
@@ -44,7 +44,7 @@ export class LoanBaseModule {
         if (range > this.market.maxBands) throw Error(`range must be <= ${this.market.maxBands}`);
     }
 
-    public async createLoanMaxRecv(collateral: number | string, range: number): Promise<string> {
+    public async createLoanMaxRecv(collateral: TAmount, range: number): Promise<string> {
         this._checkRange(range);
 
         return formatUnits(await this._maxBorrowable(collateral, range), this.market.borrowed_token.decimals);
@@ -488,13 +488,13 @@ export class LoanBaseModule {
         return [_n2, _n1];
     }
 
-    public async repayBands(debt: number | string, address = ""): Promise<[number, number]> {
+    public async repayBands({ debt, address = "" }: { debt: number | string; address?: string }): Promise<[number, number]> {
         const [_n2, _n1] = await this._repayBands({ debt, address });
 
         return [Number(_n2), Number(_n1)];
     }
 
-    public async repayPrices(debt: number | string, address = ""): Promise<string[]> {
+    public async repayPrices({ debt, address = "" }: { debt: number | string; address?: string }): Promise<string[]> {
         const [_n2, _n1] = await this._repayBands({ debt, address });
 
         return await this.market.prices.getPrices(_n2, _n1);
@@ -536,12 +536,12 @@ export class LoanBaseModule {
         return this._repayContractCall({ _debt, address, n, estimateGas, shrink });
     }
 
-    public async repayEstimateGas(debt: number | string, address = "", shrink = false): Promise<TGas> {
+    public async repayEstimateGas({ debt, address = "", shrink = false }: { debt: number | string; address?: string; shrink?: boolean }): Promise<TGas> {
         if (!(await this.repayIsApproved(debt))) throw Error("Approval is needed for gas estimation");
         return await this._repay(debt, address, true, shrink) as TGas;
     }
 
-    public async repay(debt: number | string, address = "", shrink = false): Promise<string> {
+    public async repay({ debt, address = "", shrink = false }: { debt: number | string; address?: string; shrink?: boolean }): Promise<string> {
         await this.repayApprove(debt);
         return await this._repay(debt, address, false, shrink) as string;
     }

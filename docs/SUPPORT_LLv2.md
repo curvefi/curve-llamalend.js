@@ -398,17 +398,17 @@ After shrink (6 bands): `| c + c_a/6 | c + c_a/6 | c + c_a/6 | c + c_a/6 | c + c
 
 ```ts
 // Preview bands/prices after repay (with optional shrink)
-market.loan.repayBands(debt, address?, shrink?)    // shrink?: boolean (default: false)
-market.loan.repayPrices(debt, address?, shrink?)   // shrink?: boolean (default: false)
+market.loan.repayBands({ debt, address?, shrink? })    // params: { debt: TAmount, address?: string, shrink?: boolean }
+market.loan.repayPrices({ debt, address?, shrink? })   // params: { debt: TAmount, address?: string, shrink?: boolean }
 
 // Preview health after repay (with optional shrink)
-market.loan.repayHealth(debt, shrink?, full?, address?)  // shrink?: boolean (default: false)
+market.loan.repayHealth({ debt, shrink?, full?, address? })  // params: { debt: TAmount, shrink?: boolean, full?: boolean, address?: string }
 
 // Execute repay (with optional shrink)
-market.loan.repay(debt, address?, shrink?)          // shrink?: boolean (default: false)
+market.loan.repay({ debt, address?, shrink? })          // params: { debt: TAmount, address?: string, shrink?: boolean }
 
 // Estimate gas (with optional shrink)
-market.loan.estimateGas.repay(debt, address?, shrink?)  // shrink?: boolean (default: false)
+market.loan.estimateGas.repay({ debt, address?, shrink? })  // params: { debt: TAmount, address?: string, shrink?: boolean }
 ```
 
 **Note:** When `shrink = false` (default), v2 repay behaves identically to v1. The `shrink` parameter is only relevant for v2 markets and has no effect on v1.

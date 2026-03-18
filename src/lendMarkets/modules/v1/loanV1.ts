@@ -3,7 +3,7 @@ import { ILoanV1 } from "../../interfaces/v1/loanV1";
 import {_getAddress, formatUnits, parseUnits} from "../../../utils";
 
 export class LoanV1Module extends LoanBaseModule implements ILoanV1 {
-    public async repayHealth(debt: number | string, full = true, address = ""): Promise<string> {
+    public async repayHealth({ debt, full = true, address = "" }: { debt: number | string; full?: boolean; address?: string }): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const _debt = parseUnits(debt) * BigInt(-1);
 

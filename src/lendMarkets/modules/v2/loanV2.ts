@@ -1,6 +1,6 @@
 import { LoanBaseModule } from "../common/loanBase.js";
 import { ILoanV2 } from "../../interfaces/v2";
-import { TGas } from "../../../interfaces";
+import { TGas, TAmount } from "../../../interfaces";
 import {
     _getAddress,
     formatUnits,
@@ -54,7 +54,7 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         return formatUnits(_health * BigInt(100));
     }
 
-    public async repayHealth(debt: number | string, shrink = false, full = true, address = ""): Promise<string> {
+    public async repayHealth({ debt, shrink = false, full = true, address = "" }: { debt: number | string; shrink?: boolean; full?: boolean; address?: string }): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const _debt = parseUnits(debt);
 
@@ -64,7 +64,7 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         return formatUnits(_health * BigInt(100));
     }
 
-    protected _maxBorrowable = async (collateralAmount: string | number, range?: number): Promise<bigint> => {
+    protected _maxBorrowable = async (collateralAmount: TAmount, range?: number): Promise<bigint> => {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const collateral = parseUnits(collateralAmount, this.market.collateral_token.decimals)
         const address = _getAddress.call(this.llamalend, '');
@@ -90,16 +90,10 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         return await this.llamalend.multicallProvider.all(calls) as bigint[];
     }
 
-    public async borrowMoreMaxRecv(collateralAmount: number | string): Promise<string> {
-        return formatUnits(await this._maxBorrowable(collateralAmount), this.market.borrowed_token.decimals);
-    }
-
     protected _getMaxBorrowableCall(_collateral: bigint, N: number): any {
         const address = _getAddress.call(this.llamalend, '');
         return this.llamalend.contracts[this.market.addresses.controller].multicallContract.max_borrowable(_collateral, N, address);
     }
-
-    // ---------------- REPAY (V2 with shrink) ----------------
 
     protected async _repayBands({ debt, address, shrink = false }: { debt: number | string, address: string, shrink?: boolean }): Promise<[bigint, bigint]> {
         const { _collateral: _currentCollateral, _borrowed, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt(address);
@@ -129,19 +123,17 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         return [_n2, _n1];
     }
 
-    public async repayBands(debt: number | string, address = "", shrink = false): Promise<[number, number]> {
+    public async repayBands({ debt, address = "", shrink = false }: { debt: number | string; address?: string; shrink?: boolean }): Promise<[number, number]> {
         const [_n2, _n1] = await this._repayBands({ debt, address, shrink });
 
         return [Number(_n2), Number(_n1)];
     }
 
-    public async repayPrices(debt: number | string, address = "", shrink = false): Promise<string[]> {
+    public async repayPrices({ debt, address = "", shrink = false }: { debt: number | string; address?: string; shrink?: boolean }): Promise<string[]> {
         const [_n2, _n1] = await this._repayBands({ debt, address, shrink });
 
         return await this.market.prices.getPrices(_n2, _n1);
     }
-
-    // ---------------- V2 CONTRACT CALLS ----------------
 
     protected async _createLoanContractCall(
         _collateral: bigint, _debt: bigint, range: number, estimateGas: boolean
