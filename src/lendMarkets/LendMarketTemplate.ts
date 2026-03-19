@@ -1383,6 +1383,9 @@ export class LendMarketTemplate {
         };
     }
 
+    /** Clears the 10s memoization cache for `userState`. */
+    public clearUserStateCache = (): void => this._userState.clear();
+
     public async userHealth(full = true, address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         let _health = await this.llamalend.contracts[this.addresses.controller].contract.health(address, full, this.llamalend.constantOptions) as bigint;
