@@ -36,7 +36,7 @@ const WEEK = 7 * DAY;
 
 
 export class LendMarketTemplate {
-    private llamalend: Llamalend;
+    llamalend: Llamalend;
     id: string;
     name: string
     addresses: {
@@ -1382,9 +1382,6 @@ export class LendMarketTemplate {
             N: formatUnits(_N, 0),
         };
     }
-
-    /** Clears the 10s memoization cache for `userState`. */
-    public clearUserStateCache = (): void => this._userState.clear();
 
     public async userHealth(full = true, address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
@@ -3336,7 +3333,20 @@ export class LendMarketTemplate {
         );
     }
 
-    public getLlamalend(): Llamalend {
-        return this.llamalend;
+    /** Clears all memoization caches. */
+    public clearCache(): void {
+        this.vaultRewardTokens.clear();
+        this.statsParameters.clear();
+        this.statsBandsInfo.clear();
+        this.A.clear();
+        this.basePrice.clear();
+        this.oraclePrice.clear();
+        this.oracleAddress.clear();
+        this._userState.clear();
+        this.createLoanMaxRecvAllRanges.clear();
+        this.leverageCreateLoanMaxRecvAllRanges.clear();
+        this._leverageCalcN1.clear();
+        this._leverageCalcN1AllRanges.clear();
+        this._leverageRepayBands.clear();
     }
 }
