@@ -29,6 +29,7 @@ export class LeverageZapV2Module {
 
     constructor(market: LendMarketTemplate) {
         this.market = market;
+        this.llamalend = market.llamalend;
     }
 
     private _getMarketId = (): number => Number(this.market.id.split("-").slice(-1)[0]);
