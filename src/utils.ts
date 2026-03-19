@@ -288,7 +288,7 @@ export const _getUsdRate = async function (this: Llamalend, assetId: string): Pr
     const pricesFromApi = await _getUsdPricesFromApi(this.constants.NETWORK_NAME);
     if (assetId.toLowerCase() in pricesFromApi) return pricesFromApi[assetId.toLowerCase()];
 
-    if (assetId === 'USD' || (assetId.toLowerCase() === this.constants.COINS.am3crv.toLowerCase())) return 1
+    if (assetId === 'USD') return 1
 
     const chainName = {
         1: 'ethereum',
