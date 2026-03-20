@@ -28,7 +28,7 @@ import { LeverageV2Module } from "./modules/index.js";
 
 
 export class MintMarketTemplate {
-    private llamalend: Llamalend;
+    llamalend: Llamalend;
     id: string;
     address: string;
     controller: string;
@@ -544,6 +544,26 @@ export class MintMarketTemplate {
             stablecoin: formatUnits(_stablecoin),
             debt: formatUnits(_debt),
         };
+    }
+
+    /** Clears all memoization caches. */
+    public clearCache(): void {
+        this.statsParameters.clear();
+        this.statsMaxMinBands.clear();
+        this.statsActiveBand.clear();
+        this.statsTotalSupply.clear();
+        this.statsTotalDebt.clear();
+        this.statsTotalStablecoin.clear();
+        this.statsTotalCollateral.clear();
+        this.statsCapAndAvailable.clear();
+        this.oracleAddress.clear();
+        this.basePrice.clear();
+        this.createLoanMaxRecvAllRanges.clear();
+        this.leverageCreateLoanMaxRecvAllRanges.clear();
+        this._leverageCreateLoanMaxRecvAllRanges2.clear();
+        this._leverageCreateLoanCollateral.clear();
+        this.deleverageRepayStablecoins.clear();
+        this._deleverageRepayBands.clear();
     }
 
     public async userLoss(userAddress = ""): Promise<{ deposited_collateral: string, current_collateral_estimation: string, loss: string, loss_pct: string }> {
@@ -2006,9 +2026,5 @@ export class MintMarketTemplate {
             currentProfit: currentProfit.toString(),
             percentage: percentage.toString(),
         };
-    }
-
-    public getLlamalend(): Llamalend {
-        return this.llamalend;
     }
 }

@@ -31,7 +31,7 @@ export class LeverageV2Module {
 
     constructor(market: MintMarketTemplate) {
         this.market = market;
-        this.llamalend = market.getLlamalend();
+        this.llamalend = market.llamalend;
     }
 
     private _getMarketId = (): number => {
