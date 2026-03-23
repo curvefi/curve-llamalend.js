@@ -855,31 +855,6 @@
       {
         "name": "_N",
         "type": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "int256"
-      }
-    ]
-  },
-  {
-    "stateMutability": "view",
-    "type": "function",
-    "name": "calculate_debt_n1",
-    "inputs": [
-      {
-        "name": "_collateral",
-        "type": "uint256"
-      },
-      {
-        "name": "_debt",
-        "type": "uint256"
-      },
-      {
-        "name": "_N",
-        "type": "uint256"
       },
       {
         "name": "_user",

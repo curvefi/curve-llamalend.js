@@ -16,7 +16,8 @@ import {
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
 import {_getUserCollateral} from "../../../external-api";
-export class LoanBaseModule {
+
+export abstract class LoanBaseModule {
     protected market: LendMarketTemplate;
     protected llamalend: Llamalend;
 
@@ -25,18 +26,45 @@ export class LoanBaseModule {
         this.llamalend = market.getLlamalend();
     }
 
+    protected abstract _calcN1(_collateral: bigint, _debt: bigint, range: number): Promise<bigint>;
+
+    protected abstract _calcN1AllRanges(_collateral: bigint, _debt: bigint, maxN: number): Promise<bigint[]>;
+
+    protected abstract _maxBorrowable(collateralAmount: TAmount, range?: number): Promise<bigint>;
+
+    protected abstract _getMaxBorrowableCall(_collateral: bigint, N: number): any;
+
+    protected abstract _createLoanContractCall(_collateral: bigint, _debt: bigint, range: number, estimateGas: boolean): Promise<string | TGas>;
+
+    protected abstract _borrowMoreContractCall(_collateral: bigint, _debt: bigint, estimateGas: boolean): Promise<string | TGas>;
+
+    protected abstract _repayContractCall(params: { _debt: bigint, address: string, n: number | bigint, estimateGas: boolean, shrink?: boolean }): Promise<string | TGas>;
+
+    protected abstract _partialLiquidateContractCall(address: string, _minAmount: bigint, frac: string, estimateGas: boolean): Promise<string | TGas>;
+
+    protected abstract _repayBands(params: { debt: number | string, address: string, shrink?: boolean }): Promise<[bigint, bigint]>;
+
+    public abstract repayBands(params: { debt: number | string; address?: string; shrink?: boolean }): Promise<[number, number]>;
+
+    public abstract repayPrices(params: { debt: number | string; address?: string; shrink?: boolean }): Promise<string[]>;
+
+    public abstract createLoanHealth(collateral: number | string, debt: number | string, range: number, full?: boolean): Promise<string>;
+
+    public abstract borrowMoreHealth(collateral: number | string, debt: number | string, full?: boolean, address?: string): Promise<string>;
+
+    public abstract addCollateralHealth(collateral: number | string, full?: boolean, address?: string): Promise<string>;
+
+    public abstract removeCollateralHealth(collateral: number | string, full?: boolean, address?: string): Promise<string>;
+
     public _checkRange(range: number): void {
         if (range < this.market.minBands) throw Error(`range must be >= ${this.market.minBands}`);
         if (range > this.market.maxBands) throw Error(`range must be <= ${this.market.maxBands}`);
     }
 
-    public async createLoanMaxRecv(collateral: number | string, range: number): Promise<string> {
+    public async createLoanMaxRecv(collateral: TAmount, range: number): Promise<string> {
         this._checkRange(range);
-        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
 
-        // TODO: currentDebt is no longer passed - now we pass user address or zero address, currentDebt is calculated under the hood
-        return formatUnits(await contract.max_borrowable(_collateral, range, 0, this.llamalend.constantOptions), this.market.borrowed_token.decimals);
+        return formatUnits(await this._maxBorrowable(collateral, range), this.market.borrowed_token.decimals);
     }
 
     public createLoanMaxRecvAllRanges = memoize(async (collateral: number | string): Promise<{ [index: number]: string }> => {
@@ -44,8 +72,7 @@ export class LoanBaseModule {
 
         const calls = [];
         for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
-            // TODO: currentDebt is no longer passed - now we pass user address or zero address, currentDebt is calculated under the hood
-            calls.push(this.llamalend.contracts[this.market.addresses.controller].multicallContract.max_borrowable(_collateral, N, 0));
+            calls.push(this._getMaxBorrowableCall(_collateral, N));
         }
         const _amounts = await this.llamalend.multicallProvider.all(calls) as bigint[];
 
@@ -68,21 +95,6 @@ export class LoanBaseModule {
         }
 
         return this.market.maxBands;
-    }
-
-    private async _calcN1(_collateral: bigint, _debt: bigint, range: number): Promise<bigint> {
-        this._checkRange(range);
-        // TODO: add 4th parameter - user address in calculate_debt_n1
-        return await this.llamalend.contracts[this.market.addresses.controller].contract.calculate_debt_n1(_collateral, _debt, range, this.llamalend.constantOptions);
-    }
-
-    private async _calcN1AllRanges(_collateral: bigint, _debt: bigint, maxN: number): Promise<bigint[]> {
-        const calls = [];
-        // TODO: add 4th parameter - user address in calculate_debt_n1
-        for (let N = this.market.minBands; N <= maxN; N++) {
-            calls.push(this.llamalend.contracts[this.market.addresses.controller].multicallContract.calculate_debt_n1(_collateral, _debt, N));
-        }
-        return await this.llamalend.multicallProvider.all(calls) as bigint[];
     }
 
     private async _createLoanBands(collateral: number | string, debt: number | string, range: number): Promise<[bigint, bigint]> {
@@ -150,17 +162,6 @@ export class LoanBaseModule {
         return pricesAllRanges;
     }
 
-    public async createLoanHealth(collateral: number | string, debt: number | string, range: number, full = true): Promise<string> {
-        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
-        const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
-
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-
-        const _health = await contract.health_calculator(this.llamalend.constants.ZERO_ADDRESS, _collateral, _debt, full, range, this.llamalend.constantOptions) as bigint;
-
-        return formatUnits(_health * BigInt(100));
-    }
-
     public async createLoanIsApproved(collateral: number | string): Promise<boolean> {
         return await hasAllowance.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
@@ -179,14 +180,7 @@ export class LoanBaseModule {
 
         const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
         const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const gas = await contract.create_loan.estimateGas(_collateral, _debt, range, { ...this.llamalend.constantOptions });
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(gas));
-        // TODO: ABI has changed (see docs)
-        return (await contract.create_loan(_collateral, _debt, range, { ...this.llamalend.options, gasLimit })).hash
+        return this._createLoanContractCall(_collateral, _debt, range, estimateGas);
     }
 
     public async createLoanEstimateGas(collateral: number | string, debt: number | string, range: number): Promise<TGas> {
@@ -202,13 +196,7 @@ export class LoanBaseModule {
     // ---------------- BORROW MORE ----------------
 
     public async borrowMoreMaxRecv(collateralAmount: number | string): Promise<string> {
-        const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt();
-        const _collateral = _currentCollateral + parseUnits(collateralAmount, this.market.collateral_token.decimals);
-
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _debt: bigint = await contract.max_borrowable(_collateral, _N, _currentDebt, this.llamalend.constantOptions);
-        // TODO: max_borrowable(deltaCollateral, _N, user) - debt is now calculated under the hood, return as is
-        return formatUnits(_debt - _currentDebt, this.market.borrowed_token.decimals);
+        return formatUnits(await this._maxBorrowable(collateralAmount), this.market.borrowed_token.decimals);
     }
 
     private async _borrowMoreBands(collateral: number | string, debt: number | string): Promise<[bigint, bigint]> {
@@ -236,17 +224,6 @@ export class LoanBaseModule {
         return await this.market.prices.getPrices(_n2, _n1);
     }
 
-    public async borrowMoreHealth(collateral: number | string, debt: number | string, full = true, address = ""): Promise<string> {
-        address = _getAddress.call(this.llamalend, address);
-        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
-        const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
-
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _health = await contract.health_calculator(address, _collateral, _debt, full, 0, this.llamalend.constantOptions) as bigint;
-
-        return formatUnits(_health * BigInt(100));
-    }
-
     public async borrowMoreIsApproved(collateral: number | string): Promise<boolean> {
         return await hasAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
@@ -266,13 +243,7 @@ export class LoanBaseModule {
 
         const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
         const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const gas = await contract.borrow_more.estimateGas(_collateral, _debt, { ...this.llamalend.constantOptions });
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.borrow_more(_collateral, _debt, { ...this.llamalend.options, gasLimit })).hash
+        return this._borrowMoreContractCall(_collateral, _debt, estimateGas);
     }
 
     public async borrowMoreEstimateGas(collateral: number | string, debt: number | string): Promise<TGas> {
@@ -321,16 +292,6 @@ export class LoanBaseModule {
         const [_n2, _n1] = await this._addCollateralBands(collateral, address);
 
         return await this.market.prices.getPrices(_n2, _n1);
-    }
-
-    public async addCollateralHealth(collateral: number | string, full = true, address = ""): Promise<string> {
-        address = _getAddress.call(this.llamalend, address);
-        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
-
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
-
-        return formatUnits(_health * BigInt(100));
     }
 
     public async addCollateralIsApproved(collateral: number | string): Promise<boolean> {
@@ -416,16 +377,6 @@ export class LoanBaseModule {
         return await this.market.prices.getPrices(_n2, _n1);
     }
 
-    public async removeCollateralHealth(collateral: number | string, full = true, address = ""): Promise<string> {
-        address = _getAddress.call(this.llamalend, address);
-        const _collateral = parseUnits(collateral, this.market.collateral_token.decimals) * BigInt(-1);
-
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _health = await contract.health_calculator(address, _collateral, 0, full, 0, this.llamalend.constantOptions) as bigint;
-
-        return formatUnits(_health * BigInt(100));
-    }
-
     private async _removeCollateral(collateral: number | string, estimateGas: boolean): Promise<string | TGas> {
         const { borrowed, debt: currentDebt } = await this.market.userPosition.userState();
         if (Number(currentDebt) === 0) throw Error(`Loan for ${this.llamalend.signerAddress} does not exist`);
@@ -462,32 +413,6 @@ export class LoanBaseModule {
     }
 
     // ---------------- REPAY ----------------
-    // TODO: add shrink: bool parameter
-    // If bool is true, _N = n2 - n1 + 1 -> _N = n2 - activeBand
-    private async _repayBands(debt: number | string, address: string): Promise<[bigint, bigint]> {
-        const { _collateral: _currentCollateral, _borrowed, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt(address);
-        if (_currentDebt === BigInt(0)) throw Error(`Loan for ${address} does not exist`);
-        // && shrink === false
-        if (_borrowed > BigInt(0)) return await this.market.userPosition.userBandsBigInt(address) as [bigint, bigint];
-        // If shrink == true, then _debt = _currentDebt - parseUnits(debt, this.market.borrowed_token.decimals) - _borrowed
-        const _debt = _currentDebt - parseUnits(debt, this.market.borrowed_token.decimals);
-        const _n1 = await this._calcN1(_currentCollateral, _debt, Number(_N));
-        const _n2 = _n1 + _N - BigInt(1);
-
-        return [_n2, _n1];
-    }
-
-    public async repayBands(debt: number | string, address = ""): Promise<[number, number]> {
-        const [_n2, _n1] = await this._repayBands(debt, address);
-
-        return [Number(_n2), Number(_n1)];
-    }
-
-    public async repayPrices(debt: number | string, address = ""): Promise<string[]> {
-        const [_n2, _n1] = await this._repayBands(debt, address);
-
-        return await this.market.prices.getPrices(_n2, _n1);
-    }
 
     public async repayIsApproved(debt: number | string): Promise<boolean> {
         return await hasAllowance.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.llamalend.signerAddress, this.market.addresses.controller);
@@ -501,33 +426,26 @@ export class LoanBaseModule {
         return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.market.addresses.controller);
     }
 
-    private async _repay(debt: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
+    private async _repay(debt: number | string, address: string, estimateGas: boolean, shrink = false): Promise<string | TGas> {
         address = _getAddress.call(this.llamalend, address);
         const { debt: currentDebt } = await this.market.userPosition.userState(address);
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
 
         const _debt = parseUnits(debt);
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const [, n1] = await this.market.userPosition.userBands(address);
         const { borrowed } = await this.market.userPosition.userState(address);
-        const n = (BN(borrowed).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;  // In liquidation mode it doesn't matter if active band moves
-        const gas = await contract.repay.estimateGas(_debt, address, n, this.llamalend.constantOptions);
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(gas));
-        // TODO: shrink parameter is added, which changes bands calculation
-        return (await contract.repay(_debt, address, n, { ...this.llamalend.options, gasLimit })).hash
+        const n = (BN(borrowed).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;
+        return this._repayContractCall({ _debt, address, n, estimateGas, shrink });
     }
 
-    public async repayEstimateGas(debt: number | string, address = ""): Promise<TGas> {
+    public async repayEstimateGas({ debt, address = "", shrink = false }: { debt: number | string; address?: string; shrink?: boolean }): Promise<TGas> {
         if (!(await this.repayIsApproved(debt))) throw Error("Approval is needed for gas estimation");
-        return await this._repay(debt, address, true) as TGas;
+        return await this._repay(debt, address, true, shrink) as TGas;
     }
 
-    public async repay(debt: number | string, address = ""): Promise<string> {
+    public async repay({ debt, address = "", shrink = false }: { debt: number | string; address?: string; shrink?: boolean }): Promise<string> {
         await this.repayApprove(debt);
-        return await this._repay(debt, address, false) as string;
+        return await this._repay(debt, address, false, shrink) as string;
     }
 
     public async repayFutureLeverage(debt: number | string, userAddress = ''): Promise<string> {
@@ -661,28 +579,7 @@ export class LoanBaseModule {
         const minAmountBN = expectedBorrowedBN.times(100 - slippage).div(100);
         const _minAmount = fromBN(minAmountBN);
 
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const gas = (await contract.liquidate_extended.estimateGas(
-            address,
-            _minAmount,
-            frac,
-            this.llamalend.constants.ZERO_ADDRESS,
-            [],
-            this.llamalend.constantOptions
-        ));
-
-        if (estimateGas) return smartNumber(gas);
-
-        await this.llamalend.updateFeeData();
-        const gasLimit = _mulBy1_3(DIGas(gas));
-        return (await contract.liquidate_extended(
-            address,
-            _minAmount,
-            frac,
-            this.llamalend.constants.ZERO_ADDRESS,
-            [],
-            { ...this.llamalend.options, gasLimit }
-        )).hash;
+        return this._partialLiquidateContractCall(address, _minAmount, frac, estimateGas);
     }
 
     public async liquidateEstimateGas(address: string, slippage = 0.1): Promise<TGas> {
