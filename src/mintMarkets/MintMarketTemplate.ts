@@ -546,6 +546,11 @@ export class MintMarketTemplate {
         };
     }
 
+    public async isSoftLiquidation(address = ""): Promise<boolean> {
+        const { _stablecoin, _debt } = await this._userState(address);
+        return !!_debt && !!_stablecoin;
+    }
+
     public async userLoss(userAddress = ""): Promise<{ deposited_collateral: string, current_collateral_estimation: string, loss: string, loss_pct: string }> {
         userAddress = _getAddress.call(this.llamalend, userAddress);
         const [deposited_collateral, _current_collateral_estimation] = await Promise.all([

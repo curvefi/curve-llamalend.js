@@ -229,6 +229,11 @@ export class UserPositionModule implements IUserPosition {
         };
     }
 
+    public async isSoftLiquidation(address = ""): Promise<boolean> {
+        const { _borrowed, _debt } = await this._userState(address);
+        return !!_debt && !!_borrowed;
+    }
+
     public async forceUpdateUserState(newTx: string, userAddress?: string): Promise<void> {
         const address = userAddress || this.llamalend.signerAddress;
         if (!address) throw Error("Need to connect wallet or pass address into args");
