@@ -536,19 +536,15 @@ export class MintMarketTemplate {
         return { _collateral, _stablecoin, _debt }
     }
 
-    public async userState(address = ""): Promise<{ collateral: string, stablecoin: string, debt: string }> {
+    public async userState(address = ""): Promise<{ collateral: string, stablecoin: string, debt: string, isSoftLiquidation: boolean }> {
         const { _collateral, _stablecoin, _debt } = await this._userState(address);
 
         return {
             collateral: formatUnits(_collateral, this.collateralDecimals),
             stablecoin: formatUnits(_stablecoin),
             debt: formatUnits(_debt),
+            isSoftLiquidation: !!_debt && !!_stablecoin,
         };
-    }
-
-    public async isSoftLiquidation(address = ""): Promise<boolean> {
-        const { _stablecoin, _debt } = await this._userState(address);
-        return !!_debt && !!_stablecoin;
     }
 
     public async userLoss(userAddress = ""): Promise<{ deposited_collateral: string, current_collateral_estimation: string, loss: string, loss_pct: string }> {

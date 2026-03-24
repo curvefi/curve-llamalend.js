@@ -163,7 +163,6 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
             userBoost: userPosition.userBoost.bind(userPosition),
             forceUpdateUserState: userPosition.forceUpdateUserState.bind(userPosition),
             getCurrentLeverageParams: userPosition.getCurrentLeverageParams.bind(userPosition),
-            isSoftLiquidation: userPosition.isSoftLiquidation.bind(userPosition),
         }
 
         this.stats = {

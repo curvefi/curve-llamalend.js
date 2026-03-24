@@ -468,31 +468,36 @@ market.loan.estimateGas.repay({ debt, address?, shrink? })  // params: { debt: T
 | userBoost() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | forceUpdateUserState() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | getCurrentLeverageParams() | ✅ | ✅ | ✅ | ✅ | ✅ |
-| isSoftLiquidation() | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-### `isSoftLiquidation()` method
+### `isSoftLiquidation` field in `userState` / `userStateBigInt`
 
-Returns `true` if the user is currently in soft-liquidation, `false` otherwise.
+The `userState` and `userStateBigInt` methods now include an `isSoftLiquidation` field in their return value.
 
-**Signature:**
-
-```ts
-market.userPosition.isSoftLiquidation(address?: string): Promise<boolean>
-```
-
-**Logic:**
-
-A user is considered to be in soft-liquidation when their position has a non-zero `borrowed` amount in the AMM (i.e. collateral has been partially converted to the borrowed token). If the user has no active loan (`debt === 0`), the method returns `false`.
+**Updated return types:**
 
 ```ts
-// Returns true if the user is in soft-liquidation
-const inSoftLiquidation = await market.userPosition.isSoftLiquidation()
+// userState
+market.userPosition.userState(address?: string): Promise<{
+  collateral: string,
+  borrowed: string,
+  debt: string,
+  N: string,
+  isSoftLiquidation: boolean,
+}>
 
-// Check for a specific address
-const inSoftLiquidation = await market.userPosition.isSoftLiquidation("0x...")
+// userStateBigInt
+market.userPosition.userStateBigInt(address?: string): Promise<{
+  _collateral: bigint,
+  _borrowed: bigint,
+  _debt: bigint,
+  _N: bigint,
+  isSoftLiquidation: boolean,
+}>
 ```
 
-**Note:** Also available on mint markets (`MintMarketTemplate`) with identical signature. In mint markets, soft-liquidation is detected by a non-zero `stablecoin` amount in the user state.
+**Logic:** `isSoftLiquidation` is `true` when the user has an active loan (`debt > 0`) and the AMM has partially converted collateral into the borrowed token (`borrowed > 0`).
+
+**Note:** Also applies to mint markets (`MintMarketTemplate`). In mint markets the field is returned by `userState` and is `true` when `stablecoin > 0` (the stablecoin amount reflects converted collateral in the AMM).
 
 ---
 

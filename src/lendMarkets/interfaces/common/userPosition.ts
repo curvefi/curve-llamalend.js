@@ -2,9 +2,9 @@ import {IDict} from "../../../interfaces";
 
 export interface IUserPosition {
     userLoanExists: (address?: string) => Promise<boolean>,
-    userStateBigInt: (address?: string) => Promise<{ _collateral: bigint, _borrowed: bigint, _debt: bigint, _N: bigint }>,
+    userStateBigInt: (address?: string) => Promise<{ _collateral: bigint, _borrowed: bigint, _debt: bigint, _N: bigint, isSoftLiquidation: boolean }>,
     userBandsBigInt:(address: string) => Promise<bigint[]>,
-    userState: (address?: string) => Promise<{ collateral: string, borrowed: string, debt: string, N: string }>,
+    userState: (address?: string) => Promise<{ collateral: string, borrowed: string, debt: string, N: string, isSoftLiquidation: boolean }>,
     userHealth: (full?: boolean, address?: string) => Promise<string>,
     userBands: (address?: string) => Promise<number[]>,
     userRange: (address?: string) => Promise<number>,
@@ -21,5 +21,4 @@ export interface IUserPosition {
     userBoost: (address?: string) => Promise<string>,
     forceUpdateUserState: (newTx: string, userAddress?: string) => Promise<void>,
     getCurrentLeverageParams: (userAddress: string) => Promise<{ stateCollateral: string, totalDepositFromUser: string }>,
-    isSoftLiquidation: (address?: string) => Promise<boolean>,
 }
