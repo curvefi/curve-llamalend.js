@@ -36,7 +36,7 @@ export class UserPositionModule implements IUserPosition {
         maxAge: 10 * 1000, // 10s
     });
 
-    public async userState(address = ""): Promise<{ collateral: string, borrowed: string, debt: string, N: string }> {
+    public async userState(address = ""): Promise<{ collateral: string, borrowed: string, debt: string, N: string, isSoftLiquidation: boolean }> {
         const { _collateral, _borrowed, _debt, _N } = await this._userState(address);
 
         return {
@@ -44,11 +44,13 @@ export class UserPositionModule implements IUserPosition {
             borrowed: formatUnits(_borrowed, this.market.borrowed_token.decimals),
             debt: formatUnits(_debt, this.market.borrowed_token.decimals),
             N: formatUnits(_N, 0),
+            isSoftLiquidation: !!_debt && !!_borrowed,
         };
     }
 
-    public async userStateBigInt(address = ""): Promise<{ _collateral: bigint, _borrowed: bigint, _debt: bigint, _N: bigint }> {
-        return await this._userState(address);
+    public async userStateBigInt(address = ""): Promise<{ _collateral: bigint, _borrowed: bigint, _debt: bigint, _N: bigint, isSoftLiquidation: boolean }> {
+        const state = await this._userState(address);
+        return { ...state, isSoftLiquidation: !!state._debt && !!state._borrowed };
     }
 
     public async userHealth(full = true, address = ""): Promise<string> {

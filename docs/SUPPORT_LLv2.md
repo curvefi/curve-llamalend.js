@@ -469,6 +469,36 @@ market.loan.estimateGas.repay({ debt, address?, shrink? })  // params: { debt: T
 | forceUpdateUserState() | ✅ | ✅ | ✅ | ✅ | ✅ |
 | getCurrentLeverageParams() | ✅ | ✅ | ✅ | ✅ | ✅ |
 
+### `isSoftLiquidation` field in `userState` / `userStateBigInt`
+
+The `userState` and `userStateBigInt` methods now include an `isSoftLiquidation` field in their return value.
+
+**Updated return types:**
+
+```ts
+// userState
+market.userPosition.userState(address?: string): Promise<{
+  collateral: string,
+  borrowed: string,
+  debt: string,
+  N: string,
+  isSoftLiquidation: boolean,
+}>
+
+// userStateBigInt
+market.userPosition.userStateBigInt(address?: string): Promise<{
+  _collateral: bigint,
+  _borrowed: bigint,
+  _debt: bigint,
+  _N: bigint,
+  isSoftLiquidation: boolean,
+}>
+```
+
+**Logic:** `isSoftLiquidation` is `true` when the user has an active loan (`debt > 0`) and the AMM has partially converted collateral into the borrowed token (`borrowed > 0`).
+
+**Note:** Also applies to mint markets (`MintMarketTemplate`). In mint markets the field is returned by `userState` and is `true` when `stablecoin > 0` (the stablecoin amount reflects converted collateral in the AMM).
+
 ---
 
 ## Leverage Module (`market.leverage`)
