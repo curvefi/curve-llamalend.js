@@ -94,7 +94,7 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
         collateral_tokens.push(marketData[3].toLowerCase());
         borrowed_tokens.push(marketData[4].toLowerCase());
         monetary_policies.push(marketData[6].toLowerCase());
-        names.push('');
+        names.push(''); // new factory does not give names, it's generated at the market creation level
         gauges.push(llamalend.constants.ZERO_ADDRESS);
     }
 
