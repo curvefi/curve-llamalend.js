@@ -72,7 +72,6 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
 
     for (let i = 0; i < markets_count; i++) {
         calls.push(createCall(factory, 'markets', [i]));
-        calls.push(createCall(factory, 'names', [i]));
     }
 
     const res = await llamalend.multicallProvider.all(calls);

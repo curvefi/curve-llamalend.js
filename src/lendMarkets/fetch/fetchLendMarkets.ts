@@ -52,7 +52,7 @@ const registerMarkets = (
         llamalend.constants.DECIMALS[gauges[index]] = 18;
 
         const marketData = {
-            name: names[index] || `${COIN_DATA[collateral_tokens[index]]?.symbol ?? collateral_tokens[index]}/${COIN_DATA[borrowed_tokens[index]]?.symbol ?? borrowed_tokens[index]}`,
+            name: names[index] || `${COIN_DATA[collateral_tokens[index]].symbol}/${COIN_DATA[borrowed_tokens[index]].symbol}`,
             version: version,
             addresses: {
                 amm: amms[index],

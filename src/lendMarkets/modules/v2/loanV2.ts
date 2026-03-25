@@ -68,7 +68,7 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const collateral = parseUnits(collateralAmount, this.market.collateral_token.decimals)
         const address = _getAddress.call(this.llamalend, '');
-        const N = range ? BigInt(range) : BigInt(0);
+        const N = BigInt(range || 0);
 
         return contract.max_borrowable(collateral, N, address, this.llamalend.constantOptions);
     }
