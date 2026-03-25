@@ -40,7 +40,7 @@ export const getFactoryMarketDataV1 = async (llamalend: Llamalend) => {
     const resolveMissingGauges = async (
         indexes: number[],
         contract: ICurveContract,
-        method: 'gauge_for_vault' | 'get_gauge_from_lp_token',
+        method: 'gauge_for_vault' | 'get_gauge_from_lp_token'
     ) => {
         const gaugeCalls = indexes.map((index) => createCall(contract, method, [data.vaults[index]]));
         const gauges = (await llamalend.multicallProvider.tryAll(gaugeCalls) as (string | null)[]).map((addr) =>
