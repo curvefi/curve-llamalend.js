@@ -72,7 +72,6 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
 
     for (let i = 0; i < markets_count; i++) {
         calls.push(createCall(factory, 'markets', [i]));
-        calls.push(createCall(factory, 'names', [i]));
     }
 
     const res = await llamalend.multicallProvider.all(calls);
@@ -87,8 +86,7 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
     const gauges: string[] = [];
 
     for (let i = 0; i < markets_count; i++) {
-        const marketData = res[i * 2] as any;
-        const name = res[(i * 2) + 1] as string;
+        const marketData = res[i] as any;
 
         vaults.push(marketData[0].toLowerCase());
         controllers.push(marketData[1].toLowerCase());
@@ -96,7 +94,7 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
         collateral_tokens.push(marketData[3].toLowerCase());
         borrowed_tokens.push(marketData[4].toLowerCase());
         monetary_policies.push(marketData[6].toLowerCase());
-        names.push(name);
+        names.push(''); // new factory does not give names, it's generated at the market creation level
         gauges.push(llamalend.constants.ZERO_ADDRESS);
     }
 
