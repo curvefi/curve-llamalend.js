@@ -87,8 +87,7 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
     const gauges: string[] = [];
 
     for (let i = 0; i < markets_count; i++) {
-        const marketData = res[i * 2] as any;
-        const name = res[(i * 2) + 1] as string;
+        const marketData = res[i] as any;
 
         vaults.push(marketData[0].toLowerCase());
         controllers.push(marketData[1].toLowerCase());
@@ -96,7 +95,7 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
         collateral_tokens.push(marketData[3].toLowerCase());
         borrowed_tokens.push(marketData[4].toLowerCase());
         monetary_policies.push(marketData[6].toLowerCase());
-        names.push(name);
+        names.push('');
         gauges.push(llamalend.constants.ZERO_ADDRESS);
     }
 
