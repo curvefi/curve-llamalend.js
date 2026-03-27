@@ -231,6 +231,9 @@ export class UserPositionModule implements IUserPosition {
         };
     }
 
+    /** Clears the user position cache for the current user. */
+    public clearCache = (): void => this._userState.clear();
+
     public async forceUpdateUserState(newTx: string, userAddress?: string): Promise<void> {
         const address = userAddress || this.llamalend.signerAddress;
         if (!address) throw Error("Need to connect wallet or pass address into args");
