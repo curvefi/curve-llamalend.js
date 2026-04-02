@@ -880,7 +880,7 @@ export class LeverageZapV2BaseModule {
 
         const _stateCollateral = parseUnits(stateCollateral, this.market.collateral_token.decimals);
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
-        const priceImpact = _stateCollateral + _userCollateral > BigInt(0) ? quote.priceImpact : 0;
+        const priceImpact = _stateCollateral + _userCollateral > BigInt(0) ? quote.priceImpact : null;
 
         return {
             priceImpact,

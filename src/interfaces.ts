@@ -235,11 +235,11 @@ export interface IResponseApi {
 
 export interface IQuote {
     outAmount: string,
-    priceImpact: number
+    priceImpact: number | null
 }
 
 export interface ILeverageMetrics {
-    priceImpact: number,
+    priceImpact: number | null,
     bands: [number, number],
     prices: string[],
     health: string,
