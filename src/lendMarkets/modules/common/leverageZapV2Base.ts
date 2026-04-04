@@ -134,6 +134,7 @@ export class LeverageZapV2BaseModule {
 
         const userEffectiveCollateralBN = maxBorrowableBN.gt(0) ? toBN(_userEffectiveCollateral, this.market.collateral_token.decimals) : BN(0);
         const maxLeverageCollateralBN = toBN(_maxLeverageCollateral, this.market.collateral_token.decimals);
+        maxBorrowableBN = maxBorrowableBN.gt(0) ? maxBorrowableBN : BN(0);
 
         return {
             maxDebt: formatNumber(maxBorrowableBN.toString(), this.market.borrowed_token.decimals),
