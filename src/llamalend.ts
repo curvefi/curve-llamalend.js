@@ -544,7 +544,6 @@ class Llamalend implements ILlamalend {
         cacheStats.clear();
 
         const marketCount = controllers.length;
-        console.log(controllers.length)
 
         const calls: Call[] = [];
 
