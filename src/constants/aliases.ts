@@ -29,7 +29,7 @@ export const ALIASES_ARBITRUM = lowerCaseValues({
 export const ALIASES_OPTIMISM = lowerCaseValues({
     "crv": "0x0994206dfE8De6Ec6920FF4D779B0d950605Fb53",
     "one_way_factory": "0x5EA8f3D674C70b020586933A0a5b250734798BeF",
-    "one_way_factory_v2": "0x68f33663b76874166Bf3C3cB2D7C117dFf38a262",
+    "one_way_factory_v2": "0x1973ED17c267245510a390e0dce4FBcD9D2685f0",
     "gauge_controller": "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
     "gauge_factory_old": "0xabC000d88f23Bb45525E447528DBF656A9D55bf5",
     "gauge_factory": "0x871fBD4E01012e2E8457346059e8C189d664DbA4",
