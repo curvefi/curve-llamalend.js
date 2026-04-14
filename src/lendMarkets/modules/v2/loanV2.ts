@@ -28,7 +28,7 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         const _collateral = parseUnits(collateral, this.market.collateral_token.decimals);
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _health = await contract.add_collateral_health_preview(_collateral, address, address, full, this.llamalend.constantOptions) as bigint;
+        const _health = await contract.add_collateral_health_preview(_collateral, address, full, this.llamalend.constantOptions) as bigint;
 
         return formatUnits(_health * BigInt(100));
     }
@@ -41,6 +41,14 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         const _health = await contract.remove_collateral_health_preview(_collateral, address, full, this.llamalend.constantOptions) as bigint;
 
         return formatUnits(_health * BigInt(100));
+    }
+
+    public async maxRemovable(): Promise<string> {
+        const address = _getAddress.call(this.llamalend, '');
+        const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt();
+        const _requiredCollateral = await this.llamalend.contracts[this.market.addresses.controller].contract.min_collateral(_currentDebt, _N, address, this.llamalend.constantOptions)
+
+        return formatUnits(_currentCollateral - _requiredCollateral, this.market.collateral_token.decimals);
     }
 
     public async borrowMoreHealth(collateral: number | string, debt: number | string, full = true, address = ""): Promise<string> {

@@ -513,22 +513,6 @@
   {
     "inputs": [
       {
-        "name": "_collateral",
-        "type": "uint256"
-      },
-      {
-        "name": "_for",
-        "type": "address"
-      }
-    ],
-    "name": "remove_collateral",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "name": "_wallet_d_debt",
         "type": "uint256"
       }
@@ -1013,10 +997,6 @@
       },
       {
         "name": "_for",
-        "type": "address"
-      },
-      {
-        "name": "_caller",
         "type": "address"
       },
       {
@@ -1619,27 +1599,6 @@
         ],
         "name": "",
         "type": "tuple[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "_debt",
-        "type": "uint256"
-      },
-      {
-        "name": "_N",
-        "type": "uint256"
-      }
-    ],
-    "name": "min_collateral",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
