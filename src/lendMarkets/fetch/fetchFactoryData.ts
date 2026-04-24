@@ -25,7 +25,19 @@ export const getFactoryMarketDataV1 = async (llamalend: Llamalend) => {
     }
     const res = (await llamalend.multicallProvider.all(calls) as string[]).map((addr) => addr.toLowerCase());
 
-    return handleMultiCallResponse(callsMap, res)
+    const factoryData = handleMultiCallResponse(callsMap, res);
+
+    const oldGaugeEndIndex = Number(llamalend.constants.ALIASES.old_gauge_end_index ?? -1);
+    if (oldGaugeEndIndex >= 0) {
+        const oldGaugeFactory = llamalend.contracts[llamalend.constants.ALIASES.gauge_factory_old];
+        const vaults = factoryData.vaults.slice(0, oldGaugeEndIndex + 1);
+        const gauges = (await llamalend.multicallProvider.all(
+            vaults.map((vault: string) => createCall(oldGaugeFactory, "get_gauge_from_lp_token", [vault]))
+        ) as string[]).map((address) => address.toLowerCase());
+        gauges.forEach((gauge, i) => { factoryData.gauges[i] = gauge; });
+    }
+
+    return factoryData;
 };
 
 export const getFactoryMarketDataByAPI = async (llamalend: Llamalend) => {
