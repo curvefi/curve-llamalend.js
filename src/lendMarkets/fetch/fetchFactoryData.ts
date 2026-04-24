@@ -1,8 +1,19 @@
 import { Call } from "@curvefi/ethcall";
 import { createCall, handleMultiCallResponse } from "../../utils.js";
-import { IMarketDataAPI } from "../../interfaces.js";
+import { ICurveContract, IMarketDataAPI } from "../../interfaces.js";
 import { _getMarketsData } from "../../external-api.js";
 import type { Llamalend } from "../../llamalend.js";
+
+type FactoryMarketData = {
+    names: string[],
+    amms: string[],
+    controllers: string[],
+    borrowed_tokens: string[],
+    collateral_tokens: string[],
+    monetary_policies: string[],
+    vaults: string[],
+    gauges: string[],
+};
 
 export const getFactoryMarketDataV1 = async (llamalend: Llamalend) => {
     const factoryAlias = 'one_way_factory';
@@ -15,23 +26,62 @@ export const getFactoryMarketDataV1 = async (llamalend: Llamalend) => {
     const factory = llamalend.contracts[factoryAddress];
     const factoryContract = factory.contract;
     const markets_count = await factoryContract.market_count();
-    const callsMap = ['names', 'amms', 'controllers', 'borrowed_tokens', 'collateral_tokens', 'monetary_policies', 'vaults', 'gauges']
+    const callsMap = ['names', 'amms', 'controllers', 'borrowed_tokens', 'collateral_tokens', 'monetary_policies', 'vaults', 'gauges'];
 
     const calls: Call[] = [];
     for (let i = 0; i < markets_count; i++) {
         callsMap.forEach((item) => {
-            calls.push(createCall(factory, item, [i]))
-        })
+            calls.push(createCall(factory, item, [i]));
+        });
     }
     const res = (await llamalend.multicallProvider.all(calls) as string[]).map((addr) => addr.toLowerCase());
 
-    return handleMultiCallResponse(callsMap, res)
+    const data = handleMultiCallResponse(callsMap, res) as FactoryMarketData;
+    const resolveMissingGauges = async (
+        indexes: number[],
+        contract: ICurveContract,
+        method: 'gauge_for_vault' | 'get_gauge_from_lp_token'
+    ) => {
+        const gaugeCalls = indexes.map((index) => createCall(contract, method, [data.vaults[index]]));
+        const gauges = (await llamalend.multicallProvider.tryAll(gaugeCalls) as (string | null)[]).map((addr) =>
+            addr?.toLowerCase() ?? llamalend.constants.ZERO_ADDRESS
+        );
+
+        indexes.forEach((marketIndex, fallbackIndex) => {
+            if (gauges[fallbackIndex] !== llamalend.constants.ZERO_ADDRESS) {
+                data.gauges[marketIndex] = gauges[fallbackIndex];
+            }
+        });
+
+        return indexes.filter((index) => data.gauges[index] === llamalend.constants.ZERO_ADDRESS);
+    };
+
+    let missingGaugeIndexes = data.gauges
+        .map((gauge, index) => gauge === llamalend.constants.ZERO_ADDRESS ? index : -1)
+        .filter((index) => index !== -1);
+
+    if (missingGaugeIndexes.length) {
+        missingGaugeIndexes = await resolveMissingGauges(missingGaugeIndexes, factory, 'gauge_for_vault');
+    }
+
+    if (llamalend.chainId !== 1 && missingGaugeIndexes.length) {
+        const gaugeFactories = [llamalend.constants.ALIASES.gauge_factory_old, llamalend.constants.ALIASES.gauge_factory]
+            .filter((address, index, addresses) => !!address && address !== llamalend.constants.ZERO_ADDRESS && addresses.indexOf(address) === index);
+
+        for (const gaugeFactoryAddress of gaugeFactories) {
+            const gaugeFactory = llamalend.contracts[gaugeFactoryAddress];
+            if (!gaugeFactory || !missingGaugeIndexes.length) continue;
+            missingGaugeIndexes = await resolveMissingGauges(missingGaugeIndexes, gaugeFactory, 'get_gauge_from_lp_token');
+        }
+    }
+
+    return data;
 };
 
 export const getFactoryMarketDataByAPI = async (llamalend: Llamalend) => {
     const apiData = (await _getMarketsData(llamalend.constants.NETWORK_NAME)).lendingVaultData;
 
-    const result: Record<string, string[]> = {
+    const result: FactoryMarketData = {
         names: [],
         amms: [],
         controllers: [],
