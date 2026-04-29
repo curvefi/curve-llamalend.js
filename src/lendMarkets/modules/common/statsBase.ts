@@ -130,11 +130,12 @@ export class StatsBaseModule {
     }
 
     public async statsFutureRates(dReserves: TAmount, dDebt: TAmount, useAPI = true): Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}> {
+        const isGetter = false;
         const _dReserves = parseUnits(dReserves, this.market.borrowed_token.decimals);
         const _dDebt = parseUnits(dDebt, this.market.borrowed_token.decimals);
         const _rate = await this._getFutureRate(_dReserves, _dDebt);
-        const debt = Number(await this.statsTotalDebt()) + Number(dDebt);
-        const cap = Number((await this.statsCapAndAvailable(true, useAPI)).totalAssets) + Number(dReserves);
+        const debt = Number(await this.statsTotalDebt(isGetter, useAPI)) + Number(dDebt);
+        const cap = Number((await this.statsCapAndAvailable(isGetter, useAPI)).totalAssets) + Number(dReserves);
         return computeRatesFromRate(_rate, debt, cap);
     }
 
