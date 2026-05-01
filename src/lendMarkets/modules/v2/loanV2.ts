@@ -67,7 +67,7 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         const _debt = parseUnits(debt);
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _health = await contract.repay_health_preview(0, _debt, address, address, shrink, full, this.llamalend.constantOptions) as bigint;
+        const _health = await contract.repay_health_preview(0, _debt, address, shrink, full, this.llamalend.constantOptions) as bigint;
 
         return formatUnits(_health * BigInt(100));
     }
