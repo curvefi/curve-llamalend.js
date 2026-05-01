@@ -1083,10 +1083,6 @@
         "type": "address"
       },
       {
-        "name": "_caller",
-        "type": "address"
-      },
-      {
         "name": "_shrink",
         "type": "bool"
       },
