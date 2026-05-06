@@ -86,12 +86,10 @@ export function createLlamalend() {
         getGasPriceFromL2: getGasPriceFromL2.bind(llamalend),
         getGasInfoForL2: getGasInfoForL2.bind(llamalend),
 
-        // Core methods
-        fetchStats: llamalend.fetchStats.bind(llamalend),
-
         // Market lists
         mintMarkets: {
             getMarketList: llamalend.getMintMarketList.bind(llamalend),
+            fetchMintMarkets: llamalend.fetchMintMarkets.bind(llamalend),
         },
         lendMarkets: {
             fetchMarkets: llamalend.fetchLendMarkets.bind(llamalend),

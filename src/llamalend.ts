@@ -1,4 +1,4 @@
-import { type TransactionRequest, ethers, Contract, Networkish, BigNumberish, Numeric, AbstractProvider } from "ethers";
+import { type TransactionRequest, ethers, Contract, Networkish, BigNumberish, Numeric, AbstractProvider, BrowserProvider, Signer, JsonRpcProvider } from "ethers";
 import { Provider as MulticallProvider, Contract as MulticallContract, Call } from '@curvefi/ethcall';
 import {
     IChainId,
@@ -9,7 +9,6 @@ import {
     ICurveContract,
     IOneWayMarket,
     ICoin,
-
 } from "./interfaces.js";
 // OneWayMarket ABIs
 import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: 'json'};
@@ -26,10 +25,7 @@ import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' wi
 // crvUSD ABIs
 import llammaABI from "./constants/abis/crvUSD/llamma.json" with {type: 'json'};
 import controllerABI from "./constants/abis/crvUSD/controller.json" with {type: 'json'};
-import controllerV2ABI from "./constants/abis/crvUSD/controller_v2.json";
 import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" with {type: 'json'};
-import FactoryABI from "./constants/abis/crvUSD/Factory.json" with {type: 'json'};
-import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" with {type: 'json'};
 import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" with {type: 'json'};
 import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: 'json'};
 import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {type: 'json'};
@@ -51,12 +47,40 @@ import {
 import {LLAMMAS} from "./constants/llammas.js";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse} from "./utils.js";
-import {cacheKey, cacheStats} from "./cache/index.js";
-import {_getMarketsData, _getHiddenPools} from "./external-api.js";
+import {_getMarketsData, _getCrvUsdMarketsData} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
 import {MintMarketTemplate} from "./mintMarkets";
 import {LendMarketTemplate} from "./lendMarkets";
 import {fetchOneWayMarketsByBlockchain, fetchOneWayMarketsByAPI} from "./lendMarkets/fetch/fetchLendMarkets.js";
+import {fetchMintMarketsByBlockchain, fetchMintMarketsByAPI} from "./mintMarkets/fetch/fetchMintMarkets.js";
+
+const memoizedContract = (): (address: string, abi: any, provider: BrowserProvider | JsonRpcProvider | Signer) => Contract => {
+    const cache: Record<string, Contract> = {};
+    return (address: string, abi: any, provider: BrowserProvider | JsonRpcProvider | Signer): Contract => {
+        if (address in cache) {
+            return cache[address];
+        }
+        else {
+            const result = new Contract(address, abi, provider)
+            cache[address] = result;
+            return result;
+        }
+    }
+}
+
+const memoizedMulticallContract = (): (address: string, abi: any) => MulticallContract => {
+    const cache: Record<string, MulticallContract> = {};
+    return (address: string, abi: any): MulticallContract => {
+        if (address in cache) {
+            return cache[address];
+        }
+        else {
+            const result = new MulticallContract(address, abi)
+            cache[address] = result;
+            return result;
+        }
+    }
+}
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
@@ -190,52 +214,50 @@ class Llamalend implements ILlamalend {
             WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2".toLowerCase(),
         };
 
-        // JsonRpc provider
+        let signerPromise: Promise<ethers.Signer | null>;
+
         if (providerType.toLowerCase() === 'JsonRpc'.toLowerCase()) {
             providerSettings = providerSettings as { url: string, privateKey: string, batchMaxCount? : number };
 
             let jsonRpcApiProviderOptions;
-            if ( providerSettings.batchMaxCount ) {
-                jsonRpcApiProviderOptions = {
-                    batchMaxCount: providerSettings.batchMaxCount,
-                };
+            if (providerSettings.batchMaxCount) {
+                jsonRpcApiProviderOptions = { batchMaxCount: providerSettings.batchMaxCount };
             }
 
-            if (providerSettings.url) {
-                this.provider = new ethers.JsonRpcProvider(providerSettings.url, undefined, jsonRpcApiProviderOptions);
-            } else {
-                this.provider = new ethers.JsonRpcProvider('http://localhost:8545/', undefined, jsonRpcApiProviderOptions);
-            }
+            this.provider = new ethers.JsonRpcProvider(
+                providerSettings.url || 'http://localhost:8545/',
+                undefined,
+                jsonRpcApiProviderOptions
+            );
 
             if (providerSettings.privateKey) {
-                this.signer = new ethers.Wallet(providerSettings.privateKey, this.provider);
+                signerPromise = Promise.resolve(new ethers.Wallet(providerSettings.privateKey, this.provider));
             } else if (!providerSettings.url?.startsWith("https://rpc.gnosischain.com")) {
-                try {
-                    this.signer = await this.provider.getSigner();
-                } catch {
-                    this.signer = null;
-                }
+                signerPromise = this.provider.getSigner().catch(() => null);
+            } else {
+                signerPromise = Promise.resolve(null);
             }
-            // Web3 provider
         } else if (providerType.toLowerCase() === 'Web3'.toLowerCase()) {
             providerSettings = providerSettings as { externalProvider: ethers.Eip1193Provider };
             this.provider = new ethers.BrowserProvider(providerSettings.externalProvider);
-            this.signer = await this.provider.getSigner();
-            // Infura provider
+            signerPromise = this.provider.getSigner();
         } else if (providerType.toLowerCase() === 'Infura'.toLowerCase()) {
             providerSettings = providerSettings as { network?: Networkish, apiKey?: string };
             this.provider = new ethers.InfuraProvider(providerSettings.network, providerSettings.apiKey);
-            this.signer = null;
-            // Alchemy provider
+            signerPromise = Promise.resolve(null);
         } else if (providerType.toLowerCase() === 'Alchemy'.toLowerCase()) {
             providerSettings = providerSettings as { network?: Networkish, apiKey?: string };
             this.provider = new ethers.AlchemyProvider(providerSettings.network, providerSettings.apiKey);
-            this.signer = null;
+            signerPromise = Promise.resolve(null);
         } else {
             throw Error('Wrong providerType');
         }
 
-        const network = await this.provider.getNetwork();
+        const [signer, network] = await Promise.all([
+            signerPromise,
+            this.provider.getNetwork(),
+        ]);
+        this.signer = signer;
         this.chainId = Number(network.chainId) === 133 || Number(network.chainId) === 31337 ? 1 : Number(network.chainId) as IChainId;
         console.log("CURVE-LLAMALEND-JS IS CONNECTED TO NETWORK:", { name: network.name.toUpperCase(), chainId: Number(this.chainId) });
 
@@ -264,8 +286,6 @@ class Llamalend implements ILlamalend {
         }
 
         this.feeData = { gasPrice: options.gasPrice, maxFeePerGas: options.maxFeePerGas, maxPriorityFeePerGas: options.maxPriorityFeePerGas };
-        await this.updateFeeData();
-
         // oneWayMarkets contracts
         this.setContract(this.constants.ALIASES['one_way_factory'], OneWayLendingFactoryABI);
         if(this.constants.ALIASES['one_way_factory_v2'] && this.constants.ALIASES['one_way_factory_v2'] !== this.constants.ZERO_ADDRESS) {
@@ -292,116 +312,6 @@ class Llamalend implements ILlamalend {
             }
         }
 
-        // crvUSD contracts
-        this.setContract(this.crvUsdAddress, ERC20ABI);
-        if(this.chainId === 1) {
-            this.setContract(this.constants.COINS.crvusd.toLowerCase(), ERC20ABI);
-            for (const llamma of Object.values(this.constants.LLAMMAS)) {
-                this.setContract(llamma.amm_address, llammaABI);
-                this.setContract(llamma.controller_address, controllerABI);
-                const monetary_policy_address = await this.contracts[llamma.controller_address].contract.monetary_policy(this.constantOptions);
-                llamma.monetary_policy_address = monetary_policy_address.toLowerCase();
-                this.setContract(llamma.monetary_policy_address, llamma.monetary_policy_abi);
-                if (llamma.collateral_address === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") {
-                    this.setContract(this.constants.WETH, ERC20ABI);
-                } else {
-                    this.setContract(llamma.collateral_address, ERC20ABI);
-                }
-                this.setContract(llamma.leverage_zap, LeverageZapCrvUSDABI);
-                this.setContract(llamma.deleverage_zap, DeleverageZapABI);
-                if (llamma.health_calculator_zap) this.setContract(llamma.health_calculator_zap, HealthCalculatorZapABI);
-            }
-            for (const pegKeeper of this.constants.PEG_KEEPERS) {
-                this.setContract(pegKeeper, PegKeeper);
-            }
-        }
-
-        // TODO Put it in a separate method
-        // Fetch new llammas
-        if(this.chainId === 1) {
-            this.setContract(this.constants.FACTORY, FactoryABI);
-            const factoryContract = this.contracts[this.constants.FACTORY].contract;
-            const factoryMulticallContract = this.contracts[this.constants.FACTORY].multicallContract;
-
-            const N1 = Object.keys(this.constants.LLAMMAS).length;
-            const N2 = await factoryContract.n_collaterals(this.constantOptions);
-            let calls = [];
-            for (let i = N1; i < N2; i++) {
-                calls.push(
-                    factoryMulticallContract.collaterals(i),
-                    factoryMulticallContract.amms(i),
-                    factoryMulticallContract.controllers(i)
-                );
-            }
-            const res: string[] = (await this.multicallProvider.all(calls) as string[]).map((c) => c.toLowerCase());
-            const collaterals = res.filter((a, i) => i % 3 == 0) as string[];
-            const amms = res.filter((a, i) => i % 3 == 1) as string[];
-            const controllers = res.filter((a, i) => i % 3 == 2) as string[];
-
-            if (collaterals.length > 0) {
-                for (const collateral of collaterals) this.setContract(collateral, ERC20ABI);
-
-                calls = [];
-                for (const collateral of collaterals) {
-                    calls.push(
-                        this.contracts[collateral].multicallContract.symbol(),
-                        this.contracts[collateral].multicallContract.decimals()
-                    )
-                }
-                const res = (await this.multicallProvider.all(calls)).map((x) => {
-                    if (typeof x === "string") return x.toLowerCase();
-                    return x;
-                });
-
-                calls = [];
-
-                for(const amm of amms) {
-                    this.setContract(amm, llammaABI);
-                    calls.push(
-                        this.contracts[amm].multicallContract.A()
-                    )
-                }
-
-                const AParams = (await this.multicallProvider.all(calls)).map((x) => {
-                    return Number(x)
-                });
-
-                for (let i = 0; i < collaterals.length; i++) {
-                    const is_eth = collaterals[i] === this.constants.WETH;
-                    const [collateral_symbol, collateral_decimals] = res.splice(0, 2) as [string, number];
-
-                    if (i >= collaterals.length - 3) {
-                        this.setContract(controllers[i], controllerV2ABI);
-                    } else {
-                        this.setContract(controllers[i], controllerABI);
-                    }
-
-                    const monetary_policy_address = (await this.contracts[controllers[i]].contract.monetary_policy(this.constantOptions)).toLowerCase();
-                    this.setContract(monetary_policy_address, MonetaryPolicy2ABI);
-                    const _llammaId: string = is_eth ? "eth" : collateral_symbol.toLowerCase();
-                    let llammaId = _llammaId
-                    let j = 2;
-                    while (llammaId in this.constants.LLAMMAS) llammaId = _llammaId + j++;
-                    this.constants.LLAMMAS[llammaId] = {
-                        amm_address: amms[i],
-                        controller_address: controllers[i],
-                        monetary_policy_address,
-                        collateral_address: is_eth ? "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" : collaterals[i],
-                        leverage_zap: this.constants.ALIASES.leverage_zap,
-                        deleverage_zap: "0x0000000000000000000000000000000000000000",
-                        collateral_symbol: is_eth ? "ETH" : collateral_symbol,
-                        collateral_decimals,
-                        min_bands: 4,
-                        max_bands: 50,
-                        default_bands: 10,
-                        A: AParams[i],
-                        monetary_policy_abi: MonetaryPolicy2ABI,
-                        is_deleverage_supported: true,
-                        index: N1 + i,
-                    }
-                }
-            }
-        }
 
         this.constants.DECIMALS = {
             ...extractDecimals(this.constants.LLAMMAS),
@@ -445,25 +355,85 @@ class Llamalend implements ILlamalend {
                 AbstractProvider.prototype.estimateGas = AbstractProvider.prototype.originalEstimate as (_tx: TransactionRequest) => Promise<bigint>;
             }
         }
+
     }
 
-    setContract(address: string, abi: any): void {
+    initContract = memoizedContract()
+    initMulticallContract = memoizedMulticallContract()
+
+    setContract(address: string | undefined, abi: any): void {
         if (address === this.constants.ZERO_ADDRESS || address === undefined) return;
-        this.contracts[address] = {
-            contract: new Contract(address, abi, this.signer || this.provider),
-            multicallContract: new MulticallContract(address, abi),
-            address: address,
-            abi: abi,
+
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const llamalendInstance = this;
+
+        const proxyHandler: ProxyHandler<any> = {
+            get: function(target: any, name: string) {
+                if(name === 'contract') {
+                    return llamalendInstance.initContract(target['address'], target['abi'], llamalendInstance.signer || llamalendInstance.provider)
+                } else if(name === 'multicallContract') {
+                    return llamalendInstance.initMulticallContract(target['address'], target['abi'])
+                } else {
+                    return target[name];
+                }
+            },
         }
+
+        const coreContract = {
+            address,
+            abi,
+        }
+
+        this.contracts[address] = new Proxy(coreContract, proxyHandler)
     }
 
     setCustomFeeData(customFeeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number }): void {
         this.feeData = { ...this.feeData, ...customFeeData };
     }
 
-    async _filterHiddenMarkets(markets: IDict<IOneWayMarket>): Promise<IDict<IOneWayMarket>> {
-        const hiddenMarkets = (await _getHiddenPools() as any)[this.constants.NETWORK_NAME] || [];
-        return Object.fromEntries(Object.entries(markets).filter(([id]) => !hiddenMarkets.includes(id))) as IDict<IOneWayMarket>;
+    async _setupMintMarketContracts(useApi = true): Promise<void> {
+        this.setContract(this.crvUsdAddress, ERC20ABI);
+        if (this.chainId !== 1) return;
+
+        this.setContract(this.constants.COINS.crvusd.toLowerCase(), ERC20ABI);
+
+        const llammas = Object.values(this.constants.LLAMMAS);
+        for (const llamma of llammas) {
+            this.setContract(llamma.amm_address, llammaABI);
+            this.setContract(llamma.controller_address, controllerABI);
+        }
+
+        if (useApi) {
+            const apiData = await _getCrvUsdMarketsData();
+            const monetaryPolicyMap = new Map(
+                apiData.map((m) => [m.address.toLowerCase(), m.monetary_policy_address.toLowerCase()])
+            );
+            for (const llamma of llammas) {
+                const fresh = monetaryPolicyMap.get(llamma.controller_address);
+                if (fresh) llamma.monetary_policy_address = fresh;
+            }
+        } else {
+            const monetaryPolicies = (await this.multicallProvider.all(
+                llammas.map((l) => this.contracts[l.controller_address].multicallContract.monetary_policy())
+            ) as string[]).map((a) => a.toLowerCase());
+            llammas.forEach((llamma, i) => { llamma.monetary_policy_address = monetaryPolicies[i]; });
+        }
+
+        for (const llamma of llammas) {
+            this.setContract(llamma.monetary_policy_address, llamma.monetary_policy_abi);
+            if (llamma.collateral_address === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") {
+                this.setContract(this.constants.WETH, ERC20ABI);
+            } else {
+                this.setContract(llamma.collateral_address, ERC20ABI);
+            }
+            this.setContract(llamma.leverage_zap, LeverageZapCrvUSDABI);
+            this.setContract(llamma.deleverage_zap, DeleverageZapABI);
+            if (llamma.health_calculator_zap) this.setContract(llamma.health_calculator_zap, HealthCalculatorZapABI);
+        }
+
+        for (const pegKeeper of this.constants.PEG_KEEPERS) {
+            this.setContract(pegKeeper, PegKeeper);
+        }
     }
 
     getLendMarketList = () => Object.keys({...this.constants.ONE_WAY_MARKETS, ...this.constants.ONE_WAY_MARKETS_V2});
@@ -480,6 +450,13 @@ class Llamalend implements ILlamalend {
         } else {
             await fetchOneWayMarketsByBlockchain(this, version)
         }
+    }
+
+    fetchMintMarkets = async ({ useApi = true }: { useApi?: boolean } = {}): Promise<void> => {
+        await Promise.all([
+            this._setupMintMarketContracts(useApi),
+            useApi ? fetchMintMarketsByAPI(this) : fetchMintMarketsByBlockchain(this),
+        ]);
     }
 
     getCoins = async (collateral_tokens: string[], borrowed_tokens: string[], useApi = false): Promise<IDict<ICoin>> => {
@@ -538,54 +515,6 @@ class Llamalend implements ILlamalend {
 
         return COINS_DATA;
     }
-
-
-    fetchStats = async (amms: string[], controllers: string[], vaults: string[], borrowed_tokens: string[], collateral_tokens: string[], version: 'v1' | 'v2' = 'v1') => {
-        cacheStats.clear();
-
-        const marketCount = controllers.length;
-
-        const calls: Call[] = [];
-
-        for (let i = 0; i < marketCount; i++) {
-            calls.push(createCall(this.contracts[controllers[i]], 'total_debt', []));
-            calls.push(createCall(this.contracts[vaults[i]], 'totalAssets', []));
-            calls.push(createCall(this.contracts[borrowed_tokens[i]], 'balanceOf', [controllers[i]]));
-            calls.push(createCall(this.contracts[amms[i]], 'rate', []));
-            calls.push(createCall(this.contracts[borrowed_tokens[i]], 'balanceOf', [amms[i]]));
-
-            if (version === 'v1') {
-                calls.push(createCall(this.contracts[amms[i]], 'admin_fees_x', []));
-                calls.push(createCall(this.contracts[amms[i]], 'admin_fees_y', []));
-            }
-            
-            calls.push(createCall(this.contracts[collateral_tokens[i]], 'balanceOf', [amms[i]]));
-        }
-
-        const res = await this.multicallProvider.all(calls);
-
-        for (let i = 0; i < marketCount; i++) {
-            if (version === 'v1') {
-                cacheStats.set(cacheKey(controllers[i], 'total_debt'), res[(i * 8) + 0]);
-                cacheStats.set(cacheKey(vaults[i], 'totalAssets', controllers[i]), res[(i * 8) + 1]);
-                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', controllers[i]), res[(i * 8) + 2]);
-                cacheStats.set(cacheKey(amms[i], 'rate'), res[(i * 8) + 3]);
-                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 4]);
-                cacheStats.set(cacheKey(amms[i], 'admin_fees_x'), res[(i * 8) + 5]);
-                cacheStats.set(cacheKey(amms[i], 'admin_fees_y'), res[(i * 8) + 6]);
-                cacheStats.set(cacheKey(collateral_tokens[i], 'balanceOf', amms[i]), res[(i * 8) + 7]);
-            } else {
-                cacheStats.set(cacheKey(controllers[i], 'total_debt'), res[(i * 6) + 0]);
-                cacheStats.set(cacheKey(vaults[i], 'totalAssets', controllers[i]), res[(i * 6) + 1]);
-                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', controllers[i]), res[(i * 6) + 2]);
-                cacheStats.set(cacheKey(amms[i], 'rate'), res[(i * 6) + 3]);
-                cacheStats.set(cacheKey(borrowed_tokens[i], 'balanceOf', amms[i]), res[(i * 6) + 4]);
-                cacheStats.set(cacheKey(amms[i], 'admin_fees_x'), BigInt(0)); // Always 0 for v2
-                cacheStats.set(cacheKey(amms[i], 'admin_fees_y'), BigInt(0)); // Always 0 for v2
-                cacheStats.set(cacheKey(collateral_tokens[i], 'balanceOf', amms[i]), res[(i * 6) + 5]);
-            }
-        }
-    };
 
     formatUnits(value: BigNumberish, unit?: string | Numeric): string {
         return ethers.formatUnits(value, unit);

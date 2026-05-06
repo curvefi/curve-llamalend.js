@@ -87,14 +87,6 @@ export const fetchOneWayMarketsByBlockchain = async (llamalend: Llamalend, versi
     }
 
     registerMarkets(llamalend, names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges, COIN_DATA, version);
-
-    if (version === 'v2') {
-        llamalend.constants.ONE_WAY_MARKETS_V2 = await llamalend._filterHiddenMarkets(llamalend.constants.ONE_WAY_MARKETS_V2);
-    } else {
-        llamalend.constants.ONE_WAY_MARKETS = await llamalend._filterHiddenMarkets(llamalend.constants.ONE_WAY_MARKETS);
-    }
-
-    await llamalend.fetchStats(amms, controllers, vaults, borrowed_tokens, collateral_tokens, version);
 };
 
 export const fetchOneWayMarketsByAPI = async (llamalend: Llamalend, version: 'v1' | 'v2' = 'v1') => {
@@ -105,10 +97,4 @@ export const fetchOneWayMarketsByAPI = async (llamalend: Llamalend, version: 'v1
     }
 
     registerMarkets(llamalend, names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges, COIN_DATA, version);
-
-    if (version === 'v2') {
-        llamalend.constants.ONE_WAY_MARKETS_V2 = await llamalend._filterHiddenMarkets(llamalend.constants.ONE_WAY_MARKETS_V2);
-    } else {
-        llamalend.constants.ONE_WAY_MARKETS = await llamalend._filterHiddenMarkets(llamalend.constants.ONE_WAY_MARKETS);
-    }
 };

@@ -169,6 +169,34 @@ export const _getMarketsData = memoize(
     }
 )
 
+export interface ICrvUsdMarketAPI {
+    address: string;
+    llamma: string;
+    amm_a: number;
+    monetary_policy_address: string;
+    collateral_token: {
+        symbol: string;
+        address: string;
+        decimals: number;
+    };
+}
+
+export const _getCrvUsdMarketsData = memoize(
+    async (): Promise<ICrvUsdMarketAPI[]> => {
+        const url = 'https://prices.curve.finance/v1/crvusd/markets/ethereum';
+        const response = await fetch(url, { headers: { "accept": "application/json" } });
+        if (response.status !== 200) {
+            throw Error(`Fetch error: ${response.status} ${response.statusText}`);
+        }
+        const { data } = await response.json() as { data: ICrvUsdMarketAPI[] };
+        return data;
+    },
+    {
+        promise: true,
+        maxAge: 10 * 1000, // 10s
+    }
+)
+
 // --- ODOS ---
 
 export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken: string, _amount: bigint, blacklist: string, pathVizImage: boolean, slippage = 0.5): Promise<IQuoteOdos> {
@@ -213,18 +241,6 @@ const _assembleTxOdosMemoized = memoize(
 export async function _assembleTxOdos(this: Llamalend, pathId: string): Promise<string> {
     return _assembleTxOdosMemoized(this.constants.ALIASES.leverage_zap, pathId);
 }
-
-export const _getHiddenPools = memoize(
-    async () => {
-        const response = await fetch(`https://api.curve.finance/api/getHiddenPools`)
-
-        return (await response.json() as any).data
-    },
-    {
-        promise: true,
-        maxAge: 5 * 60 * 1000, // 5m
-    }
-)
 
 async function fetchJson(url: string): Promise<any> {
     const response = await fetch(url);
