@@ -232,7 +232,7 @@ class Llamalend implements ILlamalend {
         const [network, signerAddress] = await Promise.all([
             this.provider.getNetwork(),
             this.signer?.getAddress().catch(() => ''),
-            this.updateFeeData()
+            this.updateFeeData(),
         ])
         this.chainId = Number(network.chainId) === 133 || Number(network.chainId) === 31337 ? 1 : Number(network.chainId) as IChainId;
 
