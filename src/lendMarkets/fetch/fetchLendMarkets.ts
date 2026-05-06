@@ -1,6 +1,6 @@
-import type { Llamalend } from "../../llamalend.js";
-import type { ICoin, IDict } from "../../interfaces.js";
-import { getFactoryMarketDataV1, getFactoryMarketDataV2, getFactoryMarketDataByAPI } from "./fetchFactoryData.js";
+import type {Llamalend} from "../../llamalend.js";
+import {ICoin, IDict} from "../../interfaces.js";
+import {getFactoryMarketDataByAPI, getFactoryMarketDataV1, getFactoryMarketDataV2} from "./fetchFactoryData.js";
 
 import LlammaABI from '../../constants/abis/Llamma.json' with {type: 'json'};
 import ControllerABI from '../../constants/abis/Controller.json' with {type: 'json'};
@@ -15,8 +15,7 @@ const controllerAbiMap = {
     'v2' : ControllerV2ABI,
 }
 
-const registerMarkets = (
-    llamalend: Llamalend,
+type FactoryData = {
     names: string[],
     amms: string[],
     controllers: string[],
@@ -25,10 +24,21 @@ const registerMarkets = (
     monetary_policies: string[],
     vaults: string[],
     gauges: string[],
+};
+
+const registerMarkets = (
+    llamalend: Llamalend,
+    { names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges }: FactoryData,
     COIN_DATA: IDict<ICoin>,
-    version: 'v1' | 'v2'
+    version: 'v1' | 'v2',
+    hiddenMarkets: string[]
 ) => {
-    amms.forEach((amm: string, index: number) => {
+    const hidden = new Set(hiddenMarkets);
+    for (const c in COIN_DATA) {
+        llamalend.constants.DECIMALS[c] = COIN_DATA[c].decimals;
+    }
+
+    amms.forEach((_, index) => {
         llamalend.setContract(amms[index], LlammaABI);
         llamalend.setContract(controllers[index], controllerAbiMap[version]);
         llamalend.setContract(monetary_policies[index], MonetaryPolicyABI);
@@ -50,6 +60,8 @@ const registerMarkets = (
         };
         llamalend.constants.DECIMALS[vaults[index]] = 18;
         llamalend.constants.DECIMALS[gauges[index]] = 18;
+        const marketId = { v1: `one-way-market-${index}`, v2: `one-way-market-v2-${index}` }[version];
+        if (hidden.has(marketId)) return;
 
         const marketData = {
             name: names[index] || `${COIN_DATA[collateral_tokens[index]].symbol}/${COIN_DATA[borrowed_tokens[index]].symbol}`,
@@ -67,48 +79,32 @@ const registerMarkets = (
             collateral_token: COIN_DATA[collateral_tokens[index]],
         };
 
-        if (version === 'v2') {
-            llamalend.constants.ONE_WAY_MARKETS_V2[`one-way-market-v2-${index}`] = marketData;
-        } else {
-            llamalend.constants.ONE_WAY_MARKETS[`one-way-market-${index}`] = marketData;
-        }
+        const constant = { v1: 'ONE_WAY_MARKETS' as const, v2: 'ONE_WAY_MARKETS_V2' as const }[version];
+        llamalend.constants[constant][marketId] = marketData;
     });
 };
 
 export const fetchOneWayMarketsByBlockchain = async (llamalend: Llamalend, version: 'v1' | 'v2' = 'v1') => {
-    const factoryData = version === 'v2'
-        ? await getFactoryMarketDataV2(llamalend)
-        : await getFactoryMarketDataV1(llamalend);
+    const hiddenMarketsPromise = llamalend._getHiddenMarkets();
+    const factoryData = (await (version === 'v2' ? getFactoryMarketDataV2 :  getFactoryMarketDataV1)(llamalend)) as FactoryData
 
-    const { names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges } = factoryData;
-    const COIN_DATA = await llamalend.getCoins(collateral_tokens, borrowed_tokens);
-    for (const c in COIN_DATA) {
-        llamalend.constants.DECIMALS[c] = COIN_DATA[c].decimals;
-    }
+    const { amms, vaults, controllers, borrowed_tokens, collateral_tokens } = factoryData;
+    const [coins, hiddenMarkets] = await Promise.all([
+        llamalend.getCoins(collateral_tokens, borrowed_tokens),
+        hiddenMarketsPromise,
+    ])
 
-    registerMarkets(llamalend, names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges, COIN_DATA, version);
-
-    if (version === 'v2') {
-        llamalend.constants.ONE_WAY_MARKETS_V2 = await llamalend._filterHiddenMarkets(llamalend.constants.ONE_WAY_MARKETS_V2);
-    } else {
-        llamalend.constants.ONE_WAY_MARKETS = await llamalend._filterHiddenMarkets(llamalend.constants.ONE_WAY_MARKETS);
-    }
+    registerMarkets(llamalend, factoryData, coins, version, hiddenMarkets);
 
     await llamalend.fetchStats(amms, controllers, vaults, borrowed_tokens, collateral_tokens, version);
 };
 
 export const fetchOneWayMarketsByAPI = async (llamalend: Llamalend, version: 'v1' | 'v2' = 'v1') => {
-    const { names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges } = await getFactoryMarketDataByAPI(llamalend);
-    const COIN_DATA = await llamalend.getCoins(collateral_tokens, borrowed_tokens, true);
-    for (const c in COIN_DATA) {
-        llamalend.constants.DECIMALS[c] = COIN_DATA[c].decimals;
-    }
-
-    registerMarkets(llamalend, names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges, COIN_DATA, version);
-
-    if (version === 'v2') {
-        llamalend.constants.ONE_WAY_MARKETS_V2 = await llamalend._filterHiddenMarkets(llamalend.constants.ONE_WAY_MARKETS_V2);
-    } else {
-        llamalend.constants.ONE_WAY_MARKETS = await llamalend._filterHiddenMarkets(llamalend.constants.ONE_WAY_MARKETS);
-    }
+    const hiddenMarketsPromise = llamalend._getHiddenMarkets();
+    const factoryData = (await getFactoryMarketDataByAPI(llamalend)) as FactoryData;
+    const [coins, hiddenMarkets] = await Promise.all([
+        llamalend.getCoins(factoryData.collateral_tokens, factoryData.borrowed_tokens, true),
+        hiddenMarketsPromise,
+    ]);
+    registerMarkets(llamalend, factoryData, coins, version, hiddenMarkets);
 };

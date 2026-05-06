@@ -1,19 +1,18 @@
-import { type TransactionRequest, ethers, Contract, Networkish, BigNumberish, Numeric, AbstractProvider } from "ethers";
-import { Provider as MulticallProvider, Contract as MulticallContract, Call } from '@curvefi/ethcall';
+import {AbstractProvider, BigNumberish, Contract, ethers, Networkish, Numeric, type TransactionRequest} from "ethers";
+import {Call, Contract as MulticallContract, Provider as MulticallProvider} from '@curvefi/ethcall';
 import {
     IChainId,
+    ICoin,
+    ICurveContract,
+    IDict,
     ILlamalend,
     ILlamma,
-    IDict,
     INetworkName,
-    ICurveContract,
     IOneWayMarket,
-    ICoin,
-
 } from "./interfaces.js";
 // OneWayMarket ABIs
-import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: 'json'};
-import OneWayLendingFactoryV2ABI from "./constants/abis/OneWayLendingFactoryV2ABI.json" with {type: 'json'};
+import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: "json"};
+import OneWayLendingFactoryV2ABI from "./constants/abis/OneWayLendingFactoryV2ABI.json" with {type: "json"};
 import ERC20ABI from './constants/abis/ERC20.json' with {type: 'json'};
 import ERC4626ABI from './constants/abis/ERC4626.json' with {type: 'json'};
 import GaugeControllerABI from './constants/abis/GaugeController.json' with {type: 'json'};
@@ -24,39 +23,33 @@ import LeverageZapABI from './constants/abis/LeverageZap.json' with {type: 'json
 import gasOracleABI from './constants/abis/gas_oracle_optimism.json' with {type: 'json'};
 import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' with {type: 'json'};
 // crvUSD ABIs
-import llammaABI from "./constants/abis/crvUSD/llamma.json" with {type: 'json'};
-import controllerABI from "./constants/abis/crvUSD/controller.json" with {type: 'json'};
+import llammaABI from "./constants/abis/crvUSD/llamma.json" with {type: "json"};
+import controllerABI from "./constants/abis/crvUSD/controller.json" with {type: "json"};
 import controllerV2ABI from "./constants/abis/crvUSD/controller_v2.json";
-import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" with {type: 'json'};
-import FactoryABI from "./constants/abis/crvUSD/Factory.json" with {type: 'json'};
-import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" with {type: 'json'};
-import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" with {type: 'json'};
-import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: 'json'};
-import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {type: 'json'};
+import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" with {type: "json"};
+import FactoryABI from "./constants/abis/crvUSD/Factory.json" with {type: "json"};
+import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" with {type: "json"};
+import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" with {type: "json"};
+import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: "json"};
+import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {type: "json"};
 
 import {
-    ALIASES_ETHEREUM,
-    ALIASES_OPTIMISM,
     ALIASES_ARBITRUM,
+    ALIASES_ETHEREUM,
     ALIASES_FRAXTAL,
+    ALIASES_OPTIMISM,
     ALIASES_SONIC,
 } from "./constants/aliases.js";
-import {
-    COINS_ETHEREUM,
-    COINS_OPTIMISM,
-    COINS_ARBITRUM,
-    COINS_FRAXTAL,
-    COINS_SONIC,
-} from "./constants/coins.js";
+import {COINS_ARBITRUM, COINS_ETHEREUM, COINS_FRAXTAL, COINS_OPTIMISM, COINS_SONIC} from "./constants/coins.js";
 import {LLAMMAS} from "./constants/llammas.js";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
-import {_getMarketsData, _getHiddenPools} from "./external-api.js";
+import {_getHiddenPools, _getMarketsData} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
 import {MintMarketTemplate} from "./mintMarkets";
 import {LendMarketTemplate} from "./lendMarkets";
-import {fetchOneWayMarketsByBlockchain, fetchOneWayMarketsByAPI} from "./lendMarkets/fetch/fetchLendMarkets.js";
+import {fetchOneWayMarketsByAPI, fetchOneWayMarketsByBlockchain} from "./lendMarkets/fetch/fetchLendMarkets.js";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
@@ -235,9 +228,13 @@ class Llamalend implements ILlamalend {
             throw Error('Wrong providerType');
         }
 
-        const network = await this.provider.getNetwork();
+        this.feeData = { gasPrice: options.gasPrice, maxFeePerGas: options.maxFeePerGas, maxPriorityFeePerGas: options.maxPriorityFeePerGas };
+        const [network, signerAddress] = await Promise.all([
+            this.provider.getNetwork(),
+            this.signer?.getAddress().catch(() => ''),
+            this.updateFeeData()
+        ])
         this.chainId = Number(network.chainId) === 133 || Number(network.chainId) === 31337 ? 1 : Number(network.chainId) as IChainId;
-        console.log("CURVE-LLAMALEND-JS IS CONNECTED TO NETWORK:", { name: network.name.toUpperCase(), chainId: Number(this.chainId) });
 
         if(this.chainId === 42161) {
             this.constantOptions = { gasLimit: 1125899906842624 } // https://arbiscan.io/chart/gaslimit
@@ -253,18 +250,11 @@ class Llamalend implements ILlamalend {
 
         this.multicallProvider = new MulticallProvider(this.chainId, this.provider);
 
-        if (this.signer) {
-            try {
-                this.signerAddress = await this.signer.getAddress();
-            } catch {
-                this.signer = null;
-            }
+        if (signerAddress) {
+            this.signerAddress = signerAddress;
         } else {
-            this.signerAddress = '';
+            this.signer = null
         }
-
-        this.feeData = { gasPrice: options.gasPrice, maxFeePerGas: options.maxFeePerGas, maxPriorityFeePerGas: options.maxPriorityFeePerGas };
-        await this.updateFeeData();
 
         // oneWayMarkets contracts
         this.setContract(this.constants.ALIASES['one_way_factory'], OneWayLendingFactoryABI);
@@ -296,11 +286,14 @@ class Llamalend implements ILlamalend {
         this.setContract(this.crvUsdAddress, ERC20ABI);
         if(this.chainId === 1) {
             this.setContract(this.constants.COINS.crvusd.toLowerCase(), ERC20ABI);
-            for (const llamma of Object.values(this.constants.LLAMMAS)) {
+            const llammas = Object.values(this.constants.LLAMMAS);
+            llammas.forEach(({ controller_address }) => this.setContract(controller_address, controllerABI))
+            const monetaryPolicyAddresses = (await this.multicallProvider.all(llammas.map((
+                {controller_address}) => this.contracts[controller_address].multicallContract.monetary_policy()
+            )) as string[]);
+            llammas.forEach((llamma, i) => {
                 this.setContract(llamma.amm_address, llammaABI);
-                this.setContract(llamma.controller_address, controllerABI);
-                const monetary_policy_address = await this.contracts[llamma.controller_address].contract.monetary_policy(this.constantOptions);
-                llamma.monetary_policy_address = monetary_policy_address.toLowerCase();
+                llamma.monetary_policy_address = monetaryPolicyAddresses[i].toLowerCase();
                 this.setContract(llamma.monetary_policy_address, llamma.monetary_policy_abi);
                 if (llamma.collateral_address === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") {
                     this.setContract(this.constants.WETH, ERC20ABI);
@@ -310,13 +303,12 @@ class Llamalend implements ILlamalend {
                 this.setContract(llamma.leverage_zap, LeverageZapCrvUSDABI);
                 this.setContract(llamma.deleverage_zap, DeleverageZapABI);
                 if (llamma.health_calculator_zap) this.setContract(llamma.health_calculator_zap, HealthCalculatorZapABI);
-            }
+            })
             for (const pegKeeper of this.constants.PEG_KEEPERS) {
                 this.setContract(pegKeeper, PegKeeper);
             }
         }
 
-        // TODO Put it in a separate method
         // Fetch new llammas
         if(this.chainId === 1) {
             this.setContract(this.constants.FACTORY, FactoryABI);
@@ -325,7 +317,7 @@ class Llamalend implements ILlamalend {
 
             const N1 = Object.keys(this.constants.LLAMMAS).length;
             const N2 = await factoryContract.n_collaterals(this.constantOptions);
-            let calls = [];
+            const calls = [];
             for (let i = N1; i < N2; i++) {
                 calls.push(
                     factoryMulticallContract.collaterals(i),
@@ -341,52 +333,38 @@ class Llamalend implements ILlamalend {
             if (collaterals.length > 0) {
                 for (const collateral of collaterals) this.setContract(collateral, ERC20ABI);
 
-                calls = [];
-                for (const collateral of collaterals) {
-                    calls.push(
+                amms.forEach((amm) => this.setContract(amm, llammaABI))
+
+                collaterals.forEach((_, i) => {
+                    this.setContract(controllers[i], i >= collaterals.length - 3 ? controllerV2ABI : controllerABI);
+                })
+
+                const [res, AParams, monetaryPolicyAddresses] = await Promise.all([
+                    this.multicallProvider.all(collaterals.flatMap((collateral) => [
                         this.contracts[collateral].multicallContract.symbol(),
-                        this.contracts[collateral].multicallContract.decimals()
-                    )
-                }
-                const res = (await this.multicallProvider.all(calls)).map((x) => {
-                    if (typeof x === "string") return x.toLowerCase();
-                    return x;
-                });
+                        this.contracts[collateral].multicallContract.decimals(),
+                    ])).then((res) => res.map((x) => typeof x === "string" ? x.toLowerCase() : x)),
+                    this.multicallProvider.all(
+                        amms.map((amm) => this.contracts[amm].multicallContract.A())
+                    ).then((res) => res.map((x) => Number(x))),
+                    this.multicallProvider.all(collaterals.map(
+                        (_, i) => this.contracts[controllers[i]].multicallContract.monetary_policy())
+                    ).then((res) => (res as string[]).map((x) => x.toLowerCase())),
+                ]);
 
-                calls = [];
-
-                for(const amm of amms) {
-                    this.setContract(amm, llammaABI);
-                    calls.push(
-                        this.contracts[amm].multicallContract.A()
-                    )
-                }
-
-                const AParams = (await this.multicallProvider.all(calls)).map((x) => {
-                    return Number(x)
-                });
-
-                for (let i = 0; i < collaterals.length; i++) {
-                    const is_eth = collaterals[i] === this.constants.WETH;
+                collaterals.forEach((collateral, i) => {
+                    const is_eth = collateral === this.constants.WETH;
                     const [collateral_symbol, collateral_decimals] = res.splice(0, 2) as [string, number];
-
-                    if (i >= collaterals.length - 3) {
-                        this.setContract(controllers[i], controllerV2ABI);
-                    } else {
-                        this.setContract(controllers[i], controllerABI);
-                    }
-
-                    const monetary_policy_address = (await this.contracts[controllers[i]].contract.monetary_policy(this.constantOptions)).toLowerCase();
-                    this.setContract(monetary_policy_address, MonetaryPolicy2ABI);
-                    const _llammaId: string = is_eth ? "eth" : collateral_symbol.toLowerCase();
-                    let llammaId = _llammaId
+                    this.setContract(monetaryPolicyAddresses[i], MonetaryPolicy2ABI);
+                    const _llammaId = is_eth ? "eth" : collateral_symbol.toLowerCase();
+                    let llammaId = _llammaId;
                     let j = 2;
                     while (llammaId in this.constants.LLAMMAS) llammaId = _llammaId + j++;
                     this.constants.LLAMMAS[llammaId] = {
                         amm_address: amms[i],
                         controller_address: controllers[i],
-                        monetary_policy_address,
-                        collateral_address: is_eth ? "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" : collaterals[i],
+                        monetary_policy_address: monetaryPolicyAddresses[i],
+                        collateral_address: is_eth ? "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" : collateral,
                         leverage_zap: this.constants.ALIASES.leverage_zap,
                         deleverage_zap: "0x0000000000000000000000000000000000000000",
                         collateral_symbol: is_eth ? "ETH" : collateral_symbol,
@@ -398,8 +376,8 @@ class Llamalend implements ILlamalend {
                         monetary_policy_abi: MonetaryPolicy2ABI,
                         is_deleverage_supported: true,
                         index: N1 + i,
-                    }
-                }
+                    };
+                });
             }
         }
 
@@ -449,6 +427,7 @@ class Llamalend implements ILlamalend {
 
     setContract(address: string, abi: any): void {
         if (address === this.constants.ZERO_ADDRESS || address === undefined) return;
+        if (this.contracts[address]?.abi === abi) return;
         this.contracts[address] = {
             contract: new Contract(address, abi, this.signer || this.provider),
             multicallContract: new MulticallContract(address, abi),
@@ -461,10 +440,7 @@ class Llamalend implements ILlamalend {
         this.feeData = { ...this.feeData, ...customFeeData };
     }
 
-    async _filterHiddenMarkets(markets: IDict<IOneWayMarket>): Promise<IDict<IOneWayMarket>> {
-        const hiddenMarkets = (await _getHiddenPools() as any)[this.constants.NETWORK_NAME] || [];
-        return Object.fromEntries(Object.entries(markets).filter(([id]) => !hiddenMarkets.includes(id))) as IDict<IOneWayMarket>;
-    }
+    _getHiddenMarkets = async () => (await _getHiddenPools())[this.constants.NETWORK_NAME] || [];
 
     getLendMarketList = () => Object.keys({...this.constants.ONE_WAY_MARKETS, ...this.constants.ONE_WAY_MARKETS_V2});
 
@@ -474,12 +450,7 @@ class Llamalend implements ILlamalend {
         if(version === 'v2' && useApi) {
             throw new Error('API fetch is not supported for v2 markets yet. Please use fetchMarkets({ useApi: false, version: "v2" }) to fetch from blockchain.');
         }
-        
-        if(useApi) {
-            await fetchOneWayMarketsByAPI(this, version)
-        } else {
-            await fetchOneWayMarketsByBlockchain(this, version)
-        }
+        await (useApi ? fetchOneWayMarketsByAPI : fetchOneWayMarketsByBlockchain)(this, version)
     }
 
     getCoins = async (collateral_tokens: string[], borrowed_tokens: string[], useApi = false): Promise<IDict<ICoin>> => {

@@ -218,7 +218,7 @@ export const _getHiddenPools = memoize(
     async () => {
         const response = await fetch(`https://api.curve.finance/api/getHiddenPools`)
 
-        return (await response.json() as any).data
+        return (await response.json() as { data: IDict<string[]> }).data
     },
     {
         promise: true,
