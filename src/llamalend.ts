@@ -236,10 +236,10 @@ class Llamalend implements ILlamalend {
         }
 
         this.feeData = { gasPrice: options.gasPrice, maxFeePerGas: options.maxFeePerGas, maxPriorityFeePerGas: options.maxPriorityFeePerGas };
+        const feeDataPromise = this.updateFeeData();
         const [network, signerAddress] = await Promise.all([
             this.provider.getNetwork(),
             this.signer?.getAddress().catch(() => ''),
-            this.updateFeeData(),
         ])
         this.chainId = Number(network.chainId) === 133 || Number(network.chainId) === 31337 ? 1 : Number(network.chainId) as IChainId;
 
@@ -347,28 +347,26 @@ class Llamalend implements ILlamalend {
                     (_, i) => this.setContract(controllers[i], i >= collaterals.length - 3 ? controllerV2ABI : controllerABI)
                 )
 
-                const [res, AParams, monetaryPolicyAddresses] = await Promise.all([
+                const [collateralResponses, AParams, monetaryPolicyAddresses] = await Promise.all([
                     this.multicallProvider.all(collaterals.flatMap((collateral) => [
                         this.contracts[collateral].multicallContract.symbol(),
                         this.contracts[collateral].multicallContract.decimals(),
-                    ])).then((res) => res.map((x) => typeof x === "string" ? x.toLowerCase() : x)),
-                    this.multicallProvider.all(
-                        amms.map((amm) => this.contracts[amm].multicallContract.A())
-                    ).then((res) => res.map((x) => Number(x))),
-                    this.multicallProvider.all(collaterals.map(
-                        (_, i) => this.contracts[controllers[i]].multicallContract.monetary_policy())
-                    ).then((res) => (res as string[]).map((x) => x.toLowerCase())),
+                    ])),
+                    this.multicallProvider.all(amms.map((amm) => this.contracts[amm].multicallContract.A())),
+                    this.multicallProvider.all(collaterals.map((_, i) => this.contracts[controllers[i]].multicallContract.monetary_policy())),
                 ]);
 
+                const { collateralSymbols, collateralDecimals } = handleMultiCallResponse(['collateralSymbols', 'collateralDecimals'], collateralResponses);
                 collaterals.forEach((collateral, i) => {
                     const is_eth = collateral === this.constants.WETH;
-                    const [collateral_symbol, collateral_decimals] = res.splice(0, 2) as [string, number];
-                    this.setContract(monetaryPolicyAddresses[i], MonetaryPolicy2ABI);
+                    const [collateral_symbol, collateral_decimals] = [collateralSymbols[i].toLowerCase() as string, Number(collateralDecimals[i])]
+                    const monetary_policy_address = (monetaryPolicyAddresses[i] as string).toLowerCase();
+                    this.setContract(monetary_policy_address, MonetaryPolicy2ABI);
                     const symbol = is_eth ? "eth" : collateral_symbol.toLowerCase();
                     this.constants.LLAMMAS[generateLlamaId(symbol, this.constants.LLAMMAS)] = {
                         amm_address: amms[i],
                         controller_address: controllers[i],
-                        monetary_policy_address: monetaryPolicyAddresses[i],
+                        monetary_policy_address,
                         collateral_address: is_eth ? "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" : collateral,
                         leverage_zap: this.constants.ALIASES.leverage_zap,
                         deleverage_zap: "0x0000000000000000000000000000000000000000",
@@ -377,7 +375,7 @@ class Llamalend implements ILlamalend {
                         min_bands: 4,
                         max_bands: 50,
                         default_bands: 10,
-                        A: AParams[i],
+                        A: Number(AParams[i]),
                         monetary_policy_abi: MonetaryPolicy2ABI,
                         is_deleverage_supported: true,
                         index: N1 + i,
@@ -428,6 +426,8 @@ class Llamalend implements ILlamalend {
                 AbstractProvider.prototype.estimateGas = AbstractProvider.prototype.originalEstimate as (_tx: TransactionRequest) => Promise<bigint>;
             }
         }
+
+        await feeDataPromise;
     }
 
     setContract(address: string, abi: any): void {
@@ -469,7 +469,6 @@ class Llamalend implements ILlamalend {
                 const collateralCoin = market.assets.collateral;
 
                 if (coins.has(borrowedCoin.address)) {
-                    this.setContract(borrowedCoin.address, ERC20ABI);
                     COINS_DATA[borrowedCoin.address] = {
                         address: borrowedCoin.address,
                         decimals: borrowedCoin.decimals,
@@ -479,7 +478,6 @@ class Llamalend implements ILlamalend {
                 }
 
                 if (coins.has(collateralCoin.address)) {
-                    this.setContract(collateralCoin.address, ERC20ABI);
                     COINS_DATA[collateralCoin.address] = {
                         address: collateralCoin.address,
                         decimals: collateralCoin.decimals,
@@ -489,27 +487,15 @@ class Llamalend implements ILlamalend {
                 }
             });
         } else {
-            const calls: Call[] = [];
             const callsMap = ['name', 'decimals', 'symbol'];
-
-            coins.forEach((coin: string) => {
-                this.setContract(coin, ERC20ABI);
-                callsMap.forEach((item) => {
-                    calls.push(createCall(this.contracts[coin], item, []));
-                });
-            });
-
-            const res = await this.multicallProvider.all(calls);
-            const { name, decimals, symbol } = handleMultiCallResponse(callsMap, res);
-
-            Array.from(coins).forEach((coin: string, index: number) => {
-                COINS_DATA[coin] = {
-                    address: coin,
-                    decimals: Number(decimals[index]),
-                    name: name[index],
-                    symbol: symbol[index],
-                };
-            });
+            const coinList = [...coins];
+            const calls = coinList.flatMap(
+                (coin: string) => callsMap.map((item) => (createCall(this.contracts[coin], item, [])))
+            );
+            const { name, decimals, symbol } = handleMultiCallResponse(callsMap, await this.multicallProvider.all(calls));
+            coinList.forEach((address: string, index: number) =>
+                COINS_DATA[address] = { address, decimals: Number(decimals[index]), name: name[index], symbol: symbol[index] }
+            );
         }
 
         return COINS_DATA;
