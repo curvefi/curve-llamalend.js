@@ -52,7 +52,7 @@ import {LLAMMAS} from "./constants/llammas.js";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse, generateLlamaId} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
-import {_getMarketsData, _getHiddenPools} from "./external-api.js";
+import {_getMarketsData} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
 import {MintMarketTemplate} from "./mintMarkets";
 import {LendMarketTemplate} from "./lendMarkets";
@@ -444,8 +444,6 @@ class Llamalend implements ILlamalend {
     setCustomFeeData(customFeeData: { gasPrice?: number, maxFeePerGas?: number, maxPriorityFeePerGas?: number }): void {
         this.feeData = { ...this.feeData, ...customFeeData };
     }
-
-    _getHiddenMarkets = async () => (await _getHiddenPools())[this.constants.NETWORK_NAME] || [];
 
     getLendMarketList = () => Object.keys({...this.constants.ONE_WAY_MARKETS, ...this.constants.ONE_WAY_MARKETS_V2});
 

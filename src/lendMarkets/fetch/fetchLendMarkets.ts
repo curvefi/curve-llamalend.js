@@ -51,10 +51,8 @@ const registerMarkets = (
     llamalend: Llamalend,
     { names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges }: FactoryData,
     COIN_DATA: IDict<ICoin>,
-    version: 'v1' | 'v2',
-    hiddenMarkets: string[]
+    version: 'v1' | 'v2'
 ) => {
-    const hidden = new Set(hiddenMarkets);
     for (const c in COIN_DATA) {
         llamalend.constants.DECIMALS[c] = COIN_DATA[c].decimals;
     }
@@ -70,8 +68,6 @@ const registerMarkets = (
         llamalend.constants.DECIMALS[vault] = 18;
 
         const marketId = { v1: `one-way-market-${index}`, v2: `one-way-market-v2-${index}` }[version];
-        if (hidden.has(marketId)) return;
-
         const marketData = {
             name: names[index] || `${COIN_DATA[collateral_token].symbol}/${COIN_DATA[borrowed_token].symbol}`,
             version: version,
@@ -94,27 +90,21 @@ const registerMarkets = (
 };
 
 export const fetchOneWayMarketsByBlockchain = async (llamalend: Llamalend, version: 'v1' | 'v2' = 'v1') => {
-    const hiddenMarketsPromise = llamalend._getHiddenMarkets();
-    const factoryData = (await (version === 'v2' ? getFactoryMarketDataV2 :  getFactoryMarketDataV1)(llamalend)) as FactoryData
+    const factoryData = (await { v1: getFactoryMarketDataV1, v2: getFactoryMarketDataV2 }[version](llamalend)) as FactoryData
     registerContracts(llamalend, factoryData, version)
 
     const { amms, vaults, controllers, borrowed_tokens, collateral_tokens } = factoryData;
-    const [coins, hiddenMarkets] = await Promise.all([
+    const [coins] = await Promise.all([
         llamalend.getCoins(collateral_tokens, borrowed_tokens),
-        hiddenMarketsPromise,
         llamalend.fetchStats(amms, controllers, vaults, borrowed_tokens, collateral_tokens, version),
     ])
 
-    registerMarkets(llamalend, factoryData, coins, version, hiddenMarkets);
+    registerMarkets(llamalend, factoryData, coins, version);
 };
 
 export const fetchOneWayMarketsByAPI = async (llamalend: Llamalend, version: 'v1' | 'v2' = 'v1') => {
-    const hiddenMarketsPromise = llamalend._getHiddenMarkets();
     const factoryData = (await getFactoryMarketDataByAPI(llamalend)) as FactoryData;
     registerContracts(llamalend, factoryData, version)
-    const [coins, hiddenMarkets] = await Promise.all([
-        llamalend.getCoins(factoryData.collateral_tokens, factoryData.borrowed_tokens, true),
-        hiddenMarketsPromise,
-    ]);
-    registerMarkets(llamalend, factoryData, coins, version, hiddenMarkets);
+    const coins = await llamalend.getCoins(factoryData.collateral_tokens, factoryData.borrowed_tokens, true);
+    registerMarkets(llamalend, factoryData, coins, version);
 };
