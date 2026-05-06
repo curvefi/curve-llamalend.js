@@ -1,18 +1,19 @@
-import {AbstractProvider, BigNumberish, Contract, ethers, Networkish, Numeric, type TransactionRequest} from "ethers";
-import {Call, Contract as MulticallContract, Provider as MulticallProvider} from '@curvefi/ethcall';
+import { type TransactionRequest, ethers, Contract, Networkish, BigNumberish, Numeric, AbstractProvider } from "ethers";
+import { Provider as MulticallProvider, Contract as MulticallContract, Call } from '@curvefi/ethcall';
 import {
     IChainId,
-    ICoin,
-    ICurveContract,
-    IDict,
     ILlamalend,
     ILlamma,
+    IDict,
     INetworkName,
+    ICurveContract,
     IOneWayMarket,
+    ICoin,
+
 } from "./interfaces.js";
 // OneWayMarket ABIs
-import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: "json"};
-import OneWayLendingFactoryV2ABI from "./constants/abis/OneWayLendingFactoryV2ABI.json" with {type: "json"};
+import OneWayLendingFactoryABI from "./constants/abis/OneWayLendingFactoryABI.json" with {type: 'json'};
+import OneWayLendingFactoryV2ABI from "./constants/abis/OneWayLendingFactoryV2ABI.json" with {type: 'json'};
 import ERC20ABI from './constants/abis/ERC20.json' with {type: 'json'};
 import ERC4626ABI from './constants/abis/ERC4626.json' with {type: 'json'};
 import GaugeControllerABI from './constants/abis/GaugeController.json' with {type: 'json'};
@@ -23,33 +24,39 @@ import LeverageZapABI from './constants/abis/LeverageZap.json' with {type: 'json
 import gasOracleABI from './constants/abis/gas_oracle_optimism.json' with {type: 'json'};
 import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' with {type: 'json'};
 // crvUSD ABIs
-import llammaABI from "./constants/abis/crvUSD/llamma.json" with {type: "json"};
-import controllerABI from "./constants/abis/crvUSD/controller.json" with {type: "json"};
+import llammaABI from "./constants/abis/crvUSD/llamma.json" with {type: 'json'};
+import controllerABI from "./constants/abis/crvUSD/controller.json" with {type: 'json'};
 import controllerV2ABI from "./constants/abis/crvUSD/controller_v2.json";
-import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" with {type: "json"};
-import FactoryABI from "./constants/abis/crvUSD/Factory.json" with {type: "json"};
-import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" with {type: "json"};
-import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" with {type: "json"};
-import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: "json"};
-import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {type: "json"};
+import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" with {type: 'json'};
+import FactoryABI from "./constants/abis/crvUSD/Factory.json" with {type: 'json'};
+import MonetaryPolicy2ABI from "./constants/abis/crvUSD/MonetaryPolicy2.json" with {type: 'json'};
+import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" with {type: 'json'};
+import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: 'json'};
+import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {type: 'json'};
 
 import {
-    ALIASES_ARBITRUM,
     ALIASES_ETHEREUM,
-    ALIASES_FRAXTAL,
     ALIASES_OPTIMISM,
+    ALIASES_ARBITRUM,
+    ALIASES_FRAXTAL,
     ALIASES_SONIC,
 } from "./constants/aliases.js";
-import {COINS_ARBITRUM, COINS_ETHEREUM, COINS_FRAXTAL, COINS_OPTIMISM, COINS_SONIC} from "./constants/coins.js";
+import {
+    COINS_ETHEREUM,
+    COINS_OPTIMISM,
+    COINS_ARBITRUM,
+    COINS_FRAXTAL,
+    COINS_SONIC,
+} from "./constants/coins.js";
 import {LLAMMAS} from "./constants/llammas.js";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
-import {_getHiddenPools, _getMarketsData} from "./external-api.js";
+import {_getMarketsData, _getHiddenPools} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
 import {MintMarketTemplate} from "./mintMarkets";
 import {LendMarketTemplate} from "./lendMarkets";
-import {fetchOneWayMarketsByAPI, fetchOneWayMarketsByBlockchain} from "./lendMarkets/fetch/fetchLendMarkets.js";
+import {fetchOneWayMarketsByBlockchain, fetchOneWayMarketsByAPI} from "./lendMarkets/fetch/fetchLendMarkets.js";
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
