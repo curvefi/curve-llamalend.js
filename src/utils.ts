@@ -494,3 +494,9 @@ export const buildCalldataForLeverageZapV2 = (routerAddress: string, exchangeCal
     );
 };
 
+export const generateLlamaId = (symbol: string, llammas: IDict<unknown>) => {
+    let llammaId = symbol;
+    let j = 2;
+    while (llammaId in llammas) llammaId = `${symbol}${j++}`;
+    return llammaId;
+}

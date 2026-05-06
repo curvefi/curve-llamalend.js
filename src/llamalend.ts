@@ -50,7 +50,7 @@ import {
 } from "./constants/coins.js";
 import {LLAMMAS} from "./constants/llammas.js";
 import {L2Networks} from "./constants/L2Networks.js";
-import {createCall, handleMultiCallResponse} from "./utils.js";
+import {createCall, handleMultiCallResponse, generateLlamaId} from "./utils.js";
 import {cacheKey, cacheStats} from "./cache/index.js";
 import {_getMarketsData, _getHiddenPools} from "./external-api.js";
 import {extractDecimals} from "./constants/utils.js";
@@ -316,6 +316,7 @@ class Llamalend implements ILlamalend {
             }
         }
 
+        // TODO Put it in a separate method
         // Fetch new llammas
         if(this.chainId === 1) {
             this.setContract(this.constants.FACTORY, FactoryABI);
@@ -342,9 +343,9 @@ class Llamalend implements ILlamalend {
 
                 amms.forEach((amm) => this.setContract(amm, llammaABI))
 
-                collaterals.forEach((_, i) => {
-                    this.setContract(controllers[i], i >= collaterals.length - 3 ? controllerV2ABI : controllerABI);
-                })
+                collaterals.forEach(
+                    (_, i) => this.setContract(controllers[i], i >= collaterals.length - 3 ? controllerV2ABI : controllerABI)
+                )
 
                 const [res, AParams, monetaryPolicyAddresses] = await Promise.all([
                     this.multicallProvider.all(collaterals.flatMap((collateral) => [
@@ -363,11 +364,8 @@ class Llamalend implements ILlamalend {
                     const is_eth = collateral === this.constants.WETH;
                     const [collateral_symbol, collateral_decimals] = res.splice(0, 2) as [string, number];
                     this.setContract(monetaryPolicyAddresses[i], MonetaryPolicy2ABI);
-                    const _llammaId = is_eth ? "eth" : collateral_symbol.toLowerCase();
-                    let llammaId = _llammaId;
-                    let j = 2;
-                    while (llammaId in this.constants.LLAMMAS) llammaId = _llammaId + j++;
-                    this.constants.LLAMMAS[llammaId] = {
+                    const symbol = is_eth ? "eth" : collateral_symbol.toLowerCase();
+                    this.constants.LLAMMAS[generateLlamaId(symbol, this.constants.LLAMMAS)] = {
                         amm_address: amms[i],
                         controller_address: controllers[i],
                         monetary_policy_address: monetaryPolicyAddresses[i],

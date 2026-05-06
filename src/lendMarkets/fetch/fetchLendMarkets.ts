@@ -1,6 +1,6 @@
-import type {Llamalend} from "../../llamalend.js";
+import type { Llamalend } from "../../llamalend.js";
 import type { ICoin, IDict } from "../../interfaces.js";
-import { getFactoryMarketDataByAPI, getFactoryMarketDataV1, getFactoryMarketDataV2 } from "./fetchFactoryData.js";
+import { getFactoryMarketDataV1, getFactoryMarketDataV2, getFactoryMarketDataByAPI } from "./fetchFactoryData.js";
 
 import LlammaABI from '../../constants/abis/Llamma.json' with {type: 'json'};
 import ControllerABI from '../../constants/abis/Controller.json' with {type: 'json'};
