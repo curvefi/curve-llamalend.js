@@ -54,33 +54,29 @@ import {LendMarketTemplate} from "./lendMarkets";
 import {fetchOneWayMarketsByBlockchain, fetchOneWayMarketsByAPI} from "./lendMarkets/fetch/fetchLendMarkets.js";
 import {fetchMintMarketsByBlockchain, fetchMintMarketsByAPI} from "./mintMarkets/fetch/fetchMintMarkets.js";
 
-const memoizedContract = (): (address: string, abi: any, provider: BrowserProvider | JsonRpcProvider | Signer) => Contract => {
-    const cache: Record<string, Contract> = {};
-    return (address: string, abi: any, provider: BrowserProvider | JsonRpcProvider | Signer): Contract => {
-        if (address in cache) {
-            return cache[address];
-        }
-        else {
-            const result = new Contract(address, abi, provider)
+const memoizeByAddress = <T, Args extends unknown[]>(
+    factory: (address: string, abi: any, ...args: Args) => T
+): () => (address: string, abi: any, ...args: Args) => T => {
+    return () => {
+        const cache: Record<string, T> = {};
+        return (address: string, abi: any, ...args: Args): T => {
+            if (address in cache) {
+                return cache[address];
+            }
+            const result = factory(address, abi, ...args);
             cache[address] = result;
             return result;
-        }
-    }
-}
+        };
+    };
+};
 
-const memoizedMulticallContract = (): (address: string, abi: any) => MulticallContract => {
-    const cache: Record<string, MulticallContract> = {};
-    return (address: string, abi: any): MulticallContract => {
-        if (address in cache) {
-            return cache[address];
-        }
-        else {
-            const result = new MulticallContract(address, abi)
-            cache[address] = result;
-            return result;
-        }
-    }
-}
+const memoizedContract = memoizeByAddress(
+    (address, abi, provider: BrowserProvider | JsonRpcProvider | Signer) => new Contract(address, abi, provider)
+);
+
+const memoizedMulticallContract = memoizeByAddress(
+    (address, abi) => new MulticallContract(address, abi)
+);
 
 export const NETWORK_CONSTANTS: { [index: number]: any } = {
     1: {
