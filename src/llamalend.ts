@@ -48,7 +48,6 @@ import {LLAMMAS} from "./constants/llammas.js";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse} from "./utils.js";
 import {_getMarketsData, _getCrvUsdMarketsData} from "./external-api.js";
-import {extractDecimals} from "./constants/utils.js";
 import {MintMarketTemplate} from "./mintMarkets";
 import {LendMarketTemplate} from "./lendMarkets";
 import {fetchOneWayMarketsByBlockchain, fetchOneWayMarketsByAPI} from "./lendMarkets/fetch/fetchLendMarkets.js";
@@ -310,7 +309,6 @@ class Llamalend implements ILlamalend {
 
 
         this.constants.DECIMALS = {
-            ...extractDecimals(this.constants.LLAMMAS),
             [this.crvUsdAddress]: 18,
             [this.constants.ALIASES.crv]: 18,
             [this.constants.ALIASES.crvUSD]: 18,
