@@ -6,6 +6,7 @@ import controllerABI from "../../constants/abis/crvUSD/controller.json" with {ty
 import controllerV2ABI from "../../constants/abis/crvUSD/controller_v2.json";
 import FactoryABI from "../../constants/abis/crvUSD/Factory.json" with {type: 'json'};
 import MonetaryPolicy2ABI from "../../constants/abis/crvUSD/MonetaryPolicy2.json" with {type: 'json'};
+import {extractDecimals} from "../../constants/utils.js";
 
 export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void> => {
     if (llamalend.chainId !== 1) return;
@@ -60,6 +61,8 @@ export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void>
             index: N1 + i,
         };
     }
+
+    llamalend.constants.DECIMALS = {...llamalend.constants.DECIMALS, ...extractDecimals(llamalend.constants.LLAMMAS)}
 };
 
 export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promise<void> => {
@@ -143,4 +146,6 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
             index: N1 + i,
         };
     }
+
+    llamalend.constants.DECIMALS = {...llamalend.constants.DECIMALS, ...extractDecimals(llamalend.constants.LLAMMAS)}
 };
