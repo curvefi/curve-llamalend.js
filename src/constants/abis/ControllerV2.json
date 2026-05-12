@@ -671,78 +671,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "name": "_user",
-        "type": "address"
-      },
-      {
-        "name": "_min_x",
-        "type": "uint256"
-      },
-      {
-        "name": "_frac",
-        "type": "uint256"
-      }
-    ],
-    "name": "liquidate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "_user",
-        "type": "address"
-      },
-      {
-        "name": "_min_x",
-        "type": "uint256"
-      },
-      {
-        "name": "_frac",
-        "type": "uint256"
-      },
-      {
-        "name": "_callbacker",
-        "type": "address"
-      }
-    ],
-    "name": "liquidate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "_user",
-        "type": "address"
-      },
-      {
-        "name": "_min_x",
-        "type": "uint256"
-      },
-      {
-        "name": "_frac",
-        "type": "uint256"
-      },
-      {
-        "name": "_callbacker",
-        "type": "address"
-      },
-      {
-        "name": "_calldata",
-        "type": "bytes"
-      }
-    ],
-    "name": "liquidate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "save_rate",
     "outputs": [],
@@ -1251,27 +1179,6 @@
       {
         "name": "_user",
         "type": "address"
-      }
-    ],
-    "name": "tokens_to_liquidate",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "_user",
-        "type": "address"
-      },
-      {
-        "name": "_frac",
-        "type": "uint256"
       }
     ],
     "name": "tokens_to_liquidate",
