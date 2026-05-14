@@ -107,7 +107,7 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
             llamalend.contracts[collaterals[i]].multicallContract.symbol(),
             llamalend.contracts[collaterals[i]].multicallContract.decimals(),
             llamalend.contracts[amms[i]].multicallContract.A(),
-            llamalend.contracts[controllers[i]].multicallContract.monetary_policy(),
+            llamalend.contracts[controllers[i]].multicallContract.monetary_policy()
         );
     }
 
