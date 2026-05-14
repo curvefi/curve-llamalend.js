@@ -40,7 +40,6 @@ export interface ILlamma {
     max_bands: number,
     default_bands: number,
     A: number,
-    monetary_policy_abi: any
     is_deleverage_supported?: boolean
     index?: number
 }
@@ -226,7 +225,6 @@ export interface ILlamma {
     max_bands: number,
     default_bands: number,
     A: number,
-    monetary_policy_abi: any
 }
 
 export interface IResponseApi {
