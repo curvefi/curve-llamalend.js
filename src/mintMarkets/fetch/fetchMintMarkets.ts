@@ -6,6 +6,7 @@ import controllerABI from "../../constants/abis/crvUSD/controller.json" with {ty
 import controllerV2ABI from "../../constants/abis/crvUSD/controller_v2.json";
 import FactoryABI from "../../constants/abis/crvUSD/Factory.json" with {type: 'json'};
 import {extractDecimals} from "../../constants/utils.js";
+import {handleMultiCallResponse} from "../../utils.js";
 import {resolveMonetaryPolicyAbi} from "../monetaryPolicyAbi.js";
 
 export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void> => {
@@ -74,6 +75,7 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
     const N1 = Object.keys(llamalend.constants.LLAMMAS).length;
     const N2 = await factoryContract.n_collaterals(llamalend.constantOptions);
 
+    const coreCallsMap = ['collaterals', 'amms', 'controllers'];
     let calls = [];
     for (let i = N1; i < N2; i++) {
         calls.push(
@@ -83,11 +85,10 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
         );
     }
 
-    const coreAddresses: string[] = (await llamalend.multicallProvider.all(calls) as string[]).map((c) => c.toLowerCase());
-
-    const collaterals = coreAddresses.filter((a, i) => i % 3 == 0) as string[];
-    const amms = coreAddresses.filter((a, i) => i % 3 == 1) as string[];
-    const controllers = coreAddresses.filter((a, i) => i % 3 == 2) as string[];
+    const coreAddresses = (await llamalend.multicallProvider.all(calls) as string[]).map((c) => c.toLowerCase());
+    const { collaterals, amms, controllers } = handleMultiCallResponse(coreCallsMap, coreAddresses) as {
+        collaterals: string[]; amms: string[]; controllers: string[];
+    };
 
     if (collaterals.length === 0) return;
 
@@ -99,31 +100,31 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
         llamalend.setContract(controllers[i], i >= N - 3 ? controllerV2ABI : controllerABI);
     }
 
+    const detailsCallsMap = ['symbols', 'decimals', 'amm_a', 'monetary_policies'];
     calls = [];
-    for (const collateral of collaterals) {
+    for (let i = 0; i < N; i++) {
         calls.push(
-            llamalend.contracts[collateral].multicallContract.symbol(),
-            llamalend.contracts[collateral].multicallContract.decimals()
+            llamalend.contracts[collaterals[i]].multicallContract.symbol(),
+            llamalend.contracts[collaterals[i]].multicallContract.decimals(),
+            llamalend.contracts[amms[i]].multicallContract.A(),
+            llamalend.contracts[controllers[i]].multicallContract.monetary_policy(),
         );
     }
-    for (const amm of amms) calls.push(llamalend.contracts[amm].multicallContract.A());
-    for (const controller of controllers) calls.push(llamalend.contracts[controller].multicallContract.monetary_policy());
 
-    const flat = await llamalend.multicallProvider.all(calls);
+    const flat = (await llamalend.multicallProvider.all(calls)).map((x) =>
+        typeof x === "string" ? x.toLowerCase() : x
+    );
+    const { symbols, decimals, amm_a, monetary_policies } = handleMultiCallResponse(detailsCallsMap, flat) as {
+        symbols: string[]; decimals: unknown[]; amm_a: unknown[]; monetary_policies: string[];
+    };
 
-    const collateralData = flat.slice(0, 2 * N).map((x) => {
-        if (typeof x === "string") return x.toLowerCase();
-        return x;
-    });
-    const AParams = (flat.slice(2 * N, 3 * N) as unknown[]).map((x) => Number(x));
-    const monetaryPolicies = (flat.slice(3 * N, 4 * N) as string[]).map((a) => a.toLowerCase());
+    for (const mp of monetary_policies) llamalend.setContract(mp, resolveMonetaryPolicyAbi(mp));
 
-    for (const mp of monetaryPolicies) llamalend.setContract(mp, resolveMonetaryPolicyAbi(mp));
-
-    for (let i = 0; i < collaterals.length; i++) {
+    for (let i = 0; i < N; i++) {
         const is_eth = collaterals[i] === llamalend.constants.WETH;
-        const [collateral_symbol, collateral_decimals] = collateralData.splice(0, 2) as [string, number];
-        const monetary_policy_address = monetaryPolicies[i];
+        const collateral_symbol = symbols[i];
+        const collateral_decimals = Number(decimals[i]);
+        const monetary_policy_address = monetary_policies[i];
 
         const _llammaId: string = is_eth ? "eth" : collateral_symbol.toLowerCase();
         let llammaId = _llammaId;
@@ -142,7 +143,7 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
             min_bands: 4,
             max_bands: 50,
             default_bands: 10,
-            A: AParams[i],
+            A: Number(amm_a[i]),
             is_deleverage_supported: true,
             index: N1 + i,
         };

@@ -1,19 +1,7 @@
 import type { Llamalend } from "../../llamalend.js";
 import type { ICoin, IDict } from "../../interfaces.js";
 import { getFactoryMarketDataV1, getFactoryMarketDataV2, getFactoryMarketDataByAPI } from "./fetchFactoryData.js";
-
-import LlammaABI from '../../constants/abis/Llamma.json' with {type: 'json'};
-import ControllerABI from '../../constants/abis/Controller.json' with {type: 'json'};
-import ControllerV2ABI from '../../constants/abis/ControllerV2.json' with {type: 'json'};
-import MonetaryPolicyABI from '../../constants/abis/MonetaryPolicy.json' with {type: 'json'};
-import VaultABI from '../../constants/abis/Vault.json' with {type: 'json'};
-import GaugeABI from '../../constants/abis/GaugeV5.json' with {type: 'json'};
-import SidechainGaugeABI from '../../constants/abis/SidechainGauge.json' with {type: 'json'};
-
-const controllerAbiMap = {
-    'v1' : ControllerABI,
-    'v2' : ControllerV2ABI,
-}
+import { setupLendMarketContracts } from "../setupContracts.js";
 
 const registerMarkets = (
     llamalend: Llamalend,
@@ -29,13 +17,6 @@ const registerMarkets = (
     version: 'v1' | 'v2'
 ) => {
     amms.forEach((amm: string, index: number) => {
-        llamalend.setContract(amms[index], LlammaABI);
-        llamalend.setContract(controllers[index], controllerAbiMap[version]);
-        llamalend.setContract(monetary_policies[index], MonetaryPolicyABI);
-        llamalend.setContract(vaults[index], VaultABI);
-        if (gauges[index]) {
-            llamalend.setContract(gauges[index], llamalend.chainId === 1 ? GaugeABI : SidechainGaugeABI);
-        }
         COIN_DATA[vaults[index]] = {
             address: vaults[index],
             decimals: 18,
@@ -48,8 +29,6 @@ const registerMarkets = (
             name: "curve.finance " + COIN_DATA[borrowed_tokens[index]].name + " Gauge Deposit",
             symbol: "cv" + COIN_DATA[borrowed_tokens[index]].symbol + "-gauge",
         };
-        llamalend.constants.DECIMALS[vaults[index]] = 18;
-        llamalend.constants.DECIMALS[gauges[index]] = 18;
 
         const marketData = {
             name: names[index] || `${COIN_DATA[collateral_tokens[index]].symbol}/${COIN_DATA[borrowed_tokens[index]].symbol}`,
@@ -66,6 +45,8 @@ const registerMarkets = (
             borrowed_token: COIN_DATA[borrowed_tokens[index]],
             collateral_token: COIN_DATA[collateral_tokens[index]],
         };
+
+        setupLendMarketContracts(llamalend, marketData);
 
         if (version === 'v2') {
             llamalend.constants.ONE_WAY_MARKETS_V2[`one-way-market-v2-${index}`] = marketData;

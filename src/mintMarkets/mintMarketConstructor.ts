@@ -1,6 +1,7 @@
 import { MintMarketTemplate} from "./MintMarketTemplate.js";
 import type { ILlamma } from "../interfaces.js";
 import type { Llamalend } from "../llamalend.js";
+import { setupMintMarketContracts } from "./setupContracts.js";
 
 export const getMintMarket = function (this: Llamalend, mintMarketId: string): MintMarketTemplate {
     if (!(mintMarketId in this.mintMarkets)) {
@@ -12,8 +13,8 @@ export const getMintMarket = function (this: Llamalend, mintMarketId: string): M
 }
 
 export const getMintMarketByData = function (this: Llamalend, id: string, llammaData: ILlamma): MintMarketTemplate {
-    if (!(id in this.mintMarkets)) {
-        this.mintMarkets[id] = new MintMarketTemplate(id, llammaData, this);
-    }
+    setupMintMarketContracts(this, llammaData);
+    this.mintMarkets[id] = new MintMarketTemplate(id, llammaData, this);
+
     return this.mintMarkets[id];
 }

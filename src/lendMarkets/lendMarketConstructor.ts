@@ -1,6 +1,7 @@
 import { LendMarketTemplate} from "./LendMarketTemplate.js";
 import type { IOneWayMarket } from "../interfaces.js";
 import type { Llamalend } from "../llamalend.js";
+import { setupLendMarketContracts } from "./setupContracts.js";
 
 export const getLendMarket = function (this: Llamalend, lendMarketId: string): LendMarketTemplate<'v1'> | LendMarketTemplate<'v2'> {
     if (!(lendMarketId in this.lendMarkets)) {
@@ -16,12 +17,13 @@ export const getLendMarket = function (this: Llamalend, lendMarketId: string): L
 }
 
 export const getLendMarketByData = function (this: Llamalend, id: string, marketData: IOneWayMarket): LendMarketTemplate<'v1'> | LendMarketTemplate<'v2'> {
-    if (!(id in this.lendMarkets)) {
-        if (marketData.version === 'v2') {
-            this.lendMarkets[id] = new LendMarketTemplate<'v2'>(id, marketData, this);
-        } else {
-            this.lendMarkets[id] = new LendMarketTemplate<'v1'>(id, marketData, this);
-        }
+    setupLendMarketContracts(this, marketData);
+
+    if (marketData.version === 'v2') {
+        this.lendMarkets[id] = new LendMarketTemplate<'v2'>(id, marketData, this);
+    } else {
+        this.lendMarkets[id] = new LendMarketTemplate<'v1'>(id, marketData, this);
     }
+
     return this.lendMarkets[id];
 }
