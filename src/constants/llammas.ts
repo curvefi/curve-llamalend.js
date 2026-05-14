@@ -1,6 +1,4 @@
 import { IDict, ILlamma } from "../interfaces.js";
-import MonetaryPolicyABI from './abis/crvUSD/MonetaryPolicy.json' with {type: 'json'};
-import MonetaryPolicy2ABI from './abis/crvUSD/MonetaryPolicy2.json' with {type: 'json'};
 import { lowerCaseLlammasAddresses } from "./utils.js";
 
 
@@ -18,7 +16,6 @@ export const LLAMMAS: IDict<ILlamma> = lowerCaseLlammasAddresses({
         max_bands: 50,
         default_bands: 10,
         A: 100,
-        monetary_policy_abi: MonetaryPolicyABI,
     },
     wsteth: {
         amm_address: '0x37417b2238aa52d0dd2d6252d989e728e8f706e4',
@@ -33,7 +30,6 @@ export const LLAMMAS: IDict<ILlamma> = lowerCaseLlammasAddresses({
         max_bands: 50,
         default_bands: 10,
         A: 100,
-        monetary_policy_abi: MonetaryPolicy2ABI,
     },
     wbtc: {
         amm_address: '0xe0438eb3703bf871e31ce639bd351109c88666ea',
@@ -49,7 +45,6 @@ export const LLAMMAS: IDict<ILlamma> = lowerCaseLlammasAddresses({
         max_bands: 50,
         default_bands: 10,
         A: 100,
-        monetary_policy_abi: MonetaryPolicy2ABI,
     },
     eth: {
         amm_address: '0x1681195c176239ac5e72d9aebacf5b2492e0c4ee',
@@ -64,7 +59,6 @@ export const LLAMMAS: IDict<ILlamma> = lowerCaseLlammasAddresses({
         max_bands: 50,
         default_bands: 10,
         A: 100,
-        monetary_policy_abi: MonetaryPolicy2ABI,
     },
     sfrxeth2: {
         amm_address: '0xfa96ad0a9e64261db86950e2da362f5572c5c6fd',
@@ -79,7 +73,6 @@ export const LLAMMAS: IDict<ILlamma> = lowerCaseLlammasAddresses({
         max_bands: 50,
         default_bands: 10,
         A: 100,
-        monetary_policy_abi: MonetaryPolicy2ABI,
     },
     tbtc: {
         amm_address: '0xf9bd9da2427a50908c4c6d1599d8e62837c2bcb0',
@@ -94,6 +87,5 @@ export const LLAMMAS: IDict<ILlamma> = lowerCaseLlammasAddresses({
         max_bands: 50,
         default_bands: 10,
         A: 100,
-        monetary_policy_abi: MonetaryPolicy2ABI,
     },
 });

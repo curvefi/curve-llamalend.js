@@ -5,8 +5,8 @@ import llammaABI from "../../constants/abis/crvUSD/llamma.json" with {type: 'jso
 import controllerABI from "../../constants/abis/crvUSD/controller.json" with {type: 'json'};
 import controllerV2ABI from "../../constants/abis/crvUSD/controller_v2.json";
 import FactoryABI from "../../constants/abis/crvUSD/Factory.json" with {type: 'json'};
-import MonetaryPolicy2ABI from "../../constants/abis/crvUSD/MonetaryPolicy2.json" with {type: 'json'};
 import {extractDecimals} from "../../constants/utils.js";
+import {resolveMonetaryPolicyAbi} from "../monetaryPolicyAbi.js";
 
 export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void> => {
     if (llamalend.chainId !== 1) return;
@@ -36,7 +36,7 @@ export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void>
         const collateral_symbol = market.collateral_token.symbol;
         const monetary_policy_address = market.monetary_policy_address.toLowerCase();
 
-        llamalend.setContract(monetary_policy_address, MonetaryPolicy2ABI);
+        llamalend.setContract(monetary_policy_address, resolveMonetaryPolicyAbi(monetary_policy_address));
 
         const _llammaId = is_eth ? "eth" : collateral_symbol.toLowerCase();
         let llammaId = _llammaId;
@@ -56,7 +56,6 @@ export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void>
             max_bands: 50,
             default_bands: 10,
             A: market.amm_a,
-            monetary_policy_abi: MonetaryPolicy2ABI,
             is_deleverage_supported: true,
             index: N1 + i,
         };
@@ -84,11 +83,11 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
         );
     }
 
-    const res: string[] = (await llamalend.multicallProvider.all(calls) as string[]).map((c) => c.toLowerCase());
+    const coreAddresses: string[] = (await llamalend.multicallProvider.all(calls) as string[]).map((c) => c.toLowerCase());
 
-    const collaterals = res.filter((a, i) => i % 3 == 0) as string[];
-    const amms = res.filter((a, i) => i % 3 == 1) as string[];
-    const controllers = res.filter((a, i) => i % 3 == 2) as string[];
+    const collaterals = coreAddresses.filter((a, i) => i % 3 == 0) as string[];
+    const amms = coreAddresses.filter((a, i) => i % 3 == 1) as string[];
+    const controllers = coreAddresses.filter((a, i) => i % 3 == 2) as string[];
 
     if (collaterals.length === 0) return;
 
@@ -119,7 +118,7 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
     const AParams = (flat.slice(2 * N, 3 * N) as unknown[]).map((x) => Number(x));
     const monetaryPolicies = (flat.slice(3 * N, 4 * N) as string[]).map((a) => a.toLowerCase());
 
-    for (const mp of monetaryPolicies) llamalend.setContract(mp, MonetaryPolicy2ABI);
+    for (const mp of monetaryPolicies) llamalend.setContract(mp, resolveMonetaryPolicyAbi(mp));
 
     for (let i = 0; i < collaterals.length; i++) {
         const is_eth = collaterals[i] === llamalend.constants.WETH;
@@ -144,7 +143,6 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
             max_bands: 50,
             default_bands: 10,
             A: AParams[i],
-            monetary_policy_abi: MonetaryPolicy2ABI,
             is_deleverage_supported: true,
             index: N1 + i,
         };

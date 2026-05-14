@@ -45,6 +45,7 @@ import {
     COINS_SONIC,
 } from "./constants/coins.js";
 import {LLAMMAS} from "./constants/llammas.js";
+import {resolveMonetaryPolicyAbi} from "./mintMarkets/monetaryPolicyAbi.js";
 import {L2Networks} from "./constants/L2Networks.js";
 import {createCall, handleMultiCallResponse} from "./utils.js";
 import {_getMarketsData, _getCrvUsdMarketsData} from "./external-api.js";
@@ -414,7 +415,7 @@ class Llamalend implements ILlamalend {
         }
 
         for (const llamma of llammas) {
-            this.setContract(llamma.monetary_policy_address, llamma.monetary_policy_abi);
+            this.setContract(llamma.monetary_policy_address, resolveMonetaryPolicyAbi(llamma.monetary_policy_address));
             if (llamma.collateral_address === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") {
                 this.setContract(this.constants.WETH, ERC20ABI);
             } else {
