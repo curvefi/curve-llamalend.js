@@ -74,6 +74,7 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
 
     const N1 = Object.keys(llamalend.constants.LLAMMAS).length;
     const N2 = await factoryContract.n_collaterals(llamalend.constantOptions);
+
     let calls = [];
     for (let i = N1; i < N2; i++) {
         calls.push(
@@ -82,14 +83,22 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
             factoryMulticallContract.controllers(i)
         );
     }
+
     const res: string[] = (await llamalend.multicallProvider.all(calls) as string[]).map((c) => c.toLowerCase());
+
     const collaterals = res.filter((a, i) => i % 3 == 0) as string[];
     const amms = res.filter((a, i) => i % 3 == 1) as string[];
     const controllers = res.filter((a, i) => i % 3 == 2) as string[];
 
     if (collaterals.length === 0) return;
 
+    const N = collaterals.length;
+
     for (const collateral of collaterals) llamalend.setContract(collateral, ERC20ABI);
+    for (const amm of amms) llamalend.setContract(amm, llammaABI);
+    for (let i = 0; i < N; i++) {
+        llamalend.setContract(controllers[i], i >= N - 3 ? controllerV2ABI : controllerABI);
+    }
 
     calls = [];
     for (const collateral of collaterals) {
@@ -98,30 +107,24 @@ export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promis
             llamalend.contracts[collateral].multicallContract.decimals()
         );
     }
-    const collateralData = (await llamalend.multicallProvider.all(calls)).map((x) => {
+    for (const amm of amms) calls.push(llamalend.contracts[amm].multicallContract.A());
+    for (const controller of controllers) calls.push(llamalend.contracts[controller].multicallContract.monetary_policy());
+
+    const flat = await llamalend.multicallProvider.all(calls);
+
+    const collateralData = flat.slice(0, 2 * N).map((x) => {
         if (typeof x === "string") return x.toLowerCase();
         return x;
     });
+    const AParams = (flat.slice(2 * N, 3 * N) as unknown[]).map((x) => Number(x));
+    const monetaryPolicies = (flat.slice(3 * N, 4 * N) as string[]).map((a) => a.toLowerCase());
 
-    calls = [];
-    for (const amm of amms) {
-        llamalend.setContract(amm, llammaABI);
-        calls.push(llamalend.contracts[amm].multicallContract.A());
-    }
-    const AParams = (await llamalend.multicallProvider.all(calls)).map((x) => Number(x));
+    for (const mp of monetaryPolicies) llamalend.setContract(mp, MonetaryPolicy2ABI);
 
     for (let i = 0; i < collaterals.length; i++) {
         const is_eth = collaterals[i] === llamalend.constants.WETH;
         const [collateral_symbol, collateral_decimals] = collateralData.splice(0, 2) as [string, number];
-
-        if (i >= collaterals.length - 3) {
-            llamalend.setContract(controllers[i], controllerV2ABI);
-        } else {
-            llamalend.setContract(controllers[i], controllerABI);
-        }
-
-        const monetary_policy_address = (await llamalend.contracts[controllers[i]].contract.monetary_policy(llamalend.constantOptions)).toLowerCase();
-        llamalend.setContract(monetary_policy_address, MonetaryPolicy2ABI);
+        const monetary_policy_address = monetaryPolicies[i];
 
         const _llammaId: string = is_eth ? "eth" : collateral_symbol.toLowerCase();
         let llammaId = _llammaId;

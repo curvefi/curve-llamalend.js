@@ -45,6 +45,8 @@ import {
     redeemEstimateGas,
     redeem,
 } from "./st-crvUSD.js";
+import {getMintMarketByData} from "./mintMarkets/mintMarketConstructor.js";
+import {getLendMarketByData} from "./lendMarkets/lendMarketConstructor.js";
 
 
 export function createLlamalend() {
@@ -73,6 +75,8 @@ export function createLlamalend() {
         // Market constructors
         getLendMarket: getLendMarket.bind(llamalend),
         getMintMarket: getMintMarket.bind(llamalend),
+        getLendMarketByData: getLendMarketByData.bind(llamalend),
+        getMintMarketByData: getMintMarketByData.bind(llamalend),
 
         // Utility functions
         totalSupply: totalSupply.bind(llamalend),

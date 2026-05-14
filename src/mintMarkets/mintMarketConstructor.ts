@@ -1,4 +1,5 @@
 import { MintMarketTemplate} from "./MintMarketTemplate.js";
+import type { ILlamma } from "../interfaces.js";
 import type { Llamalend } from "../llamalend.js";
 
 export const getMintMarket = function (this: Llamalend, mintMarketId: string): MintMarketTemplate {
@@ -8,4 +9,11 @@ export const getMintMarket = function (this: Llamalend, mintMarketId: string): M
         this.mintMarkets[mintMarketId] = new MintMarketTemplate(mintMarketId, llammaData, this)
     }
     return this.mintMarkets[mintMarketId]
+}
+
+export const getMintMarketByData = function (this: Llamalend, id: string, llammaData: ILlamma): MintMarketTemplate {
+    if (!(id in this.mintMarkets)) {
+        this.mintMarkets[id] = new MintMarketTemplate(id, llammaData, this);
+    }
+    return this.mintMarkets[id];
 }
