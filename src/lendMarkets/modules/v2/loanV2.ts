@@ -64,7 +64,7 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
 
     public async repayHealth({ debt, shrink = false, full = true, address = "" }: { debt: number | string; shrink?: boolean; full?: boolean; address?: string }): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
-        const _debt = parseUnits(debt);
+        const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _health = await contract.repay_health_preview(0, _debt, address, shrink, full, this.llamalend.constantOptions) as bigint;
