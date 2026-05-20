@@ -431,7 +431,7 @@ export abstract class LoanBaseModule {
         const { debt: currentDebt } = await this.market.userPosition.userState(address);
         if (Number(currentDebt) === 0) throw Error(`Loan for ${address} does not exist`);
 
-        const _debt = parseUnits(debt);
+        const _debt = parseUnits(debt, this.market.borrowed_token.decimals);
         const [, n1] = await this.market.userPosition.userBands(address);
         const { borrowed } = await this.market.userPosition.userState(address);
         const n = (BN(borrowed).gt(0)) ? MAX_ACTIVE_BAND : n1 - 1;
