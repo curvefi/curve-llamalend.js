@@ -486,11 +486,50 @@ export const calculateFutureLeverage = (
 
 export const buildCalldataForLeverageZapV2 = (routerAddress: string, exchangeCalldata: string): string => {
     const cleanCalldata = exchangeCalldata.startsWith('0x') ? exchangeCalldata.slice(2) : exchangeCalldata;
-    
+
     const abiCoder = ethers.AbiCoder.defaultAbiCoder();
     return abiCoder.encode(
         ['address', 'bytes'],
         [routerAddress, '0x' + cleanCalldata]
+    );
+};
+
+//   - create_loan / borrow_more: (uint256 controllerId, uint256 userBorrowed, uint256 minRecv, address router, bytes exchangeCalldata)
+//   - repay:                     (uint256 controllerId, uint256 userCollateral, uint256 userBorrowed, uint256 minRecv, address router, bytes exchangeCalldata)
+export type LeverageZapV3CalldataParams =
+    | {
+        op: 'create_loan' | 'borrow_more';
+        controllerId: number | string | bigint;
+        userBorrowed: bigint;
+        minRecv: bigint;
+        router: string;
+        exchangeCalldata: string;
+    }
+    | {
+        op: 'repay';
+        controllerId: number | string | bigint;
+        userCollateral: bigint;
+        userBorrowed: bigint;
+        minRecv: bigint;
+        router: string;
+        exchangeCalldata: string;
+    };
+
+export const buildCalldataForLeverageZapV3 = (params: LeverageZapV3CalldataParams): string => {
+    const cleanCalldata = params.exchangeCalldata.startsWith('0x') ? params.exchangeCalldata.slice(2) : params.exchangeCalldata;
+    const exchangeBytes = '0x' + cleanCalldata;
+    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+
+    if (params.op === 'repay') {
+        return abiCoder.encode(
+            ['uint256', 'uint256', 'uint256', 'uint256', 'address', 'bytes'],
+            [BigInt(params.controllerId), params.userCollateral, params.userBorrowed, params.minRecv, params.router, exchangeBytes]
+        );
+    }
+
+    return abiCoder.encode(
+        ['uint256', 'uint256', 'uint256', 'address', 'bytes'],
+        [BigInt(params.controllerId), params.userBorrowed, params.minRecv, params.router, exchangeBytes]
     );
 };
 
