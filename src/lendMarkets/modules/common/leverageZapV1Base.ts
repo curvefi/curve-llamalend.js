@@ -37,7 +37,7 @@ export class LeverageZapV1BaseModule {
     // ============ CREATE LOAN METHODS ============
 
     public hasLeverage = (): boolean => {
-        return this.llamalend.constants.ALIASES.leverage_zap !== this.llamalend.constants.ZERO_ADDRESS &&
+        return this.llamalend.constants.ALIASES.leverage_zap_deprecated !== this.llamalend.constants.ZERO_ADDRESS &&
             this._getMarketId() >= Number(this.llamalend.constants.ALIASES["leverage_markets_start_id"]);
     }
 
@@ -93,7 +93,7 @@ export class LeverageZapV1BaseModule {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].contract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_deprecated].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.market.collateral_token.decimals);
@@ -141,7 +141,7 @@ export class LeverageZapV1BaseModule {
         }>> => {
         this._checkLeverageZap();
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
-        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].multicallContract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_deprecated].multicallContract;
 
         const oraclePriceBand = await this.market.prices.oraclePriceBand();
         const pAvgApproxBN = BN(await this.market.prices.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
@@ -427,7 +427,7 @@ export class LeverageZapV1BaseModule {
         const collateralAllowance = await hasAllowance.call(this.llamalend,
             [this.market.collateral_token.address], [userCollateral], this.llamalend.signerAddress, this.market.addresses.controller);
         const borrowedAllowance = await hasAllowance.call(this.llamalend,
-            [this.market.borrowed_token.address], [userBorrowed], this.llamalend.signerAddress, this.llamalend.constants.ALIASES.leverage_zap);
+            [this.market.borrowed_token.address], [userBorrowed], this.llamalend.signerAddress, this.llamalend.constants.ALIASES.leverage_zap_deprecated);
 
         return collateralAllowance && borrowedAllowance
     }
@@ -437,7 +437,7 @@ export class LeverageZapV1BaseModule {
         const collateralGas = await ensureAllowanceEstimateGas.call(this.llamalend,
             [this.market.collateral_token.address], [userCollateral], this.market.addresses.controller);
         const borrowedGas = await ensureAllowanceEstimateGas.call(this.llamalend,
-            [this.market.borrowed_token.address], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap);
+            [this.market.borrowed_token.address], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap_deprecated);
 
         if(Array.isArray(collateralGas) && Array.isArray(borrowedGas)) {
             return [collateralGas[0] + borrowedGas[0], collateralGas[1] + borrowedGas[1]]
@@ -451,7 +451,7 @@ export class LeverageZapV1BaseModule {
         const collateralApproveTx = await ensureAllowance.call(this.llamalend,
             [this.market.collateral_token.address], [userCollateral], this.market.addresses.controller);
         const borrowedApproveTx = await ensureAllowance.call(this.llamalend,
-            [this.market.borrowed_token.address], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap);
+            [this.market.borrowed_token.address], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap_deprecated);
 
         return [...collateralApproveTx, ...borrowedApproveTx]
     }
@@ -486,7 +486,7 @@ export class LeverageZapV1BaseModule {
             _userCollateral,
             _debt,
             range,
-            this.llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated,
             [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
             calldata,
             { ...this.llamalend.constantOptions }
@@ -499,7 +499,7 @@ export class LeverageZapV1BaseModule {
             _userCollateral,
             _debt,
             range,
-            this.llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated,
             [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
             calldata,
             { ...this.llamalend.options, gasLimit }
@@ -547,7 +547,7 @@ export class LeverageZapV1BaseModule {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].contract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_deprecated].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.market.collateral_token.decimals);
@@ -656,7 +656,7 @@ export class LeverageZapV1BaseModule {
         const gas = await contract.borrow_more_extended.estimateGas(
             _userCollateral,
             _debt,
-            this.llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated,
             [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
             calldata,
             { ...this.llamalend.constantOptions }
@@ -669,7 +669,7 @@ export class LeverageZapV1BaseModule {
         return (await contract.borrow_more_extended(
             _userCollateral,
             _debt,
-            this.llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated,
             [0, parseUnits(this._getMarketId(), 0), _userBorrowed],
             calldata,
             { ...this.llamalend.options, gasLimit }
@@ -846,7 +846,7 @@ export class LeverageZapV1BaseModule {
             [this.market.collateral_token.address, this.market.borrowed_token.address],
             [userCollateral, userBorrowed],
             this.llamalend.signerAddress,
-            this.llamalend.constants.ALIASES.leverage_zap
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated
         );
     }
 
@@ -855,7 +855,7 @@ export class LeverageZapV1BaseModule {
         return await ensureAllowanceEstimateGas.call(this.llamalend,
             [this.market.collateral_token.address, this.market.borrowed_token.address],
             [userCollateral, userBorrowed],
-            this.llamalend.constants.ALIASES.leverage_zap
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated
         );
     }
 
@@ -864,7 +864,7 @@ export class LeverageZapV1BaseModule {
         return await ensureAllowance.call(this.llamalend,
             [this.market.collateral_token.address, this.market.borrowed_token.address],
             [userCollateral, userBorrowed],
-            this.llamalend.constants.ALIASES.leverage_zap
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated
         );
     }
 
@@ -896,7 +896,7 @@ export class LeverageZapV1BaseModule {
 
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = await contract.repay_extended.estimateGas(
-            this.llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated,
             [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed],
             calldata
         );
@@ -906,7 +906,7 @@ export class LeverageZapV1BaseModule {
         const gasLimit = _mulBy1_3(DIGas(gas));
 
         return (await contract.repay_extended(
-            this.llamalend.constants.ALIASES.leverage_zap,
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated,
             [0, parseUnits(this._getMarketId(), 0), _userCollateral, _userBorrowed],
             calldata,
             { ...this.llamalend.options, gasLimit }
