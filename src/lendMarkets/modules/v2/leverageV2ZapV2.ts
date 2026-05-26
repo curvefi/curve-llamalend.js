@@ -6,12 +6,12 @@ import {
     _mulBy1_3,
     DIGas,
     MAX_ACTIVE_BAND,
-    buildCalldataForLeverageZapV3,
+    buildCalldataForLeverageZapV2Llv2,
 } from "../../../utils";
 
 export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
     protected override _getLeverageZapAddress(): string {
-        return this.llamalend.constants.ALIASES.leverage_zap_v3;
+        return this.llamalend.constants.ALIASES.leverage_zap_v2_llv2;
     }
 
     protected override async _getMaxAdditionalBorrowable(
@@ -77,7 +77,7 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _for = _getAddress.call(this.llamalend, '');
         const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV3({
+        const zapCalldata = buildCalldataForLeverageZapV2Llv2({
             op: 'create_loan',
             controllerId: this._getMarketId(),
             userBorrowed: _userBorrowed,
@@ -122,7 +122,7 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _for = _getAddress.call(this.llamalend, '');
         const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV3({
+        const zapCalldata = buildCalldataForLeverageZapV2Llv2({
             op: 'borrow_more',
             controllerId: this._getMarketId(),
             userBorrowed: _userBorrowed,
@@ -164,7 +164,7 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _for = _getAddress.call(this.llamalend, '');
         const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV3({
+        const zapCalldata = buildCalldataForLeverageZapV2Llv2({
             op: 'repay',
             controllerId: this._getMarketId(),
             userCollateral: _userCollateral,

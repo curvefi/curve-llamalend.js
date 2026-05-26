@@ -496,26 +496,17 @@ export const buildCalldataForLeverageZapV2 = (routerAddress: string, exchangeCal
 
 //   - create_loan / borrow_more: (uint256 controllerId, uint256 userBorrowed, uint256 minRecv, address router, bytes exchangeCalldata)
 //   - repay:                     (uint256 controllerId, uint256 userCollateral, uint256 userBorrowed, uint256 minRecv, address router, bytes exchangeCalldata)
-export type LeverageZapV3CalldataParams =
-    | {
-        op: 'create_loan' | 'borrow_more';
-        controllerId: number | string | bigint;
-        userBorrowed: bigint;
-        minRecv: bigint;
-        router: string;
-        exchangeCalldata: string;
-    }
-    | {
-        op: 'repay';
-        controllerId: number | string | bigint;
-        userCollateral: bigint;
-        userBorrowed: bigint;
-        minRecv: bigint;
-        router: string;
-        exchangeCalldata: string;
-    };
+export type LeverageZapV2LLv2CalldataParams = {
+    controllerId: number | string | bigint;
+    minRecv: bigint;
+    router: string;
+    exchangeCalldata: string;
+} & (
+    { op: 'create_loan' | 'borrow_more'; userBorrowed: bigint }
+    | {op: 'repay'; userCollateral: bigint; userBorrowed: bigint }
+    );
 
-export const buildCalldataForLeverageZapV3 = (params: LeverageZapV3CalldataParams): string => {
+export const buildCalldataForLeverageZapV2Llv2 = (params: LeverageZapV2LLv2CalldataParams): string => {
     const cleanCalldata = params.exchangeCalldata.startsWith('0x') ? params.exchangeCalldata.slice(2) : params.exchangeCalldata;
     const exchangeBytes = '0x' + cleanCalldata;
     const abiCoder = ethers.AbiCoder.defaultAbiCoder();
