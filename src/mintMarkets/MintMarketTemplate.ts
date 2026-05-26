@@ -1136,6 +1136,7 @@ export class MintMarketTemplate {
     // ---------------- REPAY ----------------
 
     private async _repayBands(debt: number | string, address: string): Promise<[bigint, bigint]> {
+        address = _getAddress.call(this.llamalend, address);
         const { _collateral: _currentCollateral, _debt: _currentDebt, _stablecoin: _currentStablecoin } = await this._userState(address);
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${address} does not exist`);
 
