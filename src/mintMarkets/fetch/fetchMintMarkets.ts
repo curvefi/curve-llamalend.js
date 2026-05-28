@@ -3,7 +3,7 @@ import { _getCrvUsdMarketsData } from "../../external-api.js";
 import ERC20ABI from '../../constants/abis/ERC20.json' with {type: 'json'};
 import llammaABI from "../../constants/abis/crvUSD/llamma.json" with {type: 'json'};
 import controllerABI from "../../constants/abis/crvUSD/controller.json" with {type: 'json'};
-import controllerV2ABI from "../../constants/abis/crvUSD/controller_v2.json";
+import controllerV2ABI from "../../constants/abis/crvUSD/controller_v2.json" with {type: 'json'};
 import FactoryABI from "../../constants/abis/crvUSD/Factory.json" with {type: 'json'};
 import {extractDecimals} from "../../constants/utils.js";
 import {handleMultiCallResponse} from "../../utils.js";
