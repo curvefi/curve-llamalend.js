@@ -10,7 +10,7 @@ export interface IStatsV1 {
         A: string,
     }>,
     rates: (isGetter?: boolean, useAPI?: boolean) => Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}>,
-    futureRates: (dReserves: TAmount, dDebt: TAmount) => Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}>,
+    futureRates: (dReserves: TAmount, dDebt: TAmount, useAPI?: boolean) => Promise<{borrowApr: string, lendApr: string, borrowApy: string, lendApy: string}>,
     balances: () => Promise<[string, string]>,
     bandsInfo: () => Promise<{ activeBand: number, maxBand: number, minBand: number, liquidationBand: number | null }>
     bandBalances:(n: number) => Promise<{ borrowed: string, collateral: string }>,
