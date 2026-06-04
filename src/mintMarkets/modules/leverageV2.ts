@@ -52,7 +52,7 @@ export class LeverageV2Module {
 
 
     public hasLeverage = (): boolean => {
-        return this.llamalend.constants.ALIASES.leverage_zap !== this.llamalend.constants.ZERO_ADDRESS && this.market.isDeleverageSupported
+        return this.llamalend.constants.ALIASES.leverage_zap_deprecated !== this.llamalend.constants.ZERO_ADDRESS && this.market.isDeleverageSupported
     }
 
     public _checkLeverageZap(): void {
@@ -108,7 +108,7 @@ export class LeverageV2Module {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].contract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_deprecated].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.market.coinDecimals[1]);
@@ -155,7 +155,7 @@ export class LeverageV2Module {
         }>> => {
         this._checkLeverageZap();
         const _userCollateral = parseUnits(userCollateral, this.market.coinDecimals[1]);
-        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].multicallContract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_deprecated].multicallContract;
 
         const oraclePriceBand = await this.market.oraclePriceBand();
         const pAvgApproxBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
@@ -563,7 +563,7 @@ export class LeverageV2Module {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap].contract;
+        const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.leverage_zap_deprecated].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.market.coinDecimals[1]);
