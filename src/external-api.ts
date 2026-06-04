@@ -207,7 +207,7 @@ export async function _getQuoteOdos(this: Llamalend, fromToken: string, toToken:
 
     const url = `https://prices.curve.finance/odos/v3/quote?chain_id=${this.chainId}&from_address=${ethers.getAddress(fromToken)}` +
         `&to_address=${ethers.getAddress(toToken)}&amount=${_amount.toString()}&slippage=${slippage}&pathVizImage=${pathVizImage}` +
-        `&caller_address=${ethers.getAddress(this.constants.ALIASES.leverage_zap)}&blacklist=${ethers.getAddress(blacklist)}`;
+        `&caller_address=${ethers.getAddress(this.constants.ALIASES.leverage_zap_deprecated)}&blacklist=${ethers.getAddress(blacklist)}`;
 
     const response = await fetch(url, {  headers: {"accept": "application/json"} });
     if (response.status !== 200) {
@@ -239,7 +239,7 @@ const _assembleTxOdosMemoized = memoize(
 );
 
 export async function _assembleTxOdos(this: Llamalend, pathId: string): Promise<string> {
-    return _assembleTxOdosMemoized(this.constants.ALIASES.leverage_zap, pathId);
+    return _assembleTxOdosMemoized(this.constants.ALIASES.leverage_zap_deprecated, pathId);
 }
 
 async function fetchJson(url: string): Promise<any> {
