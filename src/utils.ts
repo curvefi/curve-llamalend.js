@@ -510,7 +510,6 @@ export const buildCalldataForLeverageZapV2Llv2 = (params: LeverageZapV2LLv2Calld
     const cleanCalldata = params.exchangeCalldata.startsWith('0x') ? params.exchangeCalldata.slice(2) : params.exchangeCalldata;
     const exchangeBytes = '0x' + cleanCalldata;
     const abiCoder = ethers.AbiCoder.defaultAbiCoder();
-    console.log(params);
 
     if (params.op === 'repay') {
         return abiCoder.encode(
