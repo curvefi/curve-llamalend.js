@@ -29,14 +29,14 @@ export const ALIASES_ARBITRUM = lowerCaseValues({
 export const ALIASES_OPTIMISM = lowerCaseValues({
     "crv": "0x0994206dfE8De6Ec6920FF4D779B0d950605Fb53",
     "one_way_factory": "0x5EA8f3D674C70b020586933A0a5b250734798BeF",
-    "one_way_factory_v2": "0xb0cEE7943A9B840ca2670d4B9f705B9b578ed1af",
+    "one_way_factory_v2": "0x5F94073E3f51c1FFf92ffc6b4B06b7Af193B3640",
     "gauge_controller": "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
     "gauge_factory_old": "0xabC000d88f23Bb45525E447528DBF656A9D55bf5",
     "gauge_factory": "0x871fBD4E01012e2E8457346059e8C189d664DbA4",
     "old_gauge_end_index": "4",
     "leverage_zap_deprecated": "0xBFab8ebc836E1c4D81837798FC076D219C9a1855", // odos v3
     "leverage_zap_v2": "0xE94d1fBF399c27CCBf0185b2Dd11Bf0FA0f0D95C",
-    "leverage_zap_v2_llv2": "0x29837e7a58436D91cC25Cf487dBed0EBF3865c00",
+    "leverage_zap_v2_llv2": "0x4b10E1774521c077a2887806fa60C56CeFa94cCC",
     "leverage_markets_start_id": "0",
     "gas_oracle": '0xc0d3C0d3C0d3c0D3C0D3C0d3C0d3C0D3C0D3000f',
     "gas_oracle_blob": '0x420000000000000000000000000000000000000f',
