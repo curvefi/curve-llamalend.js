@@ -77,6 +77,11 @@ const versionModules: { v1: V1ModuleConstructors; v2: V2ModuleConstructors } = {
     },
 };
 
+const ZAP_ALIAS_BY_VERSION: Record<'v1' | 'v2', string> = {
+    v1: 'leverage_zap_v2',
+    v2: 'leverage_zap_v2_llv2',
+};
+
 export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
     private llamalend: Llamalend;
     id: string;
@@ -448,5 +453,9 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
 
     public getLlamalend(): Llamalend {
         return this.llamalend;
+    }
+
+    public getZapAddress(): string {
+        return this.llamalend.constants.ALIASES[ZAP_ALIAS_BY_VERSION[this.version]];
     }
 }
