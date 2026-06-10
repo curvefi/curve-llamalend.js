@@ -2013,4 +2013,8 @@ export class MintMarketTemplate {
     public getLlamalend(): Llamalend {
         return this.llamalend;
     }
+
+    public getZapAddress(): string {
+        return this.leverageZap;
+    }
 }
