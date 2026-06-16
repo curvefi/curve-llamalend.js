@@ -95,7 +95,7 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
     const collateral_tokens: string[] = [];
     const borrowed_tokens: string[] = [];
     const monetary_policies: string[] = [];
-    const gauges: string[] = [];
+    const gauges: string[] = new Array(Number(markets_count)).fill(llamalend.constants.ZERO_ADDRESS);
 
     for (let i = 0; i < markets_count; i++) {
         const marketData = res[i] as any;
@@ -107,7 +107,15 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
         borrowed_tokens.push(marketData[4].toLowerCase());
         monetary_policies.push(marketData[6].toLowerCase());
         names.push(''); // new factory does not give names, it's generated at the market creation level
-        gauges.push(llamalend.constants.ZERO_ADDRESS);
+    }
+
+    const gaugeFactoryAddress = llamalend.constants.ALIASES.gauge_factory;
+    if (llamalend.chainId !== 1 && gaugeFactoryAddress && gaugeFactoryAddress !== llamalend.constants.ZERO_ADDRESS) {
+        const gaugeFactory = llamalend.contracts[gaugeFactoryAddress];
+        const fetchedGauges = (await llamalend.multicallProvider.all(
+            vaults.map((vault: string) => createCall(gaugeFactory, "get_gauge_from_lp_token", [vault]))
+        ) as string[]).map((address) => address.toLowerCase());
+        fetchedGauges.forEach((gauge, i) => { gauges[i] = gauge; });
     }
 
     return {
