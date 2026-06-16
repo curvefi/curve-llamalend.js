@@ -112,10 +112,9 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
     const gaugeFactoryAddress = llamalend.constants.ALIASES.gauge_factory;
     if (llamalend.chainId !== 1 && gaugeFactoryAddress && gaugeFactoryAddress !== llamalend.constants.ZERO_ADDRESS) {
         const gaugeFactory = llamalend.contracts[gaugeFactoryAddress];
-        const fetchedGauges = (await llamalend.multicallProvider.all(
+        (await llamalend.multicallProvider.all(
             vaults.map((vault: string) => createCall(gaugeFactory, "get_gauge_from_lp_token", [vault]))
-        ) as string[]).map((address) => address.toLowerCase());
-        fetchedGauges.forEach((gauge, i) => { gauges[i] = gauge; });
+        ) as string[]).forEach((gauge, i) => { gauges[i] = gauge.toLowerCase(); });
     }
 
     return {
