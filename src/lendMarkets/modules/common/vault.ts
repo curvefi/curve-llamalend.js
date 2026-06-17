@@ -289,14 +289,15 @@ export class VaultModule {
     }
 
     public async vaultTotalLiquidity(useAPI = true): Promise<string> {
-        const { totalAssets } = await this.market.stats.capAndAvailable(true, useAPI);
+        const { totalAssets } = await this.market.stats.capAndAvailable(false, useAPI);
         const price = await _getUsdRate.call(this.llamalend, this.market.addresses.borrowed_token);
 
         return BN(totalAssets).times(price).toFixed(6)
     }
 
     private _calcCrvApr = async (futureWorkingSupplyBN: BigNumber | null = null): Promise<[baseApy: number, boostedApy: number]> => {
-        const totalLiquidityUSD = await this.vaultTotalLiquidity();
+        const totalLiquidityUSD = await this.vaultTotalLiquidity(false);
+        
         if (Number(totalLiquidityUSD) === 0) return [0, 0];
 
         let inflationRateBN, workingSupplyBN, totalSupplyBN;
