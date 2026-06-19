@@ -235,7 +235,7 @@ export const hasAllowance = async function (this: Llamalend, coins: string[], am
     return _allowance.map((a, i) => a >= _amounts[i]).reduce((a, b) => a && b);
 }
 
-export const _ensureAllowance = async function (this: Llamalend, coins: string[], _amounts: bigint[], spender: string, isMax = true): Promise<string[]> {
+export const _ensureAllowance = async function (this: Llamalend, coins: string[], _amounts: bigint[], spender: string, isMax = false): Promise<string[]> {
     const address = this.signerAddress;
     const _allowance: bigint[] = await _getAllowance.call(this, coins, address, spender);
 
@@ -254,7 +254,7 @@ export const _ensureAllowance = async function (this: Llamalend, coins: string[]
 }
 
 // coins can be either addresses or symbols
-export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<TGas> {
+export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = false): Promise<TGas> {
     const coinAddresses = _getCoinAddresses.call(this, coins);
     const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
@@ -274,7 +274,7 @@ export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins
 }
 
 // coins can be either addresses or symbols
-export const ensureAllowance = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<string[]> {
+export const ensureAllowance = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = false): Promise<string[]> {
     const coinAddresses = _getCoinAddresses.call(this, coins);
     const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
