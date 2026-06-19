@@ -37,18 +37,17 @@
     "chai": "^5.3.3",
     "eslint": "^9.38.0",
     "globals": "^16.4.0",
-    "mocha": "^11.7.5",
+    "mocha": "^11.7.6",
     "typescript": "^5.9.3",
     "vue-eslint-parser": "^10.2.0"
   },
   "overrides": {
-    "serialize-javascript": "^7.0.4",
-    "diff": "^8.0.3"
+    "serialize-javascript": "^7.0.4"
   },
   "dependencies": {
-    "@curvefi/ethcall": "6.0.16",
+    "@curvefi/ethcall": "6.0.20",
     "bignumber.js": "9.3.1",
-    "ethers": "6.15.0",
+    "ethers": "6.17.0",
     "memoizee": "0.4.17"
   }
 }
