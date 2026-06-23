@@ -80,7 +80,7 @@ export class LoanV1Module extends LoanBaseModule implements ILoanV1 {
         return formatUnits(_health * BigInt(100));
     }
 
-    public async tokensToShrink(dCollateral: number | string = 0, address = ""): Promise<string> {
+    public async tokensToShrink(): Promise<string> {
         throw Error("tokensToShrink is not supported for v1 markets");
     }
 
