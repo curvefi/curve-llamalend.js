@@ -80,6 +80,10 @@ export class LoanV1Module extends LoanBaseModule implements ILoanV1 {
         return formatUnits(_health * BigInt(100));
     }
 
+    public async tokensToShrink(dCollateral: number | string = 0, address = ""): Promise<string> {
+        throw Error("tokensToShrink is not supported for v1 markets");
+    }
+
     protected async _repayBands({ debt, address }: { debt: number | string, address: string, shrink?: boolean }): Promise<[bigint, bigint]> {
         const { _collateral: _currentCollateral, _borrowed, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt(address);
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${address} does not exist`);
