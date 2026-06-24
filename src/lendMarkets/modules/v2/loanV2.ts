@@ -43,6 +43,16 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         return formatUnits(_health * BigInt(100));
     }
 
+    public async tokensToShrink(dCollateral: number | string = 0, address = ""): Promise<string> {
+        address = _getAddress.call(this.llamalend, address);
+        const _dCollateral = parseUnits(dCollateral, this.market.collateral_token.decimals);
+
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
+        const _tokens = await contract.tokens_to_shrink(address, _dCollateral, this.llamalend.constantOptions) as bigint;
+
+        return formatUnits(_tokens, this.market.borrowed_token.decimals);
+    }
+
     public async maxRemovable(): Promise<string> {
         const address = _getAddress.call(this.llamalend, '');
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt();
