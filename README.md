@@ -1051,7 +1051,7 @@ Use `calcMinRecv(expected, slippage)` to compute the minimum acceptable amount:
 ```ts
 // quote.outAmount — the expected amount from your router (computed on your side)
 const minRecv = lendMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
-await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, range, minRecv, router, calldata });
+await lendMarket.leverageZapV2.createLoan({ userCollateral, debt, range, minRecv, router, calldata });
 ```
 
 
@@ -1089,7 +1089,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     // 7.4728229145282742179
     
     // Get maximum possible debt for given parameters
-    await lendMarket.leverageZapV2.createLoanMaxRecv({ userCollateral, userBorrowed, range, getExpected });
+    await lendMarket.leverageZapV2.createLoanMaxRecv({ userCollateral, range, getExpected });
     // {
     //     maxDebt: '26089.494406081862861214',
     //     maxTotalCollateral: '9.539182089833411347',
@@ -1103,7 +1103,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     // Get quote for swapping (debt + userBorrowed)!!!
     
     // Get expected collateral amount
-    await lendMarket.leverageZapV2.createLoanExpectedCollateral({ userCollateral, userBorrowed, debt, quote });
+    await lendMarket.leverageZapV2.createLoanExpectedCollateral({ userCollateral, debt, quote });
     // {
     //     totalCollateral: '1.946422996710829',
     //     userCollateral: '1.0',
@@ -1115,8 +1115,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     
     // NEW: Get all metrics in one call
     const metrics = await lendMarket.leverageZapV2.createLoanExpectedMetrics({
-        userCollateral, 
-        userBorrowed, 
+        userCollateral,
         debt, 
         range, 
         quote, 
@@ -1129,9 +1128,9 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     //     health: '195.8994783042570637'  // %
     // 
     
-    await lendMarket.leverageZapV2.createLoanIsApproved({ userCollateral, userBorrowed });
+    await lendMarket.leverageZapV2.createLoanIsApproved({ userCollateral });
     // false
-    await lendMarket.leverageZapV2.createLoanApprove({ userCollateral, userBorrowed });
+    await lendMarket.leverageZapV2.createLoanApprove({ userCollateral });
     // [
     //     '0xd5491d9f1e9d8ac84b03867494e35b25efad151c597d2fa4211d7bf5d540c98e',
     //     '0x93565f37ec5be902a824714a30bddc25cf9cd9ed39b4c0e8de61fab44af5bc8c'
@@ -1143,7 +1142,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     const minRecv = lendMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
 
     // Create loan, passing router address and calldata from router
-    await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, range, minRecv, router, calldata });
+    await lendMarket.leverageZapV2.createLoan({ userCollateral, debt, range, minRecv, router, calldata });
     // 0xeb1b7a92bcb02598f00dc8bbfe8fa3a554e7a2b1ca764e0ee45e2bf583edf731
 
     await lendMarket.wallet.balances();
@@ -1188,7 +1187,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     debt = 10000;
     
     // Get maximum possible debt for given parameters
-    await lendMarket.leverageZapV2.borrowMoreMaxRecv({ userCollateral, userBorrowed, getExpected });
+    await lendMarket.leverageZapV2.borrowMoreMaxRecv({ userCollateral, getExpected });
     // {
     //     maxDebt: '76182.8497941193262889',
     //     maxTotalCollateral: '26.639775583730298462',
@@ -1200,7 +1199,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     
     // Get quote for swapping (debt + userBorrowed)
     
-    await lendMarket.leverageZapV2.borrowMoreExpectedCollateral({ userCollateral, userBorrowed, dDebt: debt, quote });
+    await lendMarket.leverageZapV2.borrowMoreExpectedCollateral({ userCollateral, dDebt: debt, quote });
     // {
     //     totalCollateral: '5.783452104143246413',
     //     userCollateral: '2.0',
@@ -1211,8 +1210,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     
     // NEW: Get all metrics in one call
     const metricsBM = await lendMarket.leverageZapV2.borrowMoreExpectedMetrics({
-        userCollateral, 
-        userBorrowed, 
+        userCollateral,
         debt, 
         quote,
         healthIsFull: true  // true for full health, false for not full
@@ -1224,16 +1222,16 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     //     health: '91.6798951784708552'  // %
     // }
     
-    await lendMarket.leverageZapV2.borrowMoreIsApproved({ userCollateral, userBorrowed });
+    await lendMarket.leverageZapV2.borrowMoreIsApproved({ userCollateral });
     // true
-    await lendMarket.leverageZapV2.borrowMoreApprove({ userCollateral, userBorrowed });
+    await lendMarket.leverageZapV2.borrowMoreApprove({ userCollateral });
     // []
 
     // Calculate minRecv with slippage protection (see Security Improvements)
     const minRecvBM = lendMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
 
     // Execute borrowMore, passing router address and calldata from router
-    await lendMarket.leverageZapV2.borrowMore({ userCollateral, userBorrowed, debt, minRecv: minRecvBM, router, calldata });
+    await lendMarket.leverageZapV2.borrowMore({ userCollateral, debt, minRecv: minRecvBM, router, calldata });
     // 0x6357dd6ea7250d7adb2344cd9295f8255fd8fbbe85f00120fbcd1ebf139e057c
 
     await lendMarket.wallet.balances();
@@ -1282,7 +1280,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     
     // Get quote for swapping (stateCollateral + userCollateral)
     
-    await lendMarket.leverageZapV2.repayExpectedBorrowed({ stateCollateral, userCollateral, userBorrowed, quote });
+    await lendMarket.leverageZapV2.repayExpectedBorrowed({ stateCollateral, userCollateral, quote });
     // {
     //     totalBorrowed: '10998.882838599741571472',
     //     borrowedFromStateCollateral: '6332.588559066494374648',
@@ -1291,16 +1289,15 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     //     avgPrice: '3166.29427953324743125312'
     // }
 
-    await lendMarket.leverageZapV2.repayIsFull({ stateCollateral, userCollateral, userBorrowed, quote });
+    await lendMarket.leverageZapV2.repayIsFull({ stateCollateral, userCollateral, quote });
     // false
-    await lendMarket.leverageZapV2.repayIsAvailable({ stateCollateral, userCollateral, userBorrowed, quote });
+    await lendMarket.leverageZapV2.repayIsAvailable({ stateCollateral, userCollateral, quote });
     // true
     
     // NEW: Get all metrics in one call
     const metricsRepay = await lendMarket.leverageZapV2.repayExpectedMetrics({
         stateCollateral, 
-        userCollateral, 
-        userBorrowed, 
+        userCollateral,
         healthIsFull: true,  // true for full health, false for not full
         quote,
         address: llamalend.signerAddress
@@ -1312,16 +1309,16 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     //     health: '1699.6097751079226865'  // %
     // }
     
-    await lendMarket.leverageZapV2.repayIsApproved({ userCollateral, userBorrowed });
+    await lendMarket.leverageZapV2.repayIsApproved({ userCollateral });
     // false
-    await lendMarket.leverageZapV2.repayApprove({ userCollateral, userBorrowed });
+    await lendMarket.leverageZapV2.repayApprove({ userCollateral });
     // ['0xd8a8d3b3f67395e1a4f4d4f95b041edcaf1c9f7bab5eb8a8a767467678295498']
 
     // Calculate minRecv with slippage protection (see Security Improvements)
     const minRecvRepay = lendMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
 
     // Execute repay, passing router address and calldata from router
-    await lendMarket.leverageZapV2.repay({ stateCollateral, userCollateral, userBorrowed, minRecv: minRecvRepay, router, calldata });
+    await lendMarket.leverageZapV2.repay({ stateCollateral, userCollateral, minRecv: minRecvRepay, router, calldata });
     // 0xe48a97fef1c54180a2c7d104d210a95ac1a516fdd22109682179f1582da23a82
 
     await lendMarket.wallet.balances();
@@ -1361,7 +1358,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     const debt = 2000;
     
     // Get maximum values for all possible ranges
-    await lendMarket.leverageZapV2.createLoanMaxRecvAllRanges({ userCollateral, userBorrowed, getExpected });
+    await lendMarket.leverageZapV2.createLoanMaxRecvAllRanges({ userCollateral, getExpected });
     // {
     //     '4': {
     //         maxDebt: '37916.338071504823875251',
@@ -1414,7 +1411,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     
     // Get quote for specific debt + userBorrowed
     // and provide getExpected callback
-    await lendMarket.leverageZapV2.createLoanBandsAllRanges({ userCollateral, userBorrowed, debt, getExpected, quote });
+    await lendMarket.leverageZapV2.createLoanBandsAllRanges({ userCollateral, debt, getExpected, quote });
     // {
     //     '4': [ 73, 70 ],
     //     '5': [ 73, 69 ],
@@ -1426,7 +1423,7 @@ await lendMarket.leverageZapV2.createLoan({ userCollateral, userBorrowed, debt, 
     //     '50': [ 97, 48 ]
     // }
 
-    await lendMarket.leverageZapV2.createLoanPricesAllRanges({ userCollateral, userBorrowed, debt, getExpected, quote });
+    await lendMarket.leverageZapV2.createLoanPricesAllRanges({ userCollateral, debt, getExpected, quote });
     // {
     //     '4': [ '1073.323292757532604807', '1136.910693647788699808' ],
     //     '5': [ '1073.323292757532604807', '1153.387660222394333133' ],
