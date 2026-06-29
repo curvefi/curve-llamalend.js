@@ -484,43 +484,21 @@ export const calculateFutureLeverage = (
     }
 };
 
-export const buildCalldataForLeverageZapV2 = (routerAddress: string, exchangeCalldata: string): string => {
-    const cleanCalldata = exchangeCalldata.startsWith('0x') ? exchangeCalldata.slice(2) : exchangeCalldata;
-
-    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
-    return abiCoder.encode(
-        ['address', 'bytes'],
-        [routerAddress, '0x' + cleanCalldata]
-    );
-};
-
-//   - create_loan / borrow_more: (uint256 controllerId, uint256 userBorrowed, uint256 minRecv, address router, bytes exchangeCalldata)
-//   - repay:                     (uint256 controllerId, uint256 userCollateral, uint256 userBorrowed, uint256 minRecv, address router, bytes exchangeCalldata)
 export type LeverageZapV2LLv2CalldataParams = {
     controllerId: number | string | bigint;
-    minRecv: bigint;
+    _minRecv: bigint;
     router: string;
     exchangeCalldata: string;
-} & (
-    { op: 'create_loan' | 'borrow_more'; userBorrowed: bigint }
-    | {op: 'repay'; userCollateral: bigint; userBorrowed: bigint }
-    );
+}
 
-export const buildCalldataForLeverageZapV2Llv2 = (params: LeverageZapV2LLv2CalldataParams): string => {
+export const buildCalldataForLeverageZapV2 = (params: LeverageZapV2LLv2CalldataParams): string => {
     const cleanCalldata = params.exchangeCalldata.startsWith('0x') ? params.exchangeCalldata.slice(2) : params.exchangeCalldata;
     const exchangeBytes = '0x' + cleanCalldata;
     const abiCoder = ethers.AbiCoder.defaultAbiCoder();
 
-    if (params.op === 'repay') {
-        return abiCoder.encode(
-            ['uint256', 'uint256', 'uint256', 'uint256', 'address', 'bytes'],
-            [BigInt(params.controllerId), params.userCollateral, params.userBorrowed, params.minRecv, params.router, exchangeBytes]
-        );
-    }
-
     return abiCoder.encode(
-        ['uint256', 'uint256', 'uint256', 'address', 'bytes'],
-        [BigInt(params.controllerId), params.userBorrowed, params.minRecv, params.router, exchangeBytes]
+        ['uint256', 'uint256', 'address', 'bytes'],
+        [BigInt(params.controllerId), params._minRecv, params.router, exchangeBytes]
     );
 };
 

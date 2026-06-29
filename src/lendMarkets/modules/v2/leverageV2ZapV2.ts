@@ -6,7 +6,7 @@ import {
     _mulBy1_3,
     DIGas,
     MAX_ACTIVE_BAND,
-    buildCalldataForLeverageZapV2Llv2,
+    buildCalldataForLeverageZapV2,
 } from "../../../utils";
 
 export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
@@ -66,7 +66,6 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
 
     protected override async _createLoanContractCall(
         _userCollateral: bigint,
-        _userBorrowed: bigint,
         _debt: bigint,
         _minRecv: bigint,
         range: number,
@@ -77,11 +76,9 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _for = _getAddress.call(this.llamalend, '');
         const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV2Llv2({
-            op: 'create_loan',
+        const zapCalldata = buildCalldataForLeverageZapV2({
             controllerId: this._getMarketId(),
-            userBorrowed: _userBorrowed,
-            minRecv: _minRecv,
+            _minRecv,
             router,
             exchangeCalldata,
         });
@@ -112,7 +109,6 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
 
     protected override async _borrowMoreContractCall(
         _userCollateral: bigint,
-        _userBorrowed: bigint,
         _debt: bigint,
         _minRecv: bigint,
         router: string,
@@ -122,11 +118,9 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _for = _getAddress.call(this.llamalend, '');
         const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV2Llv2({
-            op: 'borrow_more',
+        const zapCalldata = buildCalldataForLeverageZapV2({
             controllerId: this._getMarketId(),
-            userBorrowed: _userBorrowed,
-            minRecv: _minRecv,
+            _minRecv,
             router,
             exchangeCalldata,
         });
@@ -155,7 +149,6 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
 
     protected override async _repayContractCall(
         _userCollateral: bigint,
-        _userBorrowed: bigint,
         _minRecv: bigint,
         router: string,
         exchangeCalldata: string,
@@ -164,12 +157,9 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const _for = _getAddress.call(this.llamalend, '');
         const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV2Llv2({
-            op: 'repay',
+        const zapCalldata = buildCalldataForLeverageZapV2({
             controllerId: this._getMarketId(),
-            userCollateral: _userCollateral,
-            userBorrowed: _userBorrowed,
-            minRecv: _minRecv,
+            _minRecv,
             router,
             exchangeCalldata,
         });
