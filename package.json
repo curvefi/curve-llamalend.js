@@ -48,7 +48,7 @@
   "dependencies": {
     "@curvefi/ethcall": "6.0.16",
     "bignumber.js": "9.3.1",
-    "ethers": "6.15.0",
+    "ethers": "6.17.0",
     "memoizee": "0.4.17"
   }
 }
