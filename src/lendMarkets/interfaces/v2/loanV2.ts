@@ -30,6 +30,8 @@ export interface ILoanV2 {
     addCollateral: (collateral: TAmount, address?: string) => Promise<string>;
     addCollateralFutureLeverage: (collateral: TAmount, userAddress?: string) => Promise<string>;
 
+    tokensToShrink: (dCollateral?: TAmount, address?: string) => Promise<string>;
+
     maxRemovable: () => Promise<string>;
     removeCollateralBands: (collateral: TAmount) => Promise<[number, number]>;
     removeCollateralPrices: (collateral: TAmount) => Promise<string[]>;
