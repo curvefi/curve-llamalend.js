@@ -36,7 +36,7 @@ export const ALIASES_OPTIMISM = lowerCaseValues({
     "old_gauge_end_index": "4",
     "leverage_zap_deprecated": "0xBFab8ebc836E1c4D81837798FC076D219C9a1855", // odos v3
     "leverage_zap_v2": "0x56C526b0159a258887e0d79ec3a80dfb940d0cD7",
-    "leverage_zap_v2_llv2": "0x0000000000000000000000000000000000000000",
+    "leverage_zap_v2_llv2": "0xdbeBDaE6f2D47B553B984E4091693824cf38584a",
     "leverage_markets_start_id": "0",
     "gas_oracle": '0xc0d3C0d3C0d3c0D3C0D3C0d3C0d3C0D3C0D3000f',
     "gas_oracle_blob": '0x420000000000000000000000000000000000000f',
