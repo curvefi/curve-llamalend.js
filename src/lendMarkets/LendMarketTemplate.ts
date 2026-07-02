@@ -250,6 +250,7 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
             removeCollateralPrices: loan.removeCollateralPrices.bind(loan),
             removeCollateralHealth: loan.removeCollateralHealth.bind(loan),
             tokensToShrink: loan.tokensToShrink.bind(loan),
+            isRepayWithShrinkAvailable: loan.isRepayWithShrinkAvailable.bind(loan),
             removeCollateral: loan.removeCollateral.bind(loan),
             removeCollateralFutureLeverage: loan.removeCollateralFutureLeverage.bind(loan),
 
