@@ -378,6 +378,7 @@ On the frontend, the value that we now return as **`totalAssets`** corresponds t
 | repay() | ✅ | ✅ | ❌ | ❌ | ✅ |
 | repayFutureLeverage() | ✅ | ✅ | ✅ | ✅ | ✅ |
 
+
 #### Shrink mechanism (v2 only)
 
 In v2, the `repay` operation supports a new **shrink** mode that allows users to exit soft-liquidation by cutting the converted part of their position.
@@ -391,8 +392,8 @@ Before shrink: `| c | c | c | c | c | c | c_a + b_a | b | b | b |`
 After shrink (6 bands): `| c + c_a/6 | c + c_a/6 | c + c_a/6 | c + c_a/6 | c + c_a/6 | c + c_a/6 |`
 
 **Constraints:**
-- User must have at least 4 unconverted bands to shrink
-- Additional borrowed tokens may be required (use `tokens_to_shrink` on the controller contract to check)
+- User must have at least 4 unconverted bands to shrink and have soft-liquidation mode. Use `loan.isRepayWithShrinkAvailable()`
+- Additional borrowed tokens may be required (use `loan.tokensToShrink` to check). And provide this value into `loan.repay()`
 
 **Updated method signatures (v2):**
 
