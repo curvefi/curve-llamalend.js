@@ -58,6 +58,8 @@ export abstract class LoanBaseModule {
 
     public abstract tokensToShrink(dCollateral?: number | string, address?: string): Promise<string>;
 
+    public abstract isRepayWithShrinkAvailable(address?: string): Promise<boolean>;
+
     public _checkRange(range: number): void {
         if (range < this.market.minBands) throw Error(`range must be >= ${this.market.minBands}`);
         if (range > this.market.maxBands) throw Error(`range must be <= ${this.market.maxBands}`);
