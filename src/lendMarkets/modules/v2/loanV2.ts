@@ -53,6 +53,17 @@ export class LoanV2Module extends LoanBaseModule implements ILoanV2 {
         return formatUnits(_tokens, this.market.borrowed_token.decimals);
     }
 
+    public async isRepayWithShrinkAvailable(address = ""): Promise<boolean> {
+        address = _getAddress.call(this.llamalend, address);
+        const { isSoftLiquidation } = await this.market.userPosition.userState(address);
+        if (!isSoftLiquidation) return false;
+
+        const bandsBalances = await this.market.userPosition.userBandsBalances(address);
+        const bandsWithoutConversion = Object.values(bandsBalances).filter(({ borrowed }) => Number(borrowed) === 0).length;
+
+        return bandsWithoutConversion >= this.market.minBands;
+    }
+
     public async maxRemovable(): Promise<string> {
         const address = _getAddress.call(this.llamalend, '');
         const { _collateral: _currentCollateral, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt();

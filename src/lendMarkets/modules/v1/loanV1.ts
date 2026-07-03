@@ -84,6 +84,10 @@ export class LoanV1Module extends LoanBaseModule implements ILoanV1 {
         throw Error("tokensToShrink is not supported for v1 markets");
     }
 
+    public async isRepayWithShrinkAvailable(): Promise<boolean> {
+        return false;
+    }
+
     protected async _repayBands({ debt, address }: { debt: number | string, address: string, shrink?: boolean }): Promise<[bigint, bigint]> {
         const { _collateral: _currentCollateral, _borrowed, _debt: _currentDebt, _N } = await this.market.userPosition.userStateBigInt(address);
         if (_currentDebt === BigInt(0)) throw Error(`Loan for ${address} does not exist`);
