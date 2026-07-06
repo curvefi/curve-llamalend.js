@@ -78,7 +78,7 @@ export async function depositApproveEstimateGas(this: Llamalend, assets: TAmount
     return await ensureAllowanceEstimateGas.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD);
 }
 
-export async function depositApprove(this: Llamalend, assets: TAmount, isMax = true): Promise<string[]> {
+export async function depositApprove(this: Llamalend, assets: TAmount, isMax = false): Promise<string[]> {
     return await ensureAllowance.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD, isMax);
 }
 
@@ -142,7 +142,7 @@ export async function mintApproveEstimateGas(this: Llamalend, shares: TAmount): 
     return await ensureAllowanceEstimateGas.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD);
 }
 
-export async function mintApprove(this: Llamalend, shares: TAmount, isMax = true): Promise<string[]> {
+export async function mintApprove(this: Llamalend, shares: TAmount, isMax = false): Promise<string[]> {
     const assets = await previewMint.call(this, shares);
     return await ensureAllowance.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD, isMax);
 }
