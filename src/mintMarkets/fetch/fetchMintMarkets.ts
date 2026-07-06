@@ -34,7 +34,7 @@ export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void>
         const market = newMarkets[i];
         const collateral_address = collaterals[i];
         const is_eth = collateral_address === llamalend.constants.WETH;
-        const collateral_symbol = market.collateral_token.symbol;
+        const collateral_symbol = market.collateral_token.symbol.toLocaleLowerCase();
         const monetary_policy_address = market.monetary_policy_address.toLowerCase();
 
         llamalend.setContract(monetary_policy_address, resolveMonetaryPolicyAbi(monetary_policy_address));
