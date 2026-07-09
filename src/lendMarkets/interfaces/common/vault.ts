@@ -2,21 +2,21 @@ import {IReward, TAmount, TGas} from "../../../interfaces";
 
 export interface IVault {
     maxDeposit: (address?: string) => Promise<string>,
-    previewDeposit: (amount: TAmount) => Promise<string>,
+    previewDeposit: (borrowed: TAmount) => Promise<string>,
     depositIsApproved: (borrowed: TAmount) => Promise<boolean>
     depositApprove: (borrowed: TAmount) => Promise<string[]>
-    deposit: (amount: TAmount) => Promise<string>,
+    deposit: (borrowed: TAmount) => Promise<string>,
     maxMint: (address?: string) => Promise<string>,
-    previewMint: (amount: TAmount) => Promise<string>,
+    previewMint: (shares: TAmount) => Promise<string>,
     mintIsApproved: (borrowed: TAmount) => Promise<boolean>
     mintApprove: (borrowed: TAmount) => Promise<string[]>
-    mint: (amount: TAmount) => Promise<string>,
+    mint: (shares: TAmount) => Promise<string>,
     maxWithdraw: (address?: string) => Promise<string>,
-    previewWithdraw: (amount: TAmount) => Promise<string>,
-    withdraw: (amount: TAmount) => Promise<string>,
+    previewWithdraw: (borrowed: TAmount) => Promise<string>,
+    withdraw: (borrowed: TAmount) => Promise<string>,
     maxRedeem: (address?: string) => Promise<string>,
-    previewRedeem: (amount: TAmount) => Promise<string>,
-    redeem: (amount: TAmount) => Promise<string>,
+    previewRedeem: (shares: TAmount) => Promise<string>,
+    redeem: (shares: TAmount) => Promise<string>,
     convertToShares: (assets: TAmount) => Promise<string>,
     convertToAssets: (shares: TAmount) => Promise<string>,
     stakeIsApproved: (vaultShares: number | string) => Promise<boolean>,
@@ -33,12 +33,12 @@ export interface IVault {
     claimableRewards: (address?: string) => Promise<{token: string, symbol: string, amount: string}[]>,
     claimRewards: () => Promise<string>,
     estimateGas: {
-        depositApprove: (amount: TAmount) => Promise<TGas>,
-        deposit: (amount: TAmount) => Promise<TGas>,
-        mintApprove: (amount: TAmount) => Promise<TGas>,
-        mint: (amount: TAmount) => Promise<TGas>,
-        withdraw: (amount: TAmount) => Promise<TGas>,
-        redeem: (amount: TAmount) => Promise<TGas>,
+        depositApprove: (borrowed: TAmount) => Promise<TGas>,
+        deposit: (borrowed: TAmount) => Promise<TGas>,
+        mintApprove: (borrowed: TAmount) => Promise<TGas>,
+        mint: (shares: TAmount) => Promise<TGas>,
+        withdraw: (borrowed: TAmount) => Promise<TGas>,
+        redeem: (shares: TAmount) => Promise<TGas>,
         stakeApprove: (vaultShares: number | string) => Promise<TGas>,
         stake: (vaultShares: number | string) => Promise<TGas>,
         unstake: (vaultShares: number | string) => Promise<TGas>,
