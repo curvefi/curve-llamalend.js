@@ -33,9 +33,9 @@ export interface IVault {
     claimableRewards: (address?: string) => Promise<{token: string, symbol: string, amount: string}[]>,
     claimRewards: () => Promise<string>,
     estimateGas: {
-        depositApprove: (amount: TAmount) => Promise<TGas>,
+        depositApprove: (borrowed: TAmount) => Promise<TGas>,
         deposit: (amount: TAmount) => Promise<TGas>,
-        mintApprove: (amount: TAmount) => Promise<TGas>,
+        mintApprove: (borrowed: TAmount) => Promise<TGas>,
         mint: (amount: TAmount) => Promise<TGas>,
         withdraw: (amount: TAmount) => Promise<TGas>,
         redeem: (amount: TAmount) => Promise<TGas>,
