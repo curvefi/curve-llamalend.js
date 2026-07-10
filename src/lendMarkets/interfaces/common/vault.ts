@@ -3,13 +3,13 @@ import {IReward, TAmount, TGas} from "../../../interfaces";
 export interface IVault {
     maxDeposit: (address?: string) => Promise<string>,
     previewDeposit: (assets: TAmount) => Promise<string>,
-    depositIsApproved: (assets: TAmount) => Promise<boolean>
-    depositApprove: (assets: TAmount, isMax?: boolean) => Promise<string[]>
+    depositIsApproved: (assets: TAmount) => Promise<boolean>,
+    depositApprove: (assets: TAmount, isMax?: boolean) => Promise<string[]>,
     deposit: (assets: TAmount, isMax?: boolean) => Promise<string>,
     maxMint: (address?: string) => Promise<string>,
     previewMint: (vaultShares: TAmount) => Promise<string>,
-    mintIsApproved: (assets: TAmount) => Promise<boolean>
-    mintApprove: (assets: TAmount, isMax?: boolean) => Promise<string[]>
+    mintIsApproved: (vaultShares: TAmount) => Promise<boolean>,
+    mintApprove: (vaultShares: TAmount, isMax?: boolean) => Promise<string[]>,
     mint: (vaultShares: TAmount, isMax?: boolean) => Promise<string>,
     maxWithdraw: (address?: string) => Promise<string>,
     previewWithdraw: (assets: TAmount) => Promise<string>,
@@ -35,7 +35,7 @@ export interface IVault {
     estimateGas: {
         depositApprove: (assets: TAmount, isMax?: boolean) => Promise<TGas>,
         deposit: (assets: TAmount) => Promise<TGas>,
-        mintApprove: (assets: TAmount, isMax?: boolean) => Promise<TGas>,
+        mintApprove: (vaultShares: TAmount, isMax?: boolean) => Promise<TGas>,
         mint: (vaultShares: TAmount) => Promise<TGas>,
         withdraw: (assets: TAmount) => Promise<TGas>,
         redeem: (vaultShares: TAmount) => Promise<TGas>,

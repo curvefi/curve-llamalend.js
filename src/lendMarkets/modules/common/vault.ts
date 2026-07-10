@@ -97,15 +97,18 @@ export class VaultModule {
         return formatUnits(_assets, this.market.borrowed_token.decimals);
     }
 
-    public async vaultMintIsApproved(assets: TAmount): Promise<boolean> {
+    public async vaultMintIsApproved(vaultShares: TAmount): Promise<boolean> {
+        const assets = await this.vaultPreviewMint(vaultShares);
         return await hasAllowance.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.llamalend.signerAddress, this.market.addresses.vault);
     }
 
-    public async vaultMintApproveEstimateGas (assets: TAmount, isMax = false): Promise<TGas> {
+    public async vaultMintApproveEstimateGas (vaultShares: TAmount, isMax = false): Promise<TGas> {
+        const assets = await this.vaultPreviewMint(vaultShares);
         return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.market.addresses.vault, isMax);
     }
 
-    public async vaultMintApprove(assets: TAmount, isMax = false): Promise<string[]> {
+    public async vaultMintApprove(vaultShares: TAmount, isMax = false): Promise<string[]> {
+        const assets = await this.vaultPreviewMint(vaultShares);
         return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.market.addresses.vault, isMax);
     }
 
