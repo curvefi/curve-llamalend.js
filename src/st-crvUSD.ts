@@ -9,6 +9,7 @@ import {
     smartNumber,
     getBalances,
     MAX_ALLOWANCE,
+    addApprovalBuffer,
 } from "./utils.js";
 import type { Llamalend } from "./llamalend.js";
 import { TAmount, TGas } from "./interfaces.js";
@@ -124,7 +125,7 @@ export async function previewMint(this: Llamalend, shares: TAmount): Promise<str
 
 export async function mintIsApproved(this: Llamalend, shares: TAmount): Promise<boolean> {
     const assets = await previewMint.call(this, shares);
-    return await hasAllowance.call(this, [this.constants.ALIASES.crvUSD], [assets], this.signerAddress, this.constants.ALIASES.st_crvUSD);
+    return await hasAllowance.call(this, [this.constants.ALIASES.crvUSD], [addApprovalBuffer(assets)], this.signerAddress, this.constants.ALIASES.st_crvUSD);
 }
 
 export async function mintAllowance(this: Llamalend): Promise<string[]> {
@@ -139,12 +140,12 @@ export async function mintAllowance(this: Llamalend): Promise<string[]> {
 
 export async function mintApproveEstimateGas(this: Llamalend, shares: TAmount, isMax = false): Promise<TGas> {
     const assets = await previewMint.call(this, shares);
-    return await ensureAllowanceEstimateGas.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD, isMax);
+    return await ensureAllowanceEstimateGas.call(this, [this.constants.ALIASES.crvUSD], [addApprovalBuffer(assets)], this.constants.ALIASES.st_crvUSD, isMax);
 }
 
 export async function mintApprove(this: Llamalend, shares: TAmount, isMax = false): Promise<string[]> {
     const assets = await previewMint.call(this, shares);
-    return await ensureAllowance.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD, isMax);
+    return await ensureAllowance.call(this, [this.constants.ALIASES.crvUSD], [addApprovalBuffer(assets)], this.constants.ALIASES.st_crvUSD, isMax);
 }
 
 async function _mint(this: Llamalend, shares: TAmount, estimateGas = false): Promise<string | TGas> {

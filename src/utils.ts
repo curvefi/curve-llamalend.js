@@ -72,6 +72,11 @@ export const fromBN = (bn: BigNumber, decimals = 18): bigint => {
     return parseUnits(toStringFromBN(bn, decimals), decimals)
 }
 
+export const APPROVAL_BUFFER = "0.1"; // %
+const APPROVAL_BUFFER_MULTIPLIER = BN(100).plus(APPROVAL_BUFFER).div(100);
+
+export const addApprovalBuffer = (amount: number | string): string => BN(amount).times(APPROVAL_BUFFER_MULTIPLIER).toString();
+
 // -----------------------------------------------------------------------------------------------
 
 
@@ -501,4 +506,3 @@ export const buildCalldataForLeverageZapV2 = (params: LeverageZapV2LLv2CalldataP
         [BigInt(params.controllerId), params._minRecv, params.router, exchangeBytes]
     );
 };
-
