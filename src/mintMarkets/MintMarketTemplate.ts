@@ -65,7 +65,7 @@ export class MintMarketTemplate {
         swap: (i: number, j: number, amount: number | string, slippage?: number) => Promise<TGas>,
         liquidateApprove: (address: string, isMax?: boolean) => Promise<TGas>,
         liquidate: (address: string, slippage?: number) => Promise<TGas>,
-        selfLiquidateApprove: (isMax?: boolean) => Promise<TGas>,
+        selfLiquidateApprove: (address?: string, isMax?: boolean) => Promise<TGas>,
         selfLiquidate: (slippage?: number) => Promise<TGas>,
     };
     stats: {
@@ -1435,12 +1435,12 @@ export class MintMarketTemplate {
         return await this.liquidateIsApproved()
     }
 
-    private async selfLiquidateApproveEstimateGas (isMax = false): Promise<TGas> {
-        return this.liquidateApproveEstimateGas("", isMax)
+    private async selfLiquidateApproveEstimateGas (address?: string, isMax = false): Promise<TGas> {
+        return this.liquidateApproveEstimateGas(address, isMax)
     }
 
-    public async selfLiquidateApprove(isMax = false): Promise<string[]> {
-        return await this.liquidateApprove("", isMax)
+    public async selfLiquidateApprove(address?: string, isMax = false): Promise<string[]> {
+        return await this.liquidateApprove(address, isMax)
     }
 
     public async selfLiquidateEstimateGas(slippage = 0.1): Promise<number> {
@@ -1449,7 +1449,7 @@ export class MintMarketTemplate {
     }
 
     public async selfLiquidate(slippage = 0.1, isMax = false): Promise<string> {
-        await this.selfLiquidateApprove(isMax);
+        await this.selfLiquidateApprove(this.llamalend.signerAddress, isMax);
         return await this._liquidate(this.llamalend.signerAddress, slippage, false) as string;
     }
 

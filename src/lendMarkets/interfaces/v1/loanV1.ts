@@ -59,7 +59,7 @@ export interface ILoanV1 {
     liquidate: (address: string, slippage?: number, isMax?: boolean) => Promise<string>;
 
     selfLiquidateIsApproved: () => Promise<boolean>;
-    selfLiquidateApprove: (isMax?: boolean) => Promise<string[]>;
+    selfLiquidateApprove: (address?: string, isMax?: boolean) => Promise<string[]>;
     selfLiquidate: (slippage?: number, isMax?: boolean) => Promise<string>;
 
     partialSelfLiquidateIsApproved: (partialFrac: IPartialFrac) => Promise<boolean>;
@@ -80,7 +80,7 @@ export interface ILoanV1 {
         fullRepay: (address?: string) => Promise<TGas>;
         liquidateApprove: (address?: string, isMax?: boolean) => Promise<TGas>;
         liquidate: (address: string, slippage?: number) => Promise<TGas>;
-        selfLiquidateApprove: (isMax?: boolean) => Promise<TGas>;
+        selfLiquidateApprove: (address?: string, isMax?: boolean) => Promise<TGas>;
         selfLiquidate: (slippage?: number) => Promise<TGas>;
         partialSelfLiquidateApprove: (partialFrac: IPartialFrac, isMax?: boolean) => Promise<TGas>;
         partialSelfLiquidate: (partialFrac: IPartialFrac, slippage?: number) => Promise<TGas>;

@@ -606,12 +606,12 @@ export abstract class LoanBaseModule {
         return await this.liquidateIsApproved()
     }
 
-    private async selfLiquidateApproveEstimateGas (isMax = false): Promise<TGas> {
-        return this.liquidateApproveEstimateGas("", isMax)
+    private async selfLiquidateApproveEstimateGas (address?: string, isMax = false): Promise<TGas> {
+        return this.liquidateApproveEstimateGas(address, isMax)
     }
 
-    public async selfLiquidateApprove(isMax = false): Promise<string[]> {
-        return await this.liquidateApprove("", isMax)
+    public async selfLiquidateApprove(address?: string, isMax = false): Promise<string[]> {
+        return await this.liquidateApprove(address, isMax)
     }
 
     public async selfLiquidateEstimateGas(slippage = 0.1): Promise<TGas> {
@@ -620,7 +620,7 @@ export abstract class LoanBaseModule {
     }
 
     public async selfLiquidate(slippage = 0.1, isMax = false): Promise<string> {
-        await this.selfLiquidateApprove(isMax);
+        await this.selfLiquidateApprove(this.llamalend.signerAddress, isMax);
         return await this._liquidate(this.llamalend.signerAddress, slippage, false) as string;
     }
 
