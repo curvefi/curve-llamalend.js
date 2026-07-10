@@ -1,17 +1,21 @@
 import memoize from "memoizee";
-import {TAmount, TGas, IPartialFrac} from "../../../interfaces";
-import type { LendMarketTemplate } from "../../LendMarketTemplate";
+import {IPartialFrac, TAmount, TGas} from "../../../interfaces";
+import type {LendMarketTemplate} from "../../LendMarketTemplate";
 import {
     _getAddress,
-    parseUnits,
+    _mulBy1_3,
+    calculateApprovalAmount,
     BN,
+    calculateFutureLeverage,
+    DIGas,
     ensureAllowance,
-    hasAllowance,
     ensureAllowanceEstimateGas,
     formatUnits,
+    fromBN,
+    hasAllowance,
+    MAX_ACTIVE_BAND,
+    parseUnits,
     smartNumber,
-    _mulBy1_3,
-    DIGas, calculateFutureLeverage, MAX_ACTIVE_BAND, fromBN, addApprovalBuffer,
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
@@ -470,7 +474,7 @@ export abstract class LoanBaseModule {
         address = _getAddress.call(this.llamalend, address);
         // TODO: now debt is _borrowed
         const { debt } = await this.market.userPosition.userState(address);
-        return addApprovalBuffer(debt);
+        return calculateApprovalAmount(debt);
     }
 
     public async fullRepayIsApproved(address = ""): Promise<boolean> {
@@ -536,18 +540,18 @@ export abstract class LoanBaseModule {
 
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [addApprovalBuffer(tokensToLiquidate)], this.llamalend.signerAddress, this.market.addresses.controller);
+        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
     private async liquidateApproveEstimateGas (address = "", isMax = false): Promise<TGas> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [addApprovalBuffer(tokensToLiquidate)], this.market.addresses.controller, isMax);
+        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.market.addresses.controller, isMax);
     }
 
     public async liquidateApprove(address = "", isMax = false): Promise<string[]> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [addApprovalBuffer(tokensToLiquidate)], this.market.addresses.controller, isMax);
+        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.market.addresses.controller, isMax);
     }
 
     private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
@@ -623,15 +627,18 @@ export abstract class LoanBaseModule {
     // ---------------- PARTIAL SELF-LIQUIDATE ----------------
 
     public async partialSelfLiquidateIsApproved(partialFrac: IPartialFrac): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [addApprovalBuffer(partialFrac.amount)], this.llamalend.signerAddress, this.market.addresses.controller);
+        const amount = calculateApprovalAmount(partialFrac.amount);
+        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
     private async partialSelfLiquidateApproveEstimateGas(partialFrac: IPartialFrac, isMax = false): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [addApprovalBuffer(partialFrac.amount)], this.market.addresses.controller, isMax);
+        const amount = calculateApprovalAmount(partialFrac.amount);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.market.addresses.controller, isMax);
     }
 
     public async partialSelfLiquidateApprove(partialFrac: IPartialFrac, isMax = false): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [addApprovalBuffer(partialFrac.amount)], this.market.addresses.controller, isMax);
+        const amount = calculateApprovalAmount(partialFrac.amount);
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.market.addresses.controller, isMax);
     }
 
     public async partialSelfLiquidateEstimateGas(partialFrac: IPartialFrac, slippage = 0.1): Promise<TGas> {

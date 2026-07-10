@@ -1,7 +1,7 @@
 import { ethers,  BigNumberish, Numeric } from "ethers";
 import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
-import { ICurveContract, IDict, TGas } from "./interfaces.js";
+import {ICurveContract, IDict, TAmount, TGas} from "./interfaces.js";
 import { _getUsdPricesFromApi } from "./cached.js";
 import type { Llamalend } from "./llamalend.js";
 import { JsonFragment } from "ethers/lib.esm";
@@ -75,7 +75,7 @@ export const fromBN = (bn: BigNumber, decimals = 18): bigint => {
 export const APPROVAL_BUFFER = "0.1"; // %
 const APPROVAL_BUFFER_MULTIPLIER = BN(100).plus(APPROVAL_BUFFER).div(100);
 
-export const addApprovalBuffer = (amount: number | string): string => BN(amount).times(APPROVAL_BUFFER_MULTIPLIER).toString();
+export const calculateApprovalAmount = (amount: TAmount) => BN(amount).times(APPROVAL_BUFFER_MULTIPLIER).toString();
 
 // -----------------------------------------------------------------------------------------------
 

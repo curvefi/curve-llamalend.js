@@ -20,7 +20,7 @@ import {
     _mulBy1_3,
     DIGas,
     calculateFutureLeverage,
-    addApprovalBuffer,
+    calculateApprovalAmount,
 } from "../utils.js";
 import {IDict, ILlamma, TGas, IRates} from "../interfaces.js";
 import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
@@ -1230,7 +1230,7 @@ export class MintMarketTemplate {
     private async _fullRepayAmount(address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const debt = await this.userDebt(address);
-        return addApprovalBuffer(debt);
+        return calculateApprovalAmount(debt);
     }
 
     public async fullRepayIsApproved(address = ""): Promise<boolean> {
@@ -1387,18 +1387,18 @@ export class MintMarketTemplate {
     }
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await hasAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [addApprovalBuffer(tokensToLiquidate)], this.llamalend.signerAddress, this.controller);
+        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        return await hasAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [amount], this.llamalend.signerAddress, this.controller);
     }
 
     private async liquidateApproveEstimateGas (address = "", isMax = false): Promise<TGas> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.llamalend.crvUsdAddress], [addApprovalBuffer(tokensToLiquidate)], this.controller, isMax);
+        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.llamalend.crvUsdAddress], [amount], this.controller, isMax);
     }
 
     public async liquidateApprove(address = "", isMax = false): Promise<string[]> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [addApprovalBuffer(tokensToLiquidate)], this.controller, isMax);
+        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        return await ensureAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [amount], this.controller, isMax);
     }
 
     private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
