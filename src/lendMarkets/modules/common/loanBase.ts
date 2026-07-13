@@ -558,7 +558,7 @@ export abstract class LoanBaseModule {
         if (Number(borrowed) === 0) throw Error(`User ${address} is not in liquidation mode`);
 
         const minAmountBN: BigNumber = BN(borrowed).times(100 - slippage).div(100);
-        const _minAmount = fromBN(minAmountBN);
+        const _minAmount = fromBN(minAmountBN, this.market.borrowed_token.decimals);
         const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
         const gas = (await contract.liquidate.estimateGas(address, _minAmount, this.llamalend.constantOptions))
         if (estimateGas) return smartNumber(gas);
@@ -581,7 +581,7 @@ export abstract class LoanBaseModule {
         const borrowedBN = BN(borrowed);
         const expectedBorrowedBN = borrowedBN.times(fracBN);
         const minAmountBN = expectedBorrowedBN.times(100 - slippage).div(100);
-        const _minAmount = fromBN(minAmountBN);
+        const _minAmount = fromBN(minAmountBN, this.market.borrowed_token.decimals);
 
         return this._partialLiquidateContractCall(address, _minAmount, frac, estimateGas);
     }
