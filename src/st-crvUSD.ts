@@ -124,7 +124,7 @@ export async function previewMint(this: Llamalend, shares: TAmount): Promise<str
 }
 
 export async function mintIsApproved(this: Llamalend, shares: TAmount): Promise<boolean> {
-    const amount = calculateApprovalAmount(await previewMint.call(this, shares));
+    const amount = await previewMint.call(this, shares);
     return await hasAllowance.call(this, [this.constants.ALIASES.crvUSD], [amount], this.signerAddress, this.constants.ALIASES.st_crvUSD);
 }
 

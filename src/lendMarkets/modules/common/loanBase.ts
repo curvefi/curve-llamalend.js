@@ -540,7 +540,7 @@ export abstract class LoanBaseModule {
 
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
-        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        const amount = await this.tokensToLiquidate(address);
         return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
@@ -627,7 +627,7 @@ export abstract class LoanBaseModule {
     // ---------------- PARTIAL SELF-LIQUIDATE ----------------
 
     public async partialSelfLiquidateIsApproved(partialFrac: IPartialFrac): Promise<boolean> {
-        const amount = calculateApprovalAmount(partialFrac.amount);
+        const amount = partialFrac.amount;
         return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 

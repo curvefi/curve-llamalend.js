@@ -1387,7 +1387,7 @@ export class MintMarketTemplate {
     }
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
-        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        const amount = await this.tokensToLiquidate(address);
         return await hasAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [amount], this.llamalend.signerAddress, this.controller);
     }
 
