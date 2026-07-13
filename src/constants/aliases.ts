@@ -4,12 +4,13 @@ import { lowerCaseValues } from "./utils.js";
 export const ALIASES_ETHEREUM = lowerCaseValues({
     "crv": "0xD533a949740bb3306d119CC777fa900bA034cd52",
     "one_way_factory": "0xeA6876DDE9e3467564acBeE1Ed5bac88783205E0",
+    "one_way_factory_v2": "0x8f6B56EC5ddF1F2691a1059f1D3cd97Ac9EaB0bd",
     "gauge_controller": "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
     "minter": '0xd061D61a4d941c39E5453435B6345Dc261C2fcE0',
     "gauge_factory": "0xabC000d88f23Bb45525E447528DBF656A9D55bf5",
     "leverage_zap_deprecated": "0xC8E8430dc7Cb23C32543329acCC68c9055C23e18", // odos v3
     "leverage_zap_v2": "0x19010d0f5D5a88aC609B568c91057679eed643d3",
-    "leverage_zap_v2_llv2": "0x0000000000000000000000000000000000000000",
+    "leverage_zap_v2_llv2": "0x5D847c892891B503c3483D3Abbc2a23774279b85",
     "leverage_markets_start_id": "9",
     "crvUSD": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
     "st_crvUSD": "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367",
