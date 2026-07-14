@@ -7,8 +7,6 @@ export interface IDict<T> {
 
 export type INetworkName = "ethereum" | "optimism" | 'sonic' | "fraxtal" | "arbitrum";
 export type IChainId = 1 | 10 | 146 | 252 | 42161;
-export type IPoolFactory = "main" | "crypto" | "factory" | "factory-crvusd" | "factory-crypto" | "factory-twocrypto" | "factory-tricrypto" | "factory-stable-ng";
-export type IPoolType = "main" | "crypto" | IPoolFactory;
 
 export interface ICurveContract {
     contract: Contract,
@@ -84,46 +82,6 @@ export interface ILlamalend {
         COINS: Record<string, string>;
         ZERO_ADDRESS: string,
     };
-}
-
-export interface ICoinFromPoolDataApi {
-    address: string,
-    symbol: string,
-    decimals: string,
-    usdPrice: number | string,
-}
-
-export interface IReward {
-    gaugeAddress: string,
-    tokenAddress: string,
-    tokenPrice?: number,
-    name?: string,
-    symbol: string,
-    decimals?: number,
-    apy: number
-}
-
-export interface IPoolDataFromApi {
-    id: string,
-    name: string,
-    symbol: string,
-    assetTypeName: string,
-    address: string,
-    lpTokenAddress?: string,
-    gaugeAddress?: string,
-    implementation: string,
-    implementationAddress: string,
-    coins: ICoinFromPoolDataApi[],
-    gaugeRewards?: IReward[],
-    usdTotal: number,
-    totalSupply: number,
-    amplificationCoefficient: string,
-}
-
-export interface IExtendedPoolDataFromApi {
-    poolData: IPoolDataFromApi[],
-    tvl?: number,
-    tvlAll: number,
 }
 
 export interface IReward {
