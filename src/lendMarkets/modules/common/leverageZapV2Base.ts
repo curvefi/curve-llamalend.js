@@ -487,20 +487,22 @@ export abstract class LeverageZapV2BaseModule {
             [this.market.collateral_token.address], [userCollateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
-    public async leverageCreateLoanApproveEstimateGas ({ userCollateral }: {
-        userCollateral: TAmount
+    public async leverageCreateLoanApproveEstimateGas ({ userCollateral, isMax = false }: {
+        userCollateral: TAmount,
+        isMax?: boolean,
     }): Promise<TGas> {
         this._checkLeverageZap();
         return await ensureAllowanceEstimateGas.call(this.llamalend,
-            [this.market.collateral_token.address], [userCollateral], this.market.addresses.controller);
+            [this.market.collateral_token.address], [userCollateral], this.market.addresses.controller, isMax);
     }
 
-    public async leverageCreateLoanApprove({ userCollateral }: {
-        userCollateral: TAmount
+    public async leverageCreateLoanApprove({ userCollateral, isMax = false }: {
+        userCollateral: TAmount,
+        isMax?: boolean,
     }): Promise<string[]> {
         this._checkLeverageZap();
         return await ensureAllowance.call(this.llamalend,
-            [this.market.collateral_token.address], [userCollateral], this.market.addresses.controller);
+            [this.market.collateral_token.address], [userCollateral], this.market.addresses.controller, isMax);
     }
 
     private async _leverageCreateLoan(
@@ -537,16 +539,17 @@ export abstract class LeverageZapV2BaseModule {
         return await this._leverageCreateLoan(userCollateral, debt, range, minRecv, router, calldata,  true) as number;
     }
 
-    public async leverageCreateLoan({ userCollateral, debt, range, minRecv, router, calldata }: {
+    public async leverageCreateLoan({ userCollateral, debt, range, minRecv, router, calldata, isMax = false }: {
         userCollateral: TAmount,
         debt: TAmount,
         range: number,
         minRecv: TAmount,
         router: string,
-        calldata: string
+        calldata: string,
+        isMax?: boolean,
     }): Promise<string> {
         this._checkLeverageZap();
-        await this.leverageCreateLoanApprove({ userCollateral });
+        await this.leverageCreateLoanApprove({ userCollateral, isMax });
         return await this._leverageCreateLoan(userCollateral, debt, range, minRecv, router, calldata, false) as string;
     }
 
@@ -685,10 +688,11 @@ export abstract class LeverageZapV2BaseModule {
         return await this.leverageCreateLoanIsApproved({ userCollateral });
     }
 
-    public async leverageBorrowMoreApprove({ userCollateral }: {
-        userCollateral: TAmount
+    public async leverageBorrowMoreApprove({ userCollateral, isMax = false }: {
+        userCollateral: TAmount,
+        isMax?: boolean,
     }): Promise<string[]> {
-        return await this.leverageCreateLoanApprove({ userCollateral });
+        return await this.leverageCreateLoanApprove({ userCollateral, isMax });
     }
 
     public async leverageBorrowMoreEstimateGas({ userCollateral, debt, minRecv, router, calldata }: {
@@ -703,15 +707,16 @@ export abstract class LeverageZapV2BaseModule {
         return await this._leverageBorrowMore(userCollateral, debt, minRecv, router, calldata,  true) as number;
     }
 
-    public async leverageBorrowMore({ userCollateral, debt, minRecv, router, calldata }: {
+    public async leverageBorrowMore({ userCollateral, debt, minRecv, router, calldata, isMax = false }: {
         userCollateral: TAmount,
         debt: TAmount,
         minRecv: TAmount,
         router: string,
-        calldata: string
+        calldata: string,
+        isMax?: boolean,
     }): Promise<string> {
         this._checkLeverageZap();
-        await this.leverageCreateLoanApprove({ userCollateral });
+        await this.leverageCreateLoanApprove({ userCollateral, isMax });
         return await this._leverageBorrowMore(userCollateral, debt, minRecv, router, calldata, false) as string;
     }
 
@@ -898,25 +903,29 @@ export abstract class LeverageZapV2BaseModule {
         );
     }
 
-    public async leverageRepayApproveEstimateGas ({ userCollateral }: {
-        userCollateral: TAmount
+    public async leverageRepayApproveEstimateGas ({ userCollateral, isMax = false }: {
+        userCollateral: TAmount,
+        isMax?: boolean,
     }): Promise<TGas> {
         this._checkLeverageZap();
         return await ensureAllowanceEstimateGas.call(this.llamalend,
             [this.market.collateral_token.address],
             [userCollateral],
-            this._getLeverageZapAddress()
+            this._getLeverageZapAddress(),
+            isMax
         );
     }
 
-    public async leverageRepayApprove({ userCollateral }: {
-        userCollateral: TAmount
+    public async leverageRepayApprove({ userCollateral, isMax = false }: {
+        userCollateral: TAmount,
+        isMax?: boolean,
     }): Promise<string[]> {
         this._checkLeverageZap();
         return await ensureAllowance.call(this.llamalend,
             [this.market.collateral_token.address],
             [userCollateral],
-            this._getLeverageZapAddress()
+            this._getLeverageZapAddress(),
+            isMax
         );
     }
 
@@ -952,15 +961,16 @@ export abstract class LeverageZapV2BaseModule {
         return await this._leverageRepay(stateCollateral, userCollateral, minRecv, router, calldata, true) as number;
     }
 
-    public async leverageRepay({ stateCollateral, userCollateral, minRecv, router, calldata }: {
+    public async leverageRepay({ stateCollateral, userCollateral, minRecv, router, calldata, isMax = false }: {
         stateCollateral: TAmount,
         userCollateral: TAmount,
         minRecv: TAmount,
         router: string,
         calldata: string,
+        isMax?: boolean,
     }): Promise<string> {
         this._checkLeverageZap();
-        await this.leverageRepayApprove({ userCollateral });
+        await this.leverageRepayApprove({ userCollateral, isMax });
         return await this._leverageRepay(stateCollateral, userCollateral, minRecv, router, calldata, false) as string;
     }
 

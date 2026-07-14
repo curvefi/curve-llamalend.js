@@ -91,16 +91,16 @@ export class AmmModule implements IAmm {
         return await hasAllowance.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.llamalend.signerAddress, this.market.addresses.amm);
     }
 
-    private async swapApproveEstimateGas (i: number, amount: number | string): Promise<TGas> {
+    private async swapApproveEstimateGas (i: number, amount: number | string, isMax = false): Promise<TGas> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.market.addresses.amm);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.market.addresses.amm, isMax);
     }
 
-    public async swapApprove(i: number, amount: number | string): Promise<string[]> {
+    public async swapApprove(i: number, amount: number | string, isMax = false): Promise<string[]> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await ensureAllowance.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.market.addresses.amm);
+        return await ensureAllowance.call(this.llamalend, [this.market.coinAddresses[i]], [amount], this.market.addresses.amm, isMax);
     }
 
     private async _swap(i: number, j: number, amount: number | string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
@@ -125,8 +125,8 @@ export class AmmModule implements IAmm {
         return await this._swap(i, j, amount, slippage, true) as TGas;
     }
 
-    public async swap(i: number, j: number, amount: number | string, slippage = 0.1): Promise<string> {
-        await this.swapApprove(i, amount);
+    public async swap(i: number, j: number, amount: number | string, slippage = 0.1, isMax = false): Promise<string> {
+        await this.swapApprove(i, amount, isMax);
         return await this._swap(i, j, amount, slippage, false) as string;
     }
 }
