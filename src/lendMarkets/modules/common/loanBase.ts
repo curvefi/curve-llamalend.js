@@ -474,7 +474,7 @@ export abstract class LoanBaseModule {
         address = _getAddress.call(this.llamalend, address);
         // TODO: now debt is _borrowed
         const { debt } = await this.market.userPosition.userState(address);
-        return calculateApprovalAmount(debt);
+        return BN(debt).times(1.0001).toString();
     }
 
     public async fullRepayIsApproved(address = ""): Promise<boolean> {
@@ -486,13 +486,13 @@ export abstract class LoanBaseModule {
     private async fullRepayApproveEstimateGas (address = "", isMax = false): Promise<TGas> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        return await this.repayApproveEstimateGas(fullRepayAmount, isMax);
+        return await this.repayApproveEstimateGas(calculateApprovalAmount(fullRepayAmount), isMax);
     }
 
     public async fullRepayApprove(address = "", isMax = false): Promise<string[]> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        return await this.repayApprove(fullRepayAmount, isMax);
+        return await this.repayApprove(calculateApprovalAmount(fullRepayAmount), isMax);
     }
 
     public async fullRepayEstimateGas(address = ""): Promise<TGas> {
@@ -505,7 +505,7 @@ export abstract class LoanBaseModule {
     public async fullRepay(address = "", isMax = false): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        await this.repayApprove(fullRepayAmount, isMax);
+        await this.repayApprove(calculateApprovalAmount(fullRepayAmount), isMax);
         return await this._repay(fullRepayAmount, address, false) as string;
     }
 

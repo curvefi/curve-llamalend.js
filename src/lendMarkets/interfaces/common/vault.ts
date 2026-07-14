@@ -8,7 +8,7 @@ export interface IVault {
     deposit: (assets: TAmount, isMax?: boolean) => Promise<string>,
     maxMint: (address?: string) => Promise<string>,
     previewMint: (vaultShares: TAmount) => Promise<string>,
-    mintIsApproved: (amount: TAmount) => Promise<boolean>,
+    mintIsApproved: (vaultShares: TAmount) => Promise<boolean>,
     mintApprove: (vaultShares: TAmount, isMax?: boolean) => Promise<string[]>,
     mint: (vaultShares: TAmount, isMax?: boolean) => Promise<string>,
     maxWithdraw: (address?: string) => Promise<string>,
