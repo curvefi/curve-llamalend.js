@@ -438,10 +438,6 @@ class Llamalend implements ILlamalend {
     getMintMarketList = () => Object.keys(this.constants.LLAMMAS);
 
     fetchLendMarkets = async ({ useApi = true, version = 'v1' }: { useApi?: boolean, version?: 'v1' | 'v2' } = {}) => {
-        if(version === 'v2' && useApi) {
-            throw new Error('API fetch is not supported for v2 markets yet. Please use fetchMarkets({ useApi: false, version: "v2" }) to fetch from blockchain.');
-        }
-        
         if(useApi) {
             await fetchOneWayMarketsByAPI(this, version)
         } else {

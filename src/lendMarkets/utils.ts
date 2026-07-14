@@ -1,5 +1,5 @@
 import { BN, toBN } from "../utils";
-import { INetworkName, IMarketData, IMarketDataAPI } from "../interfaces";
+import { ILendMarketFromPricesAPI, INetworkName, IMarketData, IMarketDataAPI } from "../interfaces";
 
 export type RatesResult = {
     borrowApr: string;
@@ -43,4 +43,37 @@ export const fetchMarketDataByVault = async (
     );
     if (!market) throw new Error("Market not found in API");
     return market;
+}
+
+export const adaptLendMarketFromPricesApi = (market: ILendMarketFromPricesAPI): IMarketDataAPI => {
+    const availableToBorrow = market.total_assets - market.total_debt;
+
+    return {
+        name: market.name,
+        version: market.version === 2 ? 'v2' : 'v1',
+        address: market.vault.toLowerCase(),
+        controllerAddress: market.controller.toLowerCase(),
+        ammAddress: market.llamma.toLowerCase(),
+        monetaryPolicyAddress: market.policy.toLowerCase(),
+        gaugeAddress: market.gauge_address?.toLowerCase() ?? '',
+        gaugeRewards: [],
+        rates: {
+            borrowApr: market.borrow_apr / 100,
+            borrowApy: market.borrow_apy / 100,
+            lendApr: market.lend_apr / 100,
+            lendApy: market.lend_apy / 100,
+        },
+        assets: {
+            borrowed: { ...market.borrowed_token, address: market.borrowed_token.address.toLowerCase() },
+            collateral: { ...market.collateral_token, address: market.collateral_token.address.toLowerCase() },
+        },
+        totalSupplied: { total: market.total_assets },
+        borrowed: { total: market.total_debt },
+        availableToBorrow: { total: availableToBorrow },
+        borrowCap: { total: market.total_assets },
+        ammBalances: {
+            ammBalanceBorrowed: market.borrowed_balance,
+            ammBalanceCollateral: market.collateral_balance,
+        },
+    };
 }

@@ -7,8 +7,6 @@ export interface IDict<T> {
 
 export type INetworkName = "ethereum" | "optimism" | 'sonic' | "fraxtal" | "arbitrum";
 export type IChainId = 1 | 10 | 146 | 252 | 42161;
-export type IPoolFactory = "main" | "crypto" | "factory" | "factory-crvusd" | "factory-crypto" | "factory-twocrypto" | "factory-tricrypto" | "factory-stable-ng";
-export type IPoolType = "main" | "crypto" | IPoolFactory;
 
 export interface ICurveContract {
     contract: Contract,
@@ -86,46 +84,6 @@ export interface ILlamalend {
     };
 }
 
-export interface ICoinFromPoolDataApi {
-    address: string,
-    symbol: string,
-    decimals: string,
-    usdPrice: number | string,
-}
-
-export interface IReward {
-    gaugeAddress: string,
-    tokenAddress: string,
-    tokenPrice?: number,
-    name?: string,
-    symbol: string,
-    decimals?: number,
-    apy: number
-}
-
-export interface IPoolDataFromApi {
-    id: string,
-    name: string,
-    symbol: string,
-    assetTypeName: string,
-    address: string,
-    lpTokenAddress?: string,
-    gaugeAddress?: string,
-    implementation: string,
-    implementationAddress: string,
-    coins: ICoinFromPoolDataApi[],
-    gaugeRewards?: IReward[],
-    usdTotal: number,
-    totalSupply: number,
-    amplificationCoefficient: string,
-}
-
-export interface IExtendedPoolDataFromApi {
-    poolData: IPoolDataFromApi[],
-    tvl?: number,
-    tvlAll: number,
-}
-
 export interface IReward {
     gaugeAddress: string,
     tokenAddress: string,
@@ -136,18 +94,14 @@ export interface IReward {
 interface Rates {
     borrowApr: number;
     borrowApy: number;
-    borrowApyPcent: number;
     lendApr: number;
     lendApy: number;
-    lendApyPcent: number;
 }
 
 interface AssetDetail {
     symbol: string;
     decimals: number;
     address: string;
-    blockchainId: string;
-    usdPrice: number;
 }
 
 interface Assets {
@@ -155,51 +109,67 @@ interface Assets {
     collateral: AssetDetail;
 }
 
-interface VaultShares {
-    pricePerShare: number;
-    totalShares: number;
-}
-
 interface Total {
     total: number;
-    usdTotal: number;
-}
-
-interface LendingVaultUrls {
-    deposit: string;
-    withdraw: string;
 }
 
 interface AmmBalances {
     ammBalanceBorrowed: number;
-    ammBalanceBorrowedUsd: number;
     ammBalanceCollateral: number;
-    ammBalanceCollateralUsd: number;
 }
 
 export interface IMarketDataAPI {
-    id: string;
     name: string;
+    version: 'v1' | 'v2';
     address: string;
     controllerAddress: string;
     ammAddress: string;
     monetaryPolicyAddress: string;
     rates: Rates;
     gaugeAddress: string;
-    gaugeRewards: any[];
+    gaugeRewards: IReward[];
     assets: Assets;
-    vaultShares: VaultShares;
     totalSupplied: Total;
     borrowed: Total;
     availableToBorrow: Total;
     borrowCap: Total;
-    lendingVaultUrls: LendingVaultUrls;
-    usdTotal: number;
     ammBalances: AmmBalances;
 }
 
 export interface IMarketData {
     lendingVaultData: IMarketDataAPI[]
+}
+
+export interface ILendMarketFromPricesAPI {
+    name: string;
+    version: number;
+    controller: string;
+    vault: string;
+    llamma: string;
+    policy: string;
+    borrow_apy: number;
+    borrow_apr: number;
+    lend_apy: number;
+    lend_apr: number;
+    total_debt: number;
+    total_assets: number;
+    collateral_balance: number;
+    borrowed_balance: number;
+    collateral_token: {
+        symbol: string;
+        address: string;
+        decimals: number;
+    };
+    borrowed_token: {
+        symbol: string;
+        address: string;
+        decimals: number;
+    };
+    gauge_address: string | null;
+}
+
+export interface ILendMarketsFromPricesAPI {
+    data: ILendMarketFromPricesAPI[];
 }
 
 export interface IQuoteOdos {
@@ -225,10 +195,6 @@ export interface ILlamma {
     max_bands: number,
     default_bands: number,
     A: number,
-}
-
-export interface IResponseApi {
-    data: any
 }
 
 export interface IQuote {
