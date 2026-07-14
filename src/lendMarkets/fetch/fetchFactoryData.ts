@@ -40,8 +40,10 @@ export const getFactoryMarketDataV1 = async (llamalend: Llamalend) => {
     return factoryData;
 };
 
-export const getFactoryMarketDataByAPI = async (llamalend: Llamalend) => {
-    const apiData = (await _getMarketsData(llamalend.constants.NETWORK_NAME)).lendingVaultData;
+export const getFactoryMarketDataByAPI = async (llamalend: Llamalend, version: 'v1' | 'v2' = 'v1') => {
+    const apiData = (await _getMarketsData(llamalend.constants.NETWORK_NAME)).lendingVaultData
+        .filter((market) => market.version === version)
+        .reverse();
 
     const result: Record<string, string[]> = {
         names: [],

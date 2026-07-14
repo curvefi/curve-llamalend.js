@@ -136,18 +136,14 @@ export interface IReward {
 interface Rates {
     borrowApr: number;
     borrowApy: number;
-    borrowApyPcent: number;
     lendApr: number;
     lendApy: number;
-    lendApyPcent: number;
 }
 
 interface AssetDetail {
     symbol: string;
     decimals: number;
     address: string;
-    blockchainId: string;
-    usdPrice: number;
 }
 
 interface Assets {
@@ -155,51 +151,67 @@ interface Assets {
     collateral: AssetDetail;
 }
 
-interface VaultShares {
-    pricePerShare: number;
-    totalShares: number;
-}
-
 interface Total {
     total: number;
-    usdTotal: number;
-}
-
-interface LendingVaultUrls {
-    deposit: string;
-    withdraw: string;
 }
 
 interface AmmBalances {
     ammBalanceBorrowed: number;
-    ammBalanceBorrowedUsd: number;
     ammBalanceCollateral: number;
-    ammBalanceCollateralUsd: number;
 }
 
 export interface IMarketDataAPI {
-    id: string;
     name: string;
+    version: 'v1' | 'v2';
     address: string;
     controllerAddress: string;
     ammAddress: string;
     monetaryPolicyAddress: string;
     rates: Rates;
     gaugeAddress: string;
-    gaugeRewards: any[];
+    gaugeRewards: IReward[];
     assets: Assets;
-    vaultShares: VaultShares;
     totalSupplied: Total;
     borrowed: Total;
     availableToBorrow: Total;
     borrowCap: Total;
-    lendingVaultUrls: LendingVaultUrls;
-    usdTotal: number;
     ammBalances: AmmBalances;
 }
 
 export interface IMarketData {
     lendingVaultData: IMarketDataAPI[]
+}
+
+export interface ILendMarketFromPricesAPI {
+    name: string;
+    version: number;
+    controller: string;
+    vault: string;
+    llamma: string;
+    policy: string;
+    borrow_apy: number;
+    borrow_apr: number;
+    lend_apy: number;
+    lend_apr: number;
+    total_debt: number;
+    total_assets: number;
+    collateral_balance: number;
+    borrowed_balance: number;
+    collateral_token: {
+        symbol: string;
+        address: string;
+        decimals: number;
+    };
+    borrowed_token: {
+        symbol: string;
+        address: string;
+        decimals: number;
+    };
+    gauge_address: string | null;
+}
+
+export interface ILendMarketsFromPricesAPI {
+    data: ILendMarketFromPricesAPI[];
 }
 
 export interface IQuoteOdos {
@@ -225,10 +237,6 @@ export interface ILlamma {
     max_bands: number,
     default_bands: number,
     A: number,
-}
-
-export interface IResponseApi {
-    data: any
 }
 
 export interface IQuote {

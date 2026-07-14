@@ -4,12 +4,13 @@ import type { Llamalend } from "./llamalend.js";
 import {
     IDict,
     IExtendedPoolDataFromApi,
+    ILendMarketsFromPricesAPI,
     IMarketData,
     INetworkName,
     IQuoteOdos,
-    IResponseApi,
     IPoolType,
 } from "./interfaces.js";
+import { adaptLendMarketFromPricesApi } from "./lendMarkets/utils.js";
 
 const uncached_getPoolsFromApi = async (network: INetworkName, poolType: IPoolType): Promise<IExtendedPoolDataFromApi> => {
     const api = "https://api.curve.finance/api";
@@ -155,13 +156,14 @@ export const _getUserCollateralCrvUsdFull = memoize(
 
 export const _getMarketsData = memoize(
     async (network: INetworkName): Promise<IMarketData> => {
-        const url = `https://api.curve.finance/api/getLendingVaults/${network}/oneway`;
+        const url = `https://prices.curve.finance/v1/lending/markets/${network}`;
         const response = await fetch(url, { headers: {"accept": "application/json"} });
         if (response.status !== 200) {
             throw Error(`Fetch error: ${response.status} ${response.statusText}`);
         }
 
-        return (await response.json() as IResponseApi).data as IMarketData;
+        const { data } = await response.json() as ILendMarketsFromPricesAPI;
+        return { lendingVaultData: data.map(adaptLendMarketFromPricesApi) };
     },
     {
         promise: true,
