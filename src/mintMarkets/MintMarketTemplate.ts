@@ -1230,7 +1230,7 @@ export class MintMarketTemplate {
     private async _fullRepayAmount(address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const debt = await this.userDebt(address);
-         return BN(debt).times(1.0001).toString();
+        return BN(debt).times(1.0001).toString();
     }
 
     public async fullRepayIsApproved(address = ""): Promise<boolean> {
