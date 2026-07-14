@@ -1,21 +1,17 @@
 import memoize from "memoizee";
-import {IPartialFrac, TAmount, TGas} from "../../../interfaces";
-import type {LendMarketTemplate} from "../../LendMarketTemplate";
+import {TAmount, TGas, IPartialFrac} from "../../../interfaces";
+import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import {
     _getAddress,
-    _mulBy1_3,
-    calculateApprovalAmount,
+    parseUnits,
     BN,
-    calculateFutureLeverage,
-    DIGas,
     ensureAllowance,
+    hasAllowance,
     ensureAllowanceEstimateGas,
     formatUnits,
-    fromBN,
-    hasAllowance,
-    MAX_ACTIVE_BAND,
-    parseUnits,
     smartNumber,
+    _mulBy1_3,
+    DIGas, calculateFutureLeverage, MAX_ACTIVE_BAND, fromBN,
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
@@ -174,12 +170,12 @@ export abstract class LoanBaseModule {
         return await hasAllowance.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
-    private async createLoanApproveEstimateGas (collateral: number | string, isMax = false): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.market.addresses.controller, isMax);
+    private async createLoanApproveEstimateGas (collateral: number | string): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.market.addresses.controller);
     }
 
-    public async createLoanApprove(collateral: number | string, isMax = false): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.market.addresses.controller, isMax);
+    public async createLoanApprove(collateral: number | string): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.market.collateral_token.address], [collateral], this.market.addresses.controller);
     }
 
     private async _createLoan(collateral: number | string, debt: number | string, range: number, estimateGas: boolean): Promise<string | TGas> {
@@ -196,8 +192,8 @@ export abstract class LoanBaseModule {
         return await this._createLoan(collateral, debt,  range, true) as TGas;
     }
 
-    public async createLoan(collateral: number | string, debt: number | string, range: number, isMax = false): Promise<string> {
-        await this.createLoanApprove(collateral, isMax);
+    public async createLoan(collateral: number | string, debt: number | string, range: number): Promise<string> {
+        await this.createLoanApprove(collateral);
         return await this._createLoan(collateral, debt, range, false) as string;
     }
 
@@ -236,12 +232,12 @@ export abstract class LoanBaseModule {
         return await hasAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
-    private async borrowMoreApproveEstimateGas (collateral: number | string, isMax = false): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller, isMax);
+    private async borrowMoreApproveEstimateGas (collateral: number | string): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller);
     }
 
-    public async borrowMoreApprove(collateral: number | string, isMax = false): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller, isMax);
+    public async borrowMoreApprove(collateral: number | string): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller);
     }
 
     private async _borrowMore(collateral: number | string, debt: number | string, estimateGas: boolean): Promise<string | TGas> {
@@ -259,8 +255,8 @@ export abstract class LoanBaseModule {
         return await this._borrowMore(collateral, debt, true) as TGas;
     }
 
-    public async borrowMore(collateral: number | string, debt: number | string, isMax = false): Promise<string> {
-        await this.borrowMoreApprove(collateral, isMax);
+    public async borrowMore(collateral: number | string, debt: number | string): Promise<string> {
+        await this.borrowMoreApprove(collateral);
         return await this._borrowMore(collateral, debt, false) as string;
     }
 
@@ -306,12 +302,12 @@ export abstract class LoanBaseModule {
         return await hasAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
-    private async addCollateralApproveEstimateGas (collateral: number | string, isMax = false): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller, isMax);
+    private async addCollateralApproveEstimateGas (collateral: number | string): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller);
     }
 
-    public async addCollateralApprove(collateral: number | string, isMax = false): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller, isMax);
+    public async addCollateralApprove(collateral: number | string): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.collateral_token], [collateral], this.market.addresses.controller);
     }
 
     private async _addCollateral(collateral: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
@@ -335,9 +331,9 @@ export abstract class LoanBaseModule {
         return await this._addCollateral(collateral, address, true) as TGas;
     }
 
-    public async addCollateral(collateral: number | string, address = "", isMax = false): Promise<string> {
+    public async addCollateral(collateral: number | string, address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
-        await this.addCollateralApprove(collateral, isMax);
+        await this.addCollateralApprove(collateral);
         return await this._addCollateral(collateral, address, false) as string;
     }
 
@@ -426,12 +422,12 @@ export abstract class LoanBaseModule {
         return await hasAllowance.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
-    private async repayApproveEstimateGas (debt: number | string, isMax = false): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.market.addresses.controller, isMax);
+    private async repayApproveEstimateGas (debt: number | string): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.market.addresses.controller);
     }
 
-    public async repayApprove(debt: number | string, isMax = false): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.market.addresses.controller, isMax);
+    public async repayApprove(debt: number | string): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [debt], this.market.addresses.controller);
     }
 
     private async _repay(debt: number | string, address: string, estimateGas: boolean, shrink = false): Promise<string | TGas> {
@@ -451,8 +447,8 @@ export abstract class LoanBaseModule {
         return await this._repay(debt, address, true, shrink) as TGas;
     }
 
-    public async repay({ debt, address = "", shrink = false, isMax = false }: { debt: number | string; address?: string; shrink?: boolean; isMax?: boolean }): Promise<string> {
-        await this.repayApprove(debt, isMax);
+    public async repay({ debt, address = "", shrink = false }: { debt: number | string; address?: string; shrink?: boolean }): Promise<string> {
+        await this.repayApprove(debt);
         return await this._repay(debt, address, false, shrink) as string;
     }
 
@@ -483,16 +479,16 @@ export abstract class LoanBaseModule {
         return await this.repayIsApproved(fullRepayAmount);
     }
 
-    private async fullRepayApproveEstimateGas (address = "", isMax = false): Promise<TGas> {
+    private async fullRepayApproveEstimateGas (address = ""): Promise<TGas> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        return await this.repayApproveEstimateGas(calculateApprovalAmount(fullRepayAmount), isMax);
+        return await this.repayApproveEstimateGas(fullRepayAmount);
     }
 
-    public async fullRepayApprove(address = "", isMax = false): Promise<string[]> {
+    public async fullRepayApprove(address = ""): Promise<string[]> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        return await this.repayApprove(calculateApprovalAmount(fullRepayAmount), isMax);
+        return await this.repayApprove(fullRepayAmount);
     }
 
     public async fullRepayEstimateGas(address = ""): Promise<TGas> {
@@ -502,10 +498,10 @@ export abstract class LoanBaseModule {
         return await this._repay(fullRepayAmount, address, true) as TGas;
     }
 
-    public async fullRepay(address = "", isMax = false): Promise<string> {
+    public async fullRepay(address = ""): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        await this.repayApprove(calculateApprovalAmount(fullRepayAmount), isMax);
+        await this.repayApprove(fullRepayAmount);
         return await this._repay(fullRepayAmount, address, false) as string;
     }
 
@@ -540,18 +536,18 @@ export abstract class LoanBaseModule {
 
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
-        const amount = await this.tokensToLiquidate(address);
-        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.llamalend.signerAddress, this.market.addresses.controller);
+        const tokensToLiquidate = await this.tokensToLiquidate(address);
+        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [tokensToLiquidate], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
-    private async liquidateApproveEstimateGas (address = "", isMax = false): Promise<TGas> {
-        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.market.addresses.controller, isMax);
+    private async liquidateApproveEstimateGas (address = ""): Promise<TGas> {
+        const tokensToLiquidate = await this.tokensToLiquidate(address);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [tokensToLiquidate], this.market.addresses.controller);
     }
 
-    public async liquidateApprove(address = "", isMax = false): Promise<string[]> {
-        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
-        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.market.addresses.controller, isMax);
+    public async liquidateApprove(address = ""): Promise<string[]> {
+        const tokensToLiquidate = await this.tokensToLiquidate(address);
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [tokensToLiquidate], this.market.addresses.controller);
     }
 
     private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
@@ -595,8 +591,8 @@ export abstract class LoanBaseModule {
         return await this._liquidate(address, slippage, true) as TGas;
     }
 
-    public async liquidate(address: string, slippage = 0.1, isMax = false): Promise<string> {
-        await this.liquidateApprove(address, isMax);
+    public async liquidate(address: string, slippage = 0.1): Promise<string> {
+        await this.liquidateApprove(address);
         return await this._liquidate(address, slippage, false) as string;
     }
 
@@ -606,12 +602,12 @@ export abstract class LoanBaseModule {
         return await this.liquidateIsApproved()
     }
 
-    private async selfLiquidateApproveEstimateGas (address?: string, isMax = false): Promise<TGas> {
-        return this.liquidateApproveEstimateGas(address, isMax)
+    private async selfLiquidateApproveEstimateGas (): Promise<TGas> {
+        return this.liquidateApproveEstimateGas()
     }
 
-    public async selfLiquidateApprove(address?: string, isMax = false): Promise<string[]> {
-        return await this.liquidateApprove(address, isMax)
+    public async selfLiquidateApprove(): Promise<string[]> {
+        return await this.liquidateApprove()
     }
 
     public async selfLiquidateEstimateGas(slippage = 0.1): Promise<TGas> {
@@ -619,26 +615,23 @@ export abstract class LoanBaseModule {
         return await this._liquidate(this.llamalend.signerAddress, slippage, true) as TGas;
     }
 
-    public async selfLiquidate(slippage = 0.1, isMax = false): Promise<string> {
-        await this.selfLiquidateApprove(this.llamalend.signerAddress, isMax);
+    public async selfLiquidate(slippage = 0.1): Promise<string> {
+        await this.selfLiquidateApprove();
         return await this._liquidate(this.llamalend.signerAddress, slippage, false) as string;
     }
 
     // ---------------- PARTIAL SELF-LIQUIDATE ----------------
 
     public async partialSelfLiquidateIsApproved(partialFrac: IPartialFrac): Promise<boolean> {
-        const amount = partialFrac.amount;
-        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.llamalend.signerAddress, this.market.addresses.controller);
+        return await hasAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [partialFrac.amount], this.llamalend.signerAddress, this.market.addresses.controller);
     }
 
-    private async partialSelfLiquidateApproveEstimateGas(partialFrac: IPartialFrac, isMax = false): Promise<TGas> {
-        const amount = calculateApprovalAmount(partialFrac.amount);
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.market.addresses.controller, isMax);
+    private async partialSelfLiquidateApproveEstimateGas(partialFrac: IPartialFrac): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.borrowed_token], [partialFrac.amount], this.market.addresses.controller);
     }
 
-    public async partialSelfLiquidateApprove(partialFrac: IPartialFrac, isMax = false): Promise<string[]> {
-        const amount = calculateApprovalAmount(partialFrac.amount);
-        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [amount], this.market.addresses.controller, isMax);
+    public async partialSelfLiquidateApprove(partialFrac: IPartialFrac): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.borrowed_token], [partialFrac.amount], this.market.addresses.controller);
     }
 
     public async partialSelfLiquidateEstimateGas(partialFrac: IPartialFrac, slippage = 0.1): Promise<TGas> {
@@ -646,8 +639,8 @@ export abstract class LoanBaseModule {
         return await this._partialLiquidate(this.llamalend.signerAddress, partialFrac, slippage, true) as TGas;
     }
 
-    public async partialSelfLiquidate(partialFrac: IPartialFrac, slippage = 0.1, isMax = false): Promise<string> {
-        await this.partialSelfLiquidateApprove(partialFrac, isMax);
+    public async partialSelfLiquidate(partialFrac: IPartialFrac, slippage = 0.1): Promise<string> {
+        await this.partialSelfLiquidateApprove(partialFrac);
         return await this._partialLiquidate(this.llamalend.signerAddress, partialFrac, slippage, false) as string;
     }
 

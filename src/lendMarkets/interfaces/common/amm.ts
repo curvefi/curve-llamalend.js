@@ -6,6 +6,6 @@ export interface IAmm {
     swapRequired: (i: number, j: number, outAmount: TAmount) => Promise<string>;
     swapPriceImpact: (i: number, j: number, amount: TAmount) => Promise<string>;
     swapIsApproved: (i: number, amount: TAmount) => Promise<boolean>;
-    swapApprove: (i: number, amount: TAmount, isMax?: boolean) => Promise<string[]>;
-    swap: (i: number, j: number, amount: TAmount, slippage?: number, isMax?: boolean) => Promise<string>;
+    swapApprove: (i: number, amount: TAmount) => Promise<string[]>;
+    swap: (i: number, j: number, amount: TAmount, slippage?: number) => Promise<string>;
 }

@@ -447,12 +447,12 @@ export class LeverageV2Module {
         return collateralAllowance && borrowedAllowance
     }
 
-    public async leverageCreateLoanApproveEstimateGas (userCollateral: TAmount, userBorrowed: TAmount, isMax = false): Promise<TGas> {
+    public async leverageCreateLoanApproveEstimateGas (userCollateral: TAmount, userBorrowed: TAmount): Promise<TGas> {
         this._checkLeverageZap();
         const collateralGas = await ensureAllowanceEstimateGas.call(this.llamalend,
-            [this.market.coinAddresses[1]], [userCollateral], this.market.controller, isMax);
+            [this.market.coinAddresses[1]], [userCollateral], this.market.controller);
         const borrowedGas = await ensureAllowanceEstimateGas.call(this.llamalend,
-            [this.market.coinAddresses[0]], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap_deprecated, isMax);
+            [this.market.coinAddresses[0]], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap_deprecated);
 
         if(Array.isArray(collateralGas) && Array.isArray(borrowedGas)) {
             return [collateralGas[0] + borrowedGas[0], collateralGas[1] + borrowedGas[1]]
@@ -461,12 +461,12 @@ export class LeverageV2Module {
         }
     }
 
-    public async leverageCreateLoanApprove(userCollateral: TAmount, userBorrowed: TAmount, isMax = false): Promise<string[]> {
+    public async leverageCreateLoanApprove(userCollateral: TAmount, userBorrowed: TAmount): Promise<string[]> {
         this._checkLeverageZap();
         const collateralApproveTx = await ensureAllowance.call(this.llamalend,
-            [this.market.coinAddresses[1]], [userCollateral], this.market.controller, isMax);
+            [this.market.coinAddresses[1]], [userCollateral], this.market.controller);
         const borrowedApproveTx = await ensureAllowance.call(this.llamalend,
-            [this.market.coinAddresses[0]], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap_deprecated, isMax);
+            [this.market.coinAddresses[0]], [userBorrowed], this.llamalend.constants.ALIASES.leverage_zap_deprecated);
 
         return [...collateralApproveTx, ...borrowedApproveTx]
     }
@@ -527,9 +527,9 @@ export class LeverageV2Module {
         return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, slippage,  true) as number;
     }
 
-    public async leverageCreateLoan(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage = 0.1, isMax = false): Promise<string> {
+    public async leverageCreateLoan(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage = 0.1): Promise<string> {
         this._checkLeverageZap();
-        await this.leverageCreateLoanApprove(userCollateral, userBorrowed, isMax);
+        await this.leverageCreateLoanApprove(userCollateral, userBorrowed);
         return await this._leverageCreateLoan(userCollateral, userBorrowed, debt, range, slippage, false) as string;
     }
 
@@ -698,9 +698,9 @@ export class LeverageV2Module {
         return await this._leverageBorrowMore(userCollateral, userBorrowed, debt, slippage,  true) as number;
     }
 
-    public async leverageBorrowMore(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage = 0.1, isMax = false): Promise<string> {
+    public async leverageBorrowMore(userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage = 0.1): Promise<string> {
         this._checkLeverageZap();
-        await this.leverageCreateLoanApprove(userCollateral, userBorrowed, isMax);
+        await this.leverageCreateLoanApprove(userCollateral, userBorrowed);
         return await this._leverageBorrowMore(userCollateral, userBorrowed, debt, slippage, false) as string;
     }
 
@@ -874,23 +874,21 @@ export class LeverageV2Module {
         );
     }
 
-    public async leverageRepayApproveEstimateGas (userCollateral: TAmount, userBorrowed: TAmount, isMax = false): Promise<TGas> {
+    public async leverageRepayApproveEstimateGas (userCollateral: TAmount, userBorrowed: TAmount): Promise<TGas> {
         this._checkLeverageZap();
         return await ensureAllowanceEstimateGas.call(this.llamalend,
             [this.market.coinAddresses[1], this.market.coinAddresses[0]],
             [userCollateral, userBorrowed],
-            this.llamalend.constants.ALIASES.leverage_zap_deprecated,
-            isMax
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated
         );
     }
 
-    public async leverageRepayApprove(userCollateral: TAmount, userBorrowed: TAmount, isMax = false): Promise<string[]> {
+    public async leverageRepayApprove(userCollateral: TAmount, userBorrowed: TAmount): Promise<string[]> {
         this._checkLeverageZap();
         return await ensureAllowance.call(this.llamalend,
             [this.market.coinAddresses[1], this.market.coinAddresses[0]],
             [userCollateral, userBorrowed],
-            this.llamalend.constants.ALIASES.leverage_zap_deprecated,
-            isMax
+            this.llamalend.constants.ALIASES.leverage_zap_deprecated
         );
     }
 
@@ -946,9 +944,9 @@ export class LeverageV2Module {
         return await this._leverageRepay(stateCollateral, userCollateral, userBorrowed, slippage,  true) as number;
     }
 
-    public async leverageRepay(stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, slippage = 0.1, isMax = false): Promise<string> {
+    public async leverageRepay(stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, slippage = 0.1): Promise<string> {
         this._checkLeverageZap();
-        await this.leverageRepayApprove(userCollateral, userBorrowed, isMax);
+        await this.leverageRepayApprove(userCollateral, userBorrowed);
         return await this._leverageRepay(stateCollateral, userCollateral, userBorrowed, slippage, false) as string;
     }
 

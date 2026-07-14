@@ -9,7 +9,6 @@ import {
     smartNumber,
     getBalances,
     MAX_ALLOWANCE,
-    calculateApprovalAmount,
 } from "./utils.js";
 import type { Llamalend } from "./llamalend.js";
 import { TAmount, TGas } from "./interfaces.js";
@@ -75,11 +74,11 @@ export async function depositAllowance(this: Llamalend): Promise<string[]> {
     return await getAllowance.call(this, [this.constants.ALIASES.crvUSD], this.signerAddress, this.constants.ALIASES.st_crvUSD);
 }
 
-export async function depositApproveEstimateGas(this: Llamalend, assets: TAmount, isMax = false): Promise<TGas> {
-    return await ensureAllowanceEstimateGas.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD, isMax);
+export async function depositApproveEstimateGas(this: Llamalend, assets: TAmount): Promise<TGas> {
+    return await ensureAllowanceEstimateGas.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD);
 }
 
-export async function depositApprove(this: Llamalend, assets: TAmount, isMax = false): Promise<string[]> {
+export async function depositApprove(this: Llamalend, assets: TAmount, isMax = true): Promise<string[]> {
     return await ensureAllowance.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD, isMax);
 }
 
@@ -101,8 +100,8 @@ export async function depositEstimateGas(this: Llamalend, assets: TAmount): Prom
     return await _deposit.call(this, assets, true) as number;
 }
 
-export async function deposit(this: Llamalend, assets: TAmount, isMax = false): Promise<string> {
-    await depositApprove.call(this, assets, isMax);
+export async function deposit(this: Llamalend, assets: TAmount): Promise<string> {
+    await depositApprove.call(this, assets);
     return await _deposit.call(this, assets, false) as string;
 }
 
@@ -124,8 +123,8 @@ export async function previewMint(this: Llamalend, shares: TAmount): Promise<str
 }
 
 export async function mintIsApproved(this: Llamalend, shares: TAmount): Promise<boolean> {
-    const amount = await previewMint.call(this, shares);
-    return await hasAllowance.call(this, [this.constants.ALIASES.crvUSD], [amount], this.signerAddress, this.constants.ALIASES.st_crvUSD);
+    const assets = await previewMint.call(this, shares);
+    return await hasAllowance.call(this, [this.constants.ALIASES.crvUSD], [assets], this.signerAddress, this.constants.ALIASES.st_crvUSD);
 }
 
 export async function mintAllowance(this: Llamalend): Promise<string[]> {
@@ -138,14 +137,14 @@ export async function mintAllowance(this: Llamalend): Promise<string[]> {
     }
 }
 
-export async function mintApproveEstimateGas(this: Llamalend, shares: TAmount, isMax = false): Promise<TGas> {
-    const amount = calculateApprovalAmount(await previewMint.call(this, shares));
-    return await ensureAllowanceEstimateGas.call(this, [this.constants.ALIASES.crvUSD], [amount], this.constants.ALIASES.st_crvUSD, isMax);
+export async function mintApproveEstimateGas(this: Llamalend, shares: TAmount): Promise<TGas> {
+    const assets = await previewMint.call(this, shares);
+    return await ensureAllowanceEstimateGas.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD);
 }
 
-export async function mintApprove(this: Llamalend, shares: TAmount, isMax = false): Promise<string[]> {
-    const amount = calculateApprovalAmount(await previewMint.call(this, shares));
-    return await ensureAllowance.call(this, [this.constants.ALIASES.crvUSD], [amount], this.constants.ALIASES.st_crvUSD, isMax);
+export async function mintApprove(this: Llamalend, shares: TAmount, isMax = true): Promise<string[]> {
+    const assets = await previewMint.call(this, shares);
+    return await ensureAllowance.call(this, [this.constants.ALIASES.crvUSD], [assets], this.constants.ALIASES.st_crvUSD, isMax);
 }
 
 async function _mint(this: Llamalend, shares: TAmount, estimateGas = false): Promise<string | TGas> {
@@ -166,8 +165,8 @@ export async function mintEstimateGas(this: Llamalend, shares: TAmount): Promise
     return await _mint.call(this, shares, true) as number;
 }
 
-export async function mint(this: Llamalend, shares: TAmount, isMax = false): Promise<string> {
-    await mintApprove.call(this, shares, isMax);
+export async function mint(this: Llamalend, shares: TAmount): Promise<string> {
+    await mintApprove.call(this, shares);
     return await _mint.call(this, shares, false) as string;
 }
 
