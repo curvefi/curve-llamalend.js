@@ -104,10 +104,8 @@ export interface ILeverageZapV2 {
     }) => Promise<boolean>,
     createLoanApprove: ({
         userCollateral,
-        isMax,
     }: {
-        userCollateral: TAmount,
-        isMax?: boolean,
+        userCollateral: TAmount
     }) => Promise<string[]>,
     calcMinRecv: (expected: TAmount, slippage: number) => string,
     createLoan: ({
@@ -117,15 +115,13 @@ export interface ILeverageZapV2 {
         minRecv,
         router,
         calldata,
-        isMax,
     }: {
         userCollateral: TAmount,
         debt: TAmount,
         range: number,
         minRecv: TAmount,
         router: string,
-        calldata: string,
-        isMax?: boolean,
+        calldata: string
     }) => Promise<string>,
 
     borrowMoreMaxRecv: ({ userCollateral, getExpected, address }: {
@@ -162,17 +158,15 @@ export interface ILeverageZapV2 {
     borrowMoreIsApproved: ({ userCollateral }: {
         userCollateral: TAmount
     }) => Promise<boolean>,
-    borrowMoreApprove: ({ userCollateral, isMax }: {
-        userCollateral: TAmount,
-        isMax?: boolean,
+    borrowMoreApprove: ({ userCollateral }: {
+        userCollateral: TAmount
     }) => Promise<string[]>,
-    borrowMore: ({ userCollateral, debt, minRecv, router, calldata, isMax }: {
+    borrowMore: ({ userCollateral, debt, minRecv, router, calldata }: {
         userCollateral: TAmount,
         debt: TAmount,
         minRecv: TAmount,
         router: string,
-        calldata: string,
-        isMax?: boolean,
+        calldata: string
     }) => Promise<string>,
     borrowMoreFutureLeverage: ({ userCollateral, debt, quote, address }: {
         userCollateral: TAmount,
@@ -214,17 +208,15 @@ export interface ILeverageZapV2 {
     repayIsApproved: ({ userCollateral }: {
         userCollateral: TAmount
     }) => Promise<boolean>,
-    repayApprove: ({ userCollateral, isMax }: {
-        userCollateral: TAmount,
-        isMax?: boolean,
+    repayApprove: ({ userCollateral }: {
+        userCollateral: TAmount
     }) => Promise<string[]>,
-    repay: ({ stateCollateral, userCollateral, minRecv, router, calldata, isMax }: {
+    repay: ({ stateCollateral, userCollateral, minRecv, router, calldata }: {
         stateCollateral: TAmount,
         userCollateral: TAmount,
         minRecv: TAmount,
         router: string,
-        calldata: string,
-        isMax?: boolean,
+        calldata: string
     }) => Promise<string>,
     repayFutureLeverage: ({ stateCollateral, userCollateral, address }: {
         stateCollateral: TAmount,
@@ -233,9 +225,8 @@ export interface ILeverageZapV2 {
     }) => Promise<string>,
 
     estimateGas: {
-        createLoanApprove: ({ userCollateral, isMax }: {
-            userCollateral: TAmount,
-            isMax?: boolean,
+        createLoanApprove: ({ userCollateral }: {
+            userCollateral: TAmount
         }) => Promise<TGas>,
         createLoan: ({ userCollateral, debt, range, minRecv, router, calldata }: {
             userCollateral: TAmount,
@@ -246,9 +237,8 @@ export interface ILeverageZapV2 {
             calldata: string
         }) => Promise<number>,
 
-        borrowMoreApprove: ({ userCollateral, isMax }: {
-            userCollateral: TAmount,
-            isMax?: boolean,
+        borrowMoreApprove: ({ userCollateral }: {
+            userCollateral: TAmount
         }) => Promise<TGas>,
         borrowMore: ({ userCollateral, debt, minRecv, router, calldata }: {
             userCollateral: TAmount,
@@ -258,9 +248,8 @@ export interface ILeverageZapV2 {
             calldata: string
         }) => Promise<number>,
 
-        repayApprove: ({ userCollateral, isMax }: {
-            userCollateral: TAmount,
-            isMax?: boolean,
+        repayApprove: ({ userCollateral }: {
+            userCollateral: TAmount
         }) => Promise<TGas>,
         repay: ({ stateCollateral, userCollateral, minRecv, router, calldata }: {
             stateCollateral: TAmount,

@@ -39,27 +39,27 @@ export class VaultModule {
         return formatUnits(_amount,  this.market.borrowed_token.decimals);
     }
 
-    public async vaultPreviewDeposit(assets: TAmount): Promise<string> {
-        const _amount = parseUnits(assets, this.market.borrowed_token.decimals);
+    public async vaultPreviewDeposit(amount: TAmount): Promise<string> {
+        const _amount = parseUnits(amount, this.market.borrowed_token.decimals);
         const _shares = await this.llamalend.contracts[this.market.addresses.vault].contract.previewDeposit(_amount);
 
         return formatUnits(_shares, 18);
     }
 
-    public async vaultDepositIsApproved(assets: TAmount): Promise<boolean> {
-        return await hasAllowance.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.llamalend.signerAddress, this.market.addresses.vault);
+    public async vaultDepositIsApproved(borrowed: TAmount): Promise<boolean> {
+        return await hasAllowance.call(this.llamalend, [this.market.borrowed_token.address], [borrowed], this.llamalend.signerAddress, this.market.addresses.vault);
     }
 
-    public async vaultDepositApproveEstimateGas (assets: TAmount, isMax = false): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.market.addresses.vault, isMax);
+    public async vaultDepositApproveEstimateGas (borrowed: TAmount): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.borrowed_token.address], [borrowed], this.market.addresses.vault);
     }
 
-    public async vaultDepositApprove(assets: TAmount, isMax = false): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.market.addresses.vault, isMax);
+    public async vaultDepositApprove(borrowed: TAmount): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [borrowed], this.market.addresses.vault);
     }
 
-    private async _vaultDeposit(assets: TAmount, estimateGas = false): Promise<string | TGas> {
-        const _amount = parseUnits(assets, this.market.borrowed_token.decimals);
+    private async _vaultDeposit(amount: TAmount, estimateGas = false): Promise<string | TGas> {
+        const _amount = parseUnits(amount, this.market.borrowed_token.decimals);
         const gas = await this.llamalend.contracts[this.market.addresses.vault].contract.deposit.estimateGas(_amount, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
@@ -70,14 +70,14 @@ export class VaultModule {
         return (await this.llamalend.contracts[this.market.addresses.vault].contract.deposit(_amount, { ...this.llamalend.options, gasLimit })).hash;
     }
 
-    public async vaultDepositEstimateGas(assets: TAmount): Promise<TGas> {
-        if (!(await this.vaultDepositIsApproved(assets))) throw Error("Approval is needed for gas estimation");
-        return await this._vaultDeposit(assets, true) as number;
+    public async vaultDepositEstimateGas(amount: TAmount): Promise<TGas> {
+        if (!(await this.vaultDepositIsApproved(amount))) throw Error("Approval is needed for gas estimation");
+        return await this._vaultDeposit(amount, true) as number;
     }
 
-    public async vaultDeposit(assets: TAmount, isMax = false): Promise<string> {
-        await this.vaultDepositApprove(assets, isMax);
-        return await this._vaultDeposit(assets, false) as string;
+    public async vaultDeposit(amount: TAmount): Promise<string> {
+        await this.vaultDepositApprove(amount);
+        return await this._vaultDeposit(amount, false) as string;
     }
 
 
@@ -90,30 +90,27 @@ export class VaultModule {
         return formatUnits(_shares, 18);
     }
 
-    public async vaultPreviewMint(vaultShares: TAmount): Promise<string> {
-        const _amount = parseUnits(vaultShares, 18);
+    public async vaultPreviewMint(amount: TAmount): Promise<string> {
+        const _amount = parseUnits(amount, 18);
         const _assets = await this.llamalend.contracts[this.market.addresses.vault].contract.previewMint(_amount);
 
         return formatUnits(_assets, this.market.borrowed_token.decimals);
     }
 
-    public async vaultMintIsApproved(vaultShares: TAmount): Promise<boolean> {
-        const assets = await this.vaultPreviewMint(vaultShares);
-        return await hasAllowance.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.llamalend.signerAddress, this.market.addresses.vault);
+    public async vaultMintIsApproved(borrowed: TAmount): Promise<boolean> {
+        return await hasAllowance.call(this.llamalend, [this.market.borrowed_token.address], [borrowed], this.llamalend.signerAddress, this.market.addresses.vault);
     }
 
-    public async vaultMintApproveEstimateGas (vaultShares: TAmount, isMax = false): Promise<TGas> {
-        const assets = await this.vaultPreviewMint(vaultShares);
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.market.addresses.vault, isMax);
+    public async vaultMintApproveEstimateGas (borrowed: TAmount): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.borrowed_token.address], [borrowed], this.market.addresses.vault);
     }
 
-    public async vaultMintApprove(vaultShares: TAmount, isMax = false): Promise<string[]> {
-        const assets = await this.vaultPreviewMint(vaultShares);
-        return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [assets], this.market.addresses.vault, isMax);
+    public async vaultMintApprove(borrowed: TAmount): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.market.borrowed_token.address], [borrowed], this.market.addresses.vault);
     }
 
-    private async _vaultMint(vaultShares: TAmount, estimateGas = false): Promise<string | TGas> {
-        const _amount = parseUnits(vaultShares, 18);
+    private async _vaultMint(amount: TAmount, estimateGas = false): Promise<string | TGas> {
+        const _amount = parseUnits(amount, 18);
         const gas = await this.llamalend.contracts[this.market.addresses.vault].contract.mint.estimateGas(_amount, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
@@ -124,14 +121,14 @@ export class VaultModule {
         return (await this.llamalend.contracts[this.market.addresses.vault].contract.mint(_amount, { ...this.llamalend.options, gasLimit })).hash;
     }
 
-    public async vaultMintEstimateGas(vaultShares: TAmount): Promise<TGas> {
-        if (!(await this.vaultMintIsApproved(vaultShares))) throw Error("Approval is needed for gas estimation");
-        return await this._vaultMint(vaultShares, true) as number;
+    public async vaultMintEstimateGas(amount: TAmount): Promise<TGas> {
+        if (!(await this.vaultMintIsApproved(amount))) throw Error("Approval is needed for gas estimation");
+        return await this._vaultMint(amount, true) as number;
     }
 
-    public async vaultMint(vaultShares: TAmount, isMax = false): Promise<string> {
-        await this.vaultMintApprove(vaultShares, isMax);
-        return await this._vaultMint(vaultShares, false) as string;
+    public async vaultMint(amount: TAmount): Promise<string> {
+        await this.vaultMintApprove(amount);
+        return await this._vaultMint(amount, false) as string;
     }
 
 
@@ -142,15 +139,15 @@ export class VaultModule {
         return formatUnits(_assets, this.market.borrowed_token.decimals);
     }
 
-    public async vaultPreviewWithdraw(assets: TAmount): Promise<string> {
-        const _amount = parseUnits(assets, this.market.borrowed_token.decimals);
+    public async vaultPreviewWithdraw(amount: TAmount): Promise<string> {
+        const _amount = parseUnits(amount, this.market.borrowed_token.decimals);
         const _shares = await this.llamalend.contracts[this.market.addresses.vault].contract.previewWithdraw(_amount);
 
         return formatUnits(_shares, 18);
     }
 
-    private async _vaultWithdraw(assets: TAmount, estimateGas = false): Promise<string | TGas> {
-        const _amount = parseUnits(assets, this.market.borrowed_token.decimals);
+    private async _vaultWithdraw(amount: TAmount, estimateGas = false): Promise<string | TGas> {
+        const _amount = parseUnits(amount, this.market.borrowed_token.decimals);
         const gas = await this.llamalend.contracts[this.market.addresses.vault].contract.withdraw.estimateGas(_amount, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
@@ -161,12 +158,12 @@ export class VaultModule {
         return (await this.llamalend.contracts[this.market.addresses.vault].contract.withdraw(_amount, { ...this.llamalend.options, gasLimit })).hash;
     }
 
-    public async vaultWithdrawEstimateGas(assets: TAmount): Promise<TGas> {
-        return await this._vaultWithdraw(assets, true) as number;
+    public async vaultWithdrawEstimateGas(amount: TAmount): Promise<TGas> {
+        return await this._vaultWithdraw(amount, true) as number;
     }
 
-    public async vaultWithdraw(assets: TAmount): Promise<string> {
-        return await this._vaultWithdraw(assets, false) as string;
+    public async vaultWithdraw(amount: TAmount): Promise<string> {
+        return await this._vaultWithdraw(amount, false) as string;
     }
 
 
@@ -177,15 +174,15 @@ export class VaultModule {
         return formatUnits(_shares, 18);
     }
 
-    public async vaultPreviewRedeem(vaultShares: TAmount): Promise<string> {
-        const _amount = parseUnits(vaultShares, 18);
+    public async vaultPreviewRedeem(amount: TAmount): Promise<string> {
+        const _amount = parseUnits(amount, 18);
         const _assets = await this.llamalend.contracts[this.market.addresses.vault].contract.previewRedeem(_amount);
 
         return formatUnits(_assets, this.market.borrowed_token.decimals);
     }
 
-    private async _vaultRedeem(vaultShares: TAmount, estimateGas = false): Promise<string | TGas> {
-        const _amount = parseUnits(vaultShares, 18);
+    private async _vaultRedeem(amount: TAmount, estimateGas = false): Promise<string | TGas> {
+        const _amount = parseUnits(amount, 18);
         const gas = await this.llamalend.contracts[this.market.addresses.vault].contract.redeem.estimateGas(_amount, { ...this.llamalend.constantOptions });
         if (estimateGas) return smartNumber(gas);
 
@@ -196,12 +193,12 @@ export class VaultModule {
         return (await this.llamalend.contracts[this.market.addresses.vault].contract.redeem(_amount, { ...this.llamalend.options, gasLimit })).hash;
     }
 
-    public async vaultRedeemEstimateGas(vaultShares: TAmount): Promise<TGas> {
-        return await this._vaultRedeem(vaultShares, true) as number;
+    public async vaultRedeemEstimateGas(amount: TAmount): Promise<TGas> {
+        return await this._vaultRedeem(amount, true) as number;
     }
 
-    public async vaultRedeem(vaultShares: TAmount): Promise<string> {
-        return await this._vaultRedeem(vaultShares, false) as string;
+    public async vaultRedeem(amount: TAmount): Promise<string> {
+        return await this._vaultRedeem(amount, false) as string;
     }
 
     // ---------------- VAULT UTILS ----------------
@@ -213,8 +210,8 @@ export class VaultModule {
         return this.llamalend.formatUnits(_shares);
     }
 
-    public async vaultConvertToAssets(vaultShares: TAmount): Promise<string> {
-        const _shares = parseUnits(vaultShares);
+    public async vaultConvertToAssets(shares: TAmount): Promise<string> {
+        const _shares = parseUnits(shares);
         const _assets = await this.llamalend.contracts[this.market.addresses.vault].contract.convertToAssets(_shares);
 
         return this.llamalend.formatUnits(_assets, this.market.borrowed_token.decimals);
@@ -229,18 +226,18 @@ export class VaultModule {
         return await hasAllowance.call(this.llamalend, [this.market.addresses.vault], [vaultShares], this.llamalend.signerAddress, this.market.addresses.gauge);
     }
 
-    public async vaultStakeApproveEstimateGas(vaultShares: number | string, isMax = false): Promise<TGas> {
+    public async vaultStakeApproveEstimateGas(vaultShares: number | string): Promise<TGas> {
         if (this.market.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`stakeApproveEstimateGas method doesn't exist for pool ${this.market.name} (id: ${this.market.name}). There is no gauge`);
         }
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.vault], [vaultShares], this.market.addresses.gauge, isMax);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.market.addresses.vault], [vaultShares], this.market.addresses.gauge);
     }
 
-    public async vaultStakeApprove(vaultShares: number | string, isMax = false): Promise<string[]> {
+    public async vaultStakeApprove(vaultShares: number | string): Promise<string[]> {
         if (this.market.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`stakeApprove method doesn't exist for pool ${this.market.name} (id: ${this.market.name}). There is no gauge`);
         }
-        return await ensureAllowance.call(this.llamalend, [this.market.addresses.vault], [vaultShares], this.market.addresses.gauge, isMax);
+        return await ensureAllowance.call(this.llamalend, [this.market.addresses.vault], [vaultShares], this.market.addresses.gauge);
     }
 
     public async vaultStakeEstimateGas(vaultShares: number | string): Promise<TGas> {
@@ -251,12 +248,12 @@ export class VaultModule {
         return smartNumber(await this.llamalend.contracts[this.market.addresses.gauge].contract.deposit.estimateGas(_vaultShares, this.llamalend.constantOptions));
     }
 
-    public async vaultStake(vaultShares: number | string, isMax = false): Promise<string> {
+    public async vaultStake(vaultShares: number | string): Promise<string> {
         if (this.market.addresses.gauge === this.llamalend.constants.ZERO_ADDRESS) {
             throw Error(`stake method doesn't exist for pool ${this.market.name} (id: ${this.market.name}). There is no gauge`);
         }
         const _vaultShares = parseUnits(vaultShares);
-        await _ensureAllowance.call(this.llamalend, [this.market.addresses.vault], [_vaultShares], this.market.addresses.gauge, isMax)
+        await _ensureAllowance.call(this.llamalend, [this.market.addresses.vault], [_vaultShares], this.market.addresses.gauge)
 
         await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(await this.llamalend.contracts[this.market.addresses.gauge].contract.deposit.estimateGas(_vaultShares, this.llamalend.constantOptions)));

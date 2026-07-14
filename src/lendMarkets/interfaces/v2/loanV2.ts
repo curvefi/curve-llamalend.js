@@ -10,24 +10,24 @@ export interface ILoanV2 {
     createLoanPricesAllRanges: (collateral: TAmount, debt: TAmount) => Promise<{ [index: number]: [string, string] | null }>;
     createLoanHealth: (collateral: TAmount, debt: TAmount, range: number, full?: boolean) => Promise<string>;
     createLoanIsApproved: (collateral: TAmount) => Promise<boolean>;
-    createLoanApprove: (collateral: TAmount, isMax?: boolean) => Promise<string[]>;
-    createLoan: (collateral: TAmount, debt: TAmount, range: number, isMax?: boolean) => Promise<string>;
+    createLoanApprove: (collateral: TAmount) => Promise<string[]>;
+    createLoan: (collateral: TAmount, debt: TAmount, range: number) => Promise<string>;
 
     borrowMoreMaxRecv: (collateralAmount: TAmount) => Promise<string>;
     borrowMoreBands: (collateral: TAmount, debt: TAmount) => Promise<[number, number]>;
     borrowMorePrices: (collateral: TAmount, debt: TAmount) => Promise<string[]>;
     borrowMoreHealth: (collateral: TAmount, debt: TAmount, full?: boolean, address?: string) => Promise<string>;
     borrowMoreIsApproved: (collateral: TAmount) => Promise<boolean>;
-    borrowMoreApprove: (collateral: TAmount, isMax?: boolean) => Promise<string[]>;
-    borrowMore: (collateral: TAmount, debt: TAmount, isMax?: boolean) => Promise<string>;
+    borrowMoreApprove: (collateral: TAmount) => Promise<string[]>;
+    borrowMore: (collateral: TAmount, debt: TAmount) => Promise<string>;
     borrowMoreFutureLeverage: (collateral: TAmount, debt: TAmount, userAddress?: string) => Promise<string>;
 
     addCollateralBands: (collateral: TAmount, address?: string) => Promise<[number, number]>;
     addCollateralPrices: (collateral: TAmount, address?: string) => Promise<string[]>;
     addCollateralHealth: (collateral: TAmount, full?: boolean, address?: string) => Promise<string>;
     addCollateralIsApproved: (collateral: TAmount) => Promise<boolean>;
-    addCollateralApprove: (collateral: TAmount, isMax?: boolean) => Promise<string[]>;
-    addCollateral: (collateral: TAmount, address?: string, isMax?: boolean) => Promise<string>;
+    addCollateralApprove: (collateral: TAmount) => Promise<string[]>;
+    addCollateral: (collateral: TAmount, address?: string) => Promise<string>;
     addCollateralFutureLeverage: (collateral: TAmount, userAddress?: string) => Promise<string>;
 
     tokensToShrink: (dCollateral?: TAmount, address?: string) => Promise<string>;
@@ -43,46 +43,46 @@ export interface ILoanV2 {
     repayBands: (params: { debt: TAmount; address?: string; shrink?: boolean }) => Promise<[number, number]>;
     repayPrices: (params: { debt: TAmount; address?: string; shrink?: boolean }) => Promise<string[]>;
     repayIsApproved: (debt: TAmount) => Promise<boolean>;
-    repayApprove: (debt: TAmount, isMax?: boolean) => Promise<string[]>;
+    repayApprove: (debt: TAmount) => Promise<string[]>;
     repayHealth: (params: { debt: TAmount; shrink?: boolean; full?: boolean; address?: string }) => Promise<string>;
-    repay: (params: { debt: TAmount; address?: string; shrink?: boolean; isMax?: boolean }) => Promise<string>;
+    repay: (params: { debt: TAmount; address?: string; shrink?: boolean }) => Promise<string>;
     repayFutureLeverage: (debt: TAmount, userAddress?: string) => Promise<string>;
 
     fullRepayIsApproved: (address?: string) => Promise<boolean>;
-    fullRepayApprove: (address?: string, isMax?: boolean) => Promise<string[]>;
-    fullRepay: (address?: string, isMax?: boolean) => Promise<string>;
+    fullRepayApprove: (address?: string) => Promise<string[]>;
+    fullRepay: (address?: string) => Promise<string>;
 
     tokensToLiquidate: (address?: string) => Promise<string>;
     calcPartialFrac: (amount: TAmount, address?: string) => Promise<IPartialFrac>;
     liquidateIsApproved: (address?: string) => Promise<boolean>;
-    liquidateApprove: (address?: string, isMax?: boolean) => Promise<string[]>;
-    liquidate: (address: string, slippage?: number, isMax?: boolean) => Promise<string>;
+    liquidateApprove: (address?: string) => Promise<string[]>;
+    liquidate: (address: string, slippage?: number) => Promise<string>;
 
     selfLiquidateIsApproved: () => Promise<boolean>;
-    selfLiquidateApprove: (address?: string, isMax?: boolean) => Promise<string[]>;
-    selfLiquidate: (slippage?: number, isMax?: boolean) => Promise<string>;
+    selfLiquidateApprove: () => Promise<string[]>;
+    selfLiquidate: (slippage?: number) => Promise<string>;
 
     partialSelfLiquidateIsApproved: (partialFrac: IPartialFrac) => Promise<boolean>;
-    partialSelfLiquidateApprove: (partialFrac: IPartialFrac, isMax?: boolean) => Promise<string[]>;
-    partialSelfLiquidate: (partialFrac: IPartialFrac, slippage?: number, isMax?: boolean) => Promise<string>;
+    partialSelfLiquidateApprove: (partialFrac: IPartialFrac) => Promise<string[]>;
+    partialSelfLiquidate: (partialFrac: IPartialFrac, slippage?: number) => Promise<string>;
 
     estimateGas: {
-        createLoanApprove: (collateral: TAmount, isMax?: boolean) => Promise<TGas>;
+        createLoanApprove: (collateral: TAmount) => Promise<TGas>;
         createLoan: (collateral: TAmount, debt: TAmount, range: number) => Promise<TGas>;
-        borrowMoreApprove: (collateral: TAmount, isMax?: boolean) => Promise<TGas>;
+        borrowMoreApprove: (collateral: TAmount) => Promise<TGas>;
         borrowMore: (collateral: TAmount, debt: TAmount) => Promise<TGas>;
-        addCollateralApprove: (collateral: TAmount, isMax?: boolean) => Promise<TGas>;
+        addCollateralApprove: (collateral: TAmount) => Promise<TGas>;
         addCollateral: (collateral: TAmount, address?: string) => Promise<TGas>;
         removeCollateral: (collateral: TAmount) => Promise<TGas>;
-        repayApprove: (debt: TAmount, isMax?: boolean) => Promise<TGas>;
+        repayApprove: (debt: TAmount) => Promise<TGas>;
         repay: (params: { debt: TAmount; address?: string; shrink?: boolean }) => Promise<TGas>;
-        fullRepayApprove: (address?: string, isMax?: boolean) => Promise<TGas>;
+        fullRepayApprove: (address?: string) => Promise<TGas>;
         fullRepay: (address?: string) => Promise<TGas>;
-        liquidateApprove: (address?: string, isMax?: boolean) => Promise<TGas>;
+        liquidateApprove: (address?: string) => Promise<TGas>;
         liquidate: (address: string, slippage?: number) => Promise<TGas>;
-        selfLiquidateApprove: (address?: string, isMax?: boolean) => Promise<TGas>;
+        selfLiquidateApprove: () => Promise<TGas>;
         selfLiquidate: (slippage?: number) => Promise<TGas>;
-        partialSelfLiquidateApprove: (partialFrac: IPartialFrac, isMax?: boolean) => Promise<TGas>;
+        partialSelfLiquidateApprove: (partialFrac: IPartialFrac) => Promise<TGas>;
         partialSelfLiquidate: (partialFrac: IPartialFrac, slippage?: number) => Promise<TGas>;
     };
 }

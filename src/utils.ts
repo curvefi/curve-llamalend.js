@@ -1,7 +1,7 @@
 import { ethers,  BigNumberish, Numeric } from "ethers";
 import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
-import {ICurveContract, IDict, TAmount, TGas} from "./interfaces.js";
+import { ICurveContract, IDict, TGas } from "./interfaces.js";
 import { _getUsdPricesFromApi } from "./cached.js";
 import type { Llamalend } from "./llamalend.js";
 import { JsonFragment } from "ethers/lib.esm";
@@ -71,11 +71,6 @@ export const toStringFromBN = (bn: BigNumber, decimals = 18): string => {
 export const fromBN = (bn: BigNumber, decimals = 18): bigint => {
     return parseUnits(toStringFromBN(bn, decimals), decimals)
 }
-
-export const APPROVAL_BUFFER = "0.1"; // %
-const APPROVAL_BUFFER_MULTIPLIER = BN(100).plus(APPROVAL_BUFFER).div(100);
-
-export const calculateApprovalAmount = (amount: TAmount) => BN(amount).times(APPROVAL_BUFFER_MULTIPLIER).toString();
 
 // -----------------------------------------------------------------------------------------------
 
@@ -240,7 +235,7 @@ export const hasAllowance = async function (this: Llamalend, coins: string[], am
     return _allowance.map((a, i) => a >= _amounts[i]).reduce((a, b) => a && b);
 }
 
-export const _ensureAllowance = async function (this: Llamalend, coins: string[], _amounts: bigint[], spender: string, isMax = false): Promise<string[]> {
+export const _ensureAllowance = async function (this: Llamalend, coins: string[], _amounts: bigint[], spender: string, isMax = true): Promise<string[]> {
     const address = this.signerAddress;
     const _allowance: bigint[] = await _getAllowance.call(this, coins, address, spender);
 
@@ -259,7 +254,7 @@ export const _ensureAllowance = async function (this: Llamalend, coins: string[]
 }
 
 // coins can be either addresses or symbols
-export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = false): Promise<TGas> {
+export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<TGas> {
     const coinAddresses = _getCoinAddresses.call(this, coins);
     const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
@@ -279,7 +274,7 @@ export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins
 }
 
 // coins can be either addresses or symbols
-export const ensureAllowance = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = false): Promise<string[]> {
+export const ensureAllowance = async function (this: Llamalend, coins: string[], amounts: (number | string)[], spender: string, isMax = true): Promise<string[]> {
     const coinAddresses = _getCoinAddresses.call(this, coins);
     const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
@@ -506,3 +501,4 @@ export const buildCalldataForLeverageZapV2 = (params: LeverageZapV2LLv2CalldataP
         [BigInt(params.controllerId), params._minRecv, params.router, exchangeBytes]
     );
 };
+
