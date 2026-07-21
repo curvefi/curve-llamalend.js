@@ -84,8 +84,8 @@ export abstract class LeverageZapV2BaseModule {
     // ============ CREATE LOAN METHODS ============
 
     public hasLeverage = (): boolean => {
-        return this._getLeverageZapAddress() !== this.llamalend.constants.ZERO_ADDRESS &&
-            this._getMarketId() >= Number(this.llamalend.constants.ALIASES["leverage_markets_start_id"]);
+        return this.market.version === 'v2' || (this._getLeverageZapAddress() !== this.llamalend.constants.ZERO_ADDRESS &&
+            this._getMarketId() >= Number(this.llamalend.constants.ALIASES["leverage_markets_start_id"]));
     }
 
     public _checkLeverageZap(): void {
