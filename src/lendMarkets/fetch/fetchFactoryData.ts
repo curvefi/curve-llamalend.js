@@ -109,9 +109,9 @@ export const getFactoryMarketDataV2 = async (llamalend: Llamalend) => {
         names.push(''); // new factory does not give names, it's generated at the market creation level
     }
 
-    // Fetch gauges for non-mainnet chains. Mainnet will use the new approach of fetching gauges from the new factory.
-    const gaugeFactoryAddress = llamalend.constants.ALIASES.gauge_factory;
-    if (llamalend.chainId !== 1 && gaugeFactoryAddress && gaugeFactoryAddress !== llamalend.constants.ZERO_ADDRESS) {
+    const gaugeFactoryAlias = llamalend.chainId === 1 ? 'gauge_factory_v2' : 'gauge_factory';
+    const gaugeFactoryAddress = llamalend.constants.ALIASES[gaugeFactoryAlias];
+    if (gaugeFactoryAddress && gaugeFactoryAddress !== llamalend.constants.ZERO_ADDRESS) {
         const gaugeFactory = llamalend.contracts[gaugeFactoryAddress];
         (await llamalend.multicallProvider.all(
             vaults.map((vault: string) => createCall(gaugeFactory, "get_gauge_from_lp_token", [vault]))

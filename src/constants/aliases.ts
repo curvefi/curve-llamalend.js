@@ -8,6 +8,7 @@ export const ALIASES_ETHEREUM = lowerCaseValues({
     "gauge_controller": "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
     "minter": '0xd061D61a4d941c39E5453435B6345Dc261C2fcE0',
     "gauge_factory": "0xabC000d88f23Bb45525E447528DBF656A9D55bf5",
+    "gauge_factory_v2": "0x64e1a69732fAC63F6790b3d8a34C5D713cC623E6",
     "leverage_zap_deprecated": "0xC8E8430dc7Cb23C32543329acCC68c9055C23e18", // odos v3
     "leverage_zap_v2": "0x19010d0f5D5a88aC609B568c91057679eed643d3",
     "leverage_zap_v2_llv2": "0x5D847c892891B503c3483D3Abbc2a23774279b85",

@@ -17,6 +17,7 @@ import ERC20ABI from './constants/abis/ERC20.json' with {type: 'json'};
 import ERC4626ABI from './constants/abis/ERC4626.json' with {type: 'json'};
 import GaugeControllerABI from './constants/abis/GaugeController.json' with {type: 'json'};
 import GaugeFactoryMainnetABI from './constants/abis/GaugeFactoryMainnet.json' with {type: 'json'};
+import GaugeFactoryLendMainnetABI from './constants/abis/GaugeFactoryLendMainnet.json' with {type: 'json'};
 import GaugeFactorySidechainABI from './constants/abis/GaugeFactorySidechain.json' with {type: 'json'};
 import MinterABI from './constants/abis/Minter.json' with {type: 'json'};
 import LeverageZapABI from './constants/abis/LeverageZap.json' with {type: 'json'};
@@ -295,6 +296,9 @@ class Llamalend implements ILlamalend {
         if (this.chainId === 1) {
             this.setContract(this.constants.ALIASES.minter, MinterABI);
             this.setContract(this.constants.ALIASES.gauge_factory, GaugeFactoryMainnetABI);
+            if (this.constants.ALIASES.gauge_factory_v2 && this.constants.ALIASES.gauge_factory_v2 !== this.constants.ZERO_ADDRESS) {
+                this.setContract(this.constants.ALIASES.gauge_factory_v2, GaugeFactoryLendMainnetABI);
+            }
         } else {
             if(this.constants.ALIASES.gauge_factory_old && this.constants.ALIASES.gauge_factory_old !== this.constants.ZERO_ADDRESS) {
                 // set old gauge factory
