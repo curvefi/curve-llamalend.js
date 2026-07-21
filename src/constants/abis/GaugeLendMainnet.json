@@ -197,83 +197,11 @@
   {
     "stateMutability": "nonpayable",
     "type": "function",
-    "name": "deposit",
-    "inputs": [
-      {
-        "name": "_value",
-        "type": "uint256"
-      },
-      {
-        "name": "_addr",
-        "type": "address"
-      }
-    ],
-    "outputs": []
-  },
-  {
-    "stateMutability": "nonpayable",
-    "type": "function",
-    "name": "deposit",
-    "inputs": [
-      {
-        "name": "_value",
-        "type": "uint256"
-      },
-      {
-        "name": "_addr",
-        "type": "address"
-      },
-      {
-        "name": "_claim_rewards",
-        "type": "bool"
-      }
-    ],
-    "outputs": []
-  },
-  {
-    "stateMutability": "nonpayable",
-    "type": "function",
     "name": "withdraw",
     "inputs": [
       {
         "name": "_value",
         "type": "uint256"
-      }
-    ],
-    "outputs": []
-  },
-  {
-    "stateMutability": "nonpayable",
-    "type": "function",
-    "name": "withdraw",
-    "inputs": [
-      {
-        "name": "_value",
-        "type": "uint256"
-      },
-      {
-        "name": "_claim_rewards",
-        "type": "bool"
-      }
-    ],
-    "outputs": []
-  },
-  {
-    "stateMutability": "nonpayable",
-    "type": "function",
-    "name": "withdraw",
-    "inputs": [
-      {
-        "name": "_value",
-        "type": "uint256"
-      },
-      {
-        "name": "_claim_rewards",
-        "type": "bool"
-      },
-      {
-        "name": "_receiver",
-        "type": "address"
       }
     ],
     "outputs": []
@@ -283,34 +211,6 @@
     "type": "function",
     "name": "claim_rewards",
     "inputs": [],
-    "outputs": []
-  },
-  {
-    "stateMutability": "nonpayable",
-    "type": "function",
-    "name": "claim_rewards",
-    "inputs": [
-      {
-        "name": "_addr",
-        "type": "address"
-      }
-    ],
-    "outputs": []
-  },
-  {
-    "stateMutability": "nonpayable",
-    "type": "function",
-    "name": "claim_rewards",
-    "inputs": [
-      {
-        "name": "_addr",
-        "type": "address"
-      },
-      {
-        "name": "_receiver",
-        "type": "address"
-      }
-    ],
     "outputs": []
   },
   {
@@ -527,26 +427,6 @@
       },
       {
         "name": "_amount",
-        "type": "uint256"
-      }
-    ],
-    "outputs": []
-  },
-  {
-    "stateMutability": "nonpayable",
-    "type": "function",
-    "name": "deposit_reward_token",
-    "inputs": [
-      {
-        "name": "_reward_token",
-        "type": "address"
-      },
-      {
-        "name": "_amount",
-        "type": "uint256"
-      },
-      {
-        "name": "_epoch",
         "type": "uint256"
       }
     ],
