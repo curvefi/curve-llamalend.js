@@ -5,6 +5,7 @@ import LlammaABI from '../constants/abis/Llamma.json' with {type: 'json'};
 import ControllerABI from '../constants/abis/Controller.json' with {type: 'json'};
 import ControllerV2ABI from '../constants/abis/ControllerV2.json' with {type: 'json'};
 import MonetaryPolicyABI from '../constants/abis/MonetaryPolicy.json' with {type: 'json'};
+import MonetaryPolicyLendMainnetV2ABI from '../constants/abis/MonetaryPolicyLendMainnetV2.json' with {type: 'json'};
 import VaultABI from '../constants/abis/Vault.json' with {type: 'json'};
 import GaugeABI from '../constants/abis/GaugeV5.json' with {type: 'json'};
 import GaugeLendMainnetABI from '../constants/abis/GaugeLendMainnet.json' with {type: 'json'};
@@ -24,7 +25,10 @@ export const setupLendMarketContracts = (llamalend: Llamalend, marketData: IOneW
 
     llamalend.setContract(addresses.amm, LlammaABI);
     llamalend.setContract(addresses.controller, controllerAbiMap[version]);
-    llamalend.setContract(addresses.monetary_policy, MonetaryPolicyABI);
+    const monetaryPolicyAbi = llamalend.chainId === 1 && version === 'v2'
+        ? MonetaryPolicyLendMainnetV2ABI
+        : MonetaryPolicyABI;
+    llamalend.setContract(addresses.monetary_policy, monetaryPolicyAbi);
     llamalend.setContract(addresses.vault, VaultABI);
     const gaugeAbi = llamalend.chainId !== 1
         ? SidechainGaugeABI
