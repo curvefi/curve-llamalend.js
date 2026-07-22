@@ -61,6 +61,19 @@ export class UserPositionModule implements IUserPosition {
         return formatUnits(_health);
     }
 
+    public async userDiscounts(address = ""): Promise<{ loanDiscount: string, liquidationDiscount: string }> {
+        address = _getAddress.call(this.llamalend, address);
+        const controller = this.llamalend.contracts[this.market.addresses.controller].multicallContract;
+        const calls = [controller.loan_discount(), controller.liquidation_discounts(address)];
+        if (this.market.version === "v2") calls.push(controller.extra_health(address));
+
+        const [_loanDiscount, _liquidationDiscount, _extraHealth = BigInt(0)] = await this.llamalend.multicallProvider.all(calls) as bigint[];
+        return {
+            loanDiscount: formatUnits((_loanDiscount + _extraHealth) * BigInt(100)),
+            liquidationDiscount: formatUnits(_liquidationDiscount * BigInt(100)),
+        };
+    }
+
     private async _userBands(address: string): Promise<bigint[]> {
         address = _getAddress.call(this.llamalend, address);
         const _bands = await this.llamalend.contracts[this.market.addresses.amm].contract.read_user_tick_numbers(address, this.llamalend.constantOptions) as bigint[];
