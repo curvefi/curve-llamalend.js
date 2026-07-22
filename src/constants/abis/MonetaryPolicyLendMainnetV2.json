@@ -1,0 +1,12 @@
+[
+    {
+        "inputs": [
+            {"name": "_d_reserves", "type": "int256"},
+            {"name": "_d_debt", "type": "int256"}
+        ],
+        "name": "future_rate",
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]
