@@ -6,6 +6,7 @@ export interface IUserPosition {
     userBandsBigInt:(address: string) => Promise<bigint[]>,
     userState: (address?: string) => Promise<{ collateral: string, borrowed: string, debt: string, N: string, isSoftLiquidation: boolean }>,
     userHealth: (full?: boolean, address?: string) => Promise<string>,
+    userDiscounts: (address?: string) => Promise<{ loanDiscount: string, liquidationDiscount: string }>,
     userBands: (address?: string) => Promise<number[]>,
     userRange: (address?: string) => Promise<number>,
     userPrices: (address?: string) => Promise<string[]>,
