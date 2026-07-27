@@ -12,6 +12,7 @@ export const ALIASES_ETHEREUM = lowerCaseValues({
     "leverage_zap_deprecated": "0xC8E8430dc7Cb23C32543329acCC68c9055C23e18", // odos v3
     "leverage_zap_v2": "0x19010d0f5D5a88aC609B568c91057679eed643d3",
     "leverage_zap_v2_llv2": "0x5D847c892891B503c3483D3Abbc2a23774279b85",
+    "leverage_zap_v2_mint": "0xe1834af57923059b4306b468013262d73f344d4e",
     "leverage_markets_start_id": "9",
     "crvUSD": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
     "st_crvUSD": "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367",

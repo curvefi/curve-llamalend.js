@@ -292,6 +292,9 @@ class Llamalend implements ILlamalend {
         this.setContract(this.constants.ALIASES['leverage_zap_deprecated'], LeverageZapABI);
         this.setContract(this.constants.ALIASES['leverage_zap_v2'], LeverageZapABI);
         this.setContract(this.constants.ALIASES['leverage_zap_v2_llv2'], LeverageZapABI);
+        if (this.constants.ALIASES['leverage_zap_v2_mint'] && this.constants.ALIASES['leverage_zap_v2_mint'] !== this.constants.ZERO_ADDRESS) {
+            this.setContract(this.constants.ALIASES['leverage_zap_v2_mint'], LeverageZapABI);
+        }
 
         if (this.chainId === 1) {
             this.setContract(this.constants.ALIASES.minter, MinterABI);
@@ -398,7 +401,7 @@ class Llamalend implements ILlamalend {
 
         this.setContract(this.constants.COINS.crvusd.toLowerCase(), ERC20ABI);
 
-        const llammas = Object.values(this.constants.LLAMMAS);
+        const llammas = Object.values(LLAMMAS);
         for (const llamma of llammas) {
             this.setContract(llamma.amm_address, llammaABI);
             this.setContract(llamma.controller_address, controllerABI);

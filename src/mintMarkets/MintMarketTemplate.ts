@@ -25,7 +25,8 @@ import {
 import {IDict, ILlamma, TGas, IRates} from "../interfaces.js";
 import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
 import { ILeverageV2 } from "./interfaces/leverage.js";
-import { LeverageV2Module } from "./modules/index.js";
+import { ILeverageZapV2 } from "./interfaces/leverageZapV2.js";
+import { LeverageV2Module, MintLeverageZapV2Module } from "./modules/index.js";
 
 
 export class MintMarketTemplate {
@@ -114,6 +115,7 @@ export class MintMarketTemplate {
         }
     }
     leverageV2: ILeverageV2
+    leverageZapV2: ILeverageZapV2
     deleverage: {
         repayStablecoins: (collateral: number | string) => Promise<{ stablecoins: string, routeIdx: number }>,
         getRouteName: (routeIdx: number) => Promise<string>,
@@ -263,6 +265,53 @@ export class MintMarketTemplate {
 
                 repayApprove: leverageV2.leverageRepayApproveEstimateGas.bind(leverageV2),
                 repay: leverageV2.leverageRepayEstimateGas.bind(leverageV2),
+            },
+        }
+
+        const leverageZapV2 = new MintLeverageZapV2Module(this);
+        this.leverageZapV2 = {
+            hasLeverage: leverageZapV2.hasLeverage.bind(leverageZapV2),
+
+            maxLeverage: leverageZapV2.maxLeverage.bind(leverageZapV2),
+
+            createLoanMaxRecv: leverageZapV2.leverageCreateLoanMaxRecv.bind(leverageZapV2),
+            createLoanMaxRecvAllRanges: leverageZapV2.leverageCreateLoanMaxRecvAllRanges.bind(leverageZapV2),
+            createLoanExpectedCollateral: leverageZapV2.leverageCreateLoanExpectedCollateral.bind(leverageZapV2),
+            createLoanMaxRange: leverageZapV2.leverageCreateLoanMaxRange.bind(leverageZapV2),
+            createLoanBandsAllRanges: leverageZapV2.leverageCreateLoanBandsAllRanges.bind(leverageZapV2),
+            createLoanPricesAllRanges: leverageZapV2.leverageCreateLoanPricesAllRanges.bind(leverageZapV2),
+            createLoanIsApproved: leverageZapV2.leverageCreateLoanIsApproved.bind(leverageZapV2),
+            createLoanApprove: leverageZapV2.leverageCreateLoanApprove.bind(leverageZapV2),
+            createLoanExpectedMetrics: leverageZapV2.leverageCreateLoanExpectedMetrics.bind(leverageZapV2),
+            calcMinRecv: leverageZapV2.calcMinRecv.bind(leverageZapV2),
+            createLoan: leverageZapV2.leverageCreateLoan.bind(leverageZapV2),
+
+            borrowMoreMaxRecv: leverageZapV2.leverageBorrowMoreMaxRecv.bind(leverageZapV2),
+            borrowMoreExpectedCollateral: leverageZapV2.leverageBorrowMoreExpectedCollateral.bind(leverageZapV2),
+            borrowMoreIsApproved: leverageZapV2.leverageBorrowMoreIsApproved.bind(leverageZapV2),
+            borrowMoreApprove: leverageZapV2.leverageBorrowMoreApprove.bind(leverageZapV2),
+            borrowMoreExpectedMetrics: leverageZapV2.leverageBorrowMoreExpectedMetrics.bind(leverageZapV2),
+            borrowMore: leverageZapV2.leverageBorrowMore.bind(leverageZapV2),
+            borrowMoreFutureLeverage: leverageZapV2.leverageBorrowMoreFutureLeverage.bind(leverageZapV2),
+
+            repayExpectedBorrowed: leverageZapV2.leverageRepayExpectedBorrowed.bind(leverageZapV2),
+            repayIsFull: leverageZapV2.leverageRepayIsFull.bind(leverageZapV2),
+            repayIsAvailable: leverageZapV2.leverageRepayIsAvailable.bind(leverageZapV2),
+            repayExpectedMetrics: leverageZapV2.leverageRepayExpectedMetrics.bind(leverageZapV2),
+            repayIsApproved: leverageZapV2.leverageRepayIsApproved.bind(leverageZapV2),
+            repayApprove: leverageZapV2.leverageRepayApprove.bind(leverageZapV2),
+            repay: leverageZapV2.leverageRepay.bind(leverageZapV2),
+            repayFutureLeverage: leverageZapV2.leverageRepayFutureLeverage.bind(leverageZapV2),
+
+            estimateGas: {
+                createLoanApprove: leverageZapV2.leverageCreateLoanApproveEstimateGas.bind(leverageZapV2),
+                createLoan: leverageZapV2.leverageCreateLoanEstimateGas.bind(leverageZapV2),
+
+                borrowMoreApprove: leverageZapV2.leverageCreateLoanApproveEstimateGas.bind(leverageZapV2),
+                borrowMore: leverageZapV2.leverageBorrowMoreEstimateGas.bind(leverageZapV2),
+
+                repayApprove: leverageZapV2.leverageRepayApproveEstimateGas.bind(leverageZapV2),
+                repay: leverageZapV2.leverageRepayEstimateGas.bind(leverageZapV2),
             },
         }
         this.deleverage = {
