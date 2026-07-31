@@ -2078,6 +2078,7 @@ export class MintMarketTemplate {
     }
 
     public getZapAddress(): string {
+        if (this.leverageZapV2.hasLeverage()) return this.llamalend.constants.ALIASES.leverage_zap_v2_mint;
         return this.leverageZap;
     }
 }
