@@ -72,7 +72,6 @@ export class StatsBaseModule {
 
     private _getFutureRate = async (_dReserves: bigint, _dDebt: bigint): Promise<bigint> => {
         const mpContract = this.llamalend.contracts[this.market.addresses.monetary_policy].contract;
-
         const futureRateCall = mpContract.interface.hasFunction('future_rate(address,int256,int256)')
             ? mpContract.future_rate(this.market.addresses.controller, _dReserves, _dDebt)
             : mpContract.future_rate(_dReserves, _dDebt);
@@ -87,7 +86,7 @@ export class StatsBaseModule {
         ]);
 
         return _rate * (PRECISION - _adminPercentage) / PRECISION;
-    };
+    }
 
     public statsParameters = memoize(async (): Promise<{
         fee: string, // %
