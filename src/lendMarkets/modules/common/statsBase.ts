@@ -59,7 +59,7 @@ export class StatsBaseModule {
             return  cacheStats.get(cacheKey(this.market.addresses.amm, 'rate'));
         } else {
             const _rate = await this.llamalend.contracts[this.market.addresses.amm].contract.rate(this.llamalend.constantOptions);
-            cacheStats.set(cacheKey(this.market.addresses.controller, 'rate'), _rate);
+            cacheStats.set(cacheKey(this.market.addresses.amm, 'rate'), _rate);
             return _rate
         }
     }
@@ -114,10 +114,12 @@ export class StatsBaseModule {
                 lendApy: (market.rates.lendApy * 100).toString(),
             };
         } else {
-            const _rate = await this._getRate(isGetter);
-            const debt = await this.statsTotalDebt(isGetter, false);
+            const [_rate, debt, adminPercentage] = await Promise.all([
+                this._getRate(isGetter),
+                this.statsTotalDebt(isGetter, false),
+                this._fetchAdminPercentage(),
+            ]);
             const { totalAssets } = Number(debt) > 0 ? await this.statsCapAndAvailable(isGetter, false) : { totalAssets: "0" };
-            const adminPercentage = await this._fetchAdminPercentage()
             return computeRatesFromRate(_rate, debt, totalAssets, adminPercentage);
         }
     }
@@ -126,10 +128,14 @@ export class StatsBaseModule {
         const isGetter = false;
         const _dReserves = parseUnits(dReserves, this.market.borrowed_token.decimals);
         const _dDebt = parseUnits(dDebt, this.market.borrowed_token.decimals);
-        const _rate = await this._getFutureRate(_dReserves, _dDebt);
-        const debt = Number(await this.statsTotalDebt(isGetter, useAPI)) + Number(dDebt);
-        const cap = Number((await this.statsCapAndAvailable(isGetter, useAPI)).totalAssets) + Number(dReserves);
-        const adminPercentage = await this._fetchAdminPercentage()
+        const [_rate, _debt, _capAndAvailable, adminPercentage] = await Promise.all([
+            this._getFutureRate(_dReserves, _dDebt),
+            this.statsTotalDebt(isGetter, useAPI),
+            this.statsCapAndAvailable(isGetter, useAPI),
+            this._fetchAdminPercentage(),
+        ]);
+        const debt = Number(_debt) + Number(dDebt);
+        const cap = Number(_capAndAvailable.totalAssets) + Number(dReserves);
         return computeRatesFromRate(_rate, debt, cap, adminPercentage);
     }
 
