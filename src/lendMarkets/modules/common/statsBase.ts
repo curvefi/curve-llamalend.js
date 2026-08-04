@@ -11,7 +11,6 @@ import {Llamalend} from "../../../llamalend";
 import {_getMarketsData} from "../../../external-api";
 import {cacheKey, cacheStats} from "../../../cache";
 import { computeRatesFromRate, fetchMarketDataByVault } from "../../utils";
-const PRECISION = BigInt("1000000000000000000"); // 1e18
 
 export class StatsBaseModule {
     protected market: LendMarketTemplate;
@@ -57,35 +56,19 @@ export class StatsBaseModule {
 
     private _getRate = async (isGetter = true): Promise<bigint> => {
         if (isGetter) {
-            const _rate: bigint = cacheStats.get(cacheKey(this.market.addresses.amm, 'rate'));
-            const _adminPercentage = await this._fetchAdminPercentage();
-            return _rate * (PRECISION - _adminPercentage) / PRECISION;
+            return  cacheStats.get(cacheKey(this.market.addresses.amm, 'rate'));
         } else {
-            const [_rate, _adminPercentage] = await Promise.all([
-                this.llamalend.contracts[this.market.addresses.amm].contract.rate(this.llamalend.constantOptions),
-                this._fetchAdminPercentage(),
-            ]);
+            const _rate = await this.llamalend.contracts[this.market.addresses.amm].contract.rate(this.llamalend.constantOptions);
             cacheStats.set(cacheKey(this.market.addresses.controller, 'rate'), _rate);
-            return _rate * (PRECISION - _adminPercentage) / PRECISION;
+            return _rate
         }
     }
 
     private _getFutureRate = async (_dReserves: bigint, _dDebt: bigint): Promise<bigint> => {
         const mpContract = this.llamalend.contracts[this.market.addresses.monetary_policy].contract;
-        const futureRateCall = mpContract.interface.hasFunction('future_rate(address,int256,int256)')
+        return await mpContract.interface.hasFunction('future_rate(address,int256,int256)')
             ? mpContract.future_rate(this.market.addresses.controller, _dReserves, _dDebt)
             : mpContract.future_rate(_dReserves, _dDebt);
-
-        if (_dDebt > BigInt(0)) {
-            return futureRateCall;
-        }
-
-        const [_rate, _adminPercentage] = await Promise.all([
-            futureRateCall,
-            this._fetchAdminPercentage(),
-        ]);
-
-        return _rate * (PRECISION - _adminPercentage) / PRECISION;
     }
 
     public statsParameters = memoize(async (): Promise<{
@@ -134,7 +117,8 @@ export class StatsBaseModule {
             const _rate = await this._getRate(isGetter);
             const debt = await this.statsTotalDebt(isGetter, false);
             const { totalAssets } = Number(debt) > 0 ? await this.statsCapAndAvailable(isGetter, false) : { totalAssets: "0" };
-            return computeRatesFromRate(_rate, debt, totalAssets);
+            const adminPercentage = await this._fetchAdminPercentage()
+            return computeRatesFromRate(_rate, debt, totalAssets, adminPercentage);
         }
     }
 
@@ -145,7 +129,8 @@ export class StatsBaseModule {
         const _rate = await this._getFutureRate(_dReserves, _dDebt);
         const debt = Number(await this.statsTotalDebt(isGetter, useAPI)) + Number(dDebt);
         const cap = Number((await this.statsCapAndAvailable(isGetter, useAPI)).totalAssets) + Number(dReserves);
-        return computeRatesFromRate(_rate, debt, cap);
+        const adminPercentage = await this._fetchAdminPercentage()
+        return computeRatesFromRate(_rate, debt, cap, adminPercentage);
     }
 
     public async statsBalances(): Promise<[string, string]> {
