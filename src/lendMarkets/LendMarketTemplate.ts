@@ -157,6 +157,7 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
             userStateBigInt: userPosition.userStateBigInt.bind(userPosition),
             userState: userPosition.userState.bind(userPosition),
             userHealth: userPosition.userHealth.bind(userPosition),
+            userDiscounts: userPosition.userDiscounts.bind(userPosition),
             userBandsBigInt: userPosition.userBandsBigInt.bind(userPosition),
             userBands: userPosition.userBands.bind(userPosition),
             userRange: userPosition.userRange.bind(userPosition),

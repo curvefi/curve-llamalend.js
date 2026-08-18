@@ -4,9 +4,10 @@ import type { IOneWayMarket } from "../interfaces.js";
 import LlammaABI from '../constants/abis/Llamma.json' with {type: 'json'};
 import ControllerABI from '../constants/abis/Controller.json' with {type: 'json'};
 import ControllerV2ABI from '../constants/abis/ControllerV2.json' with {type: 'json'};
-import MonetaryPolicyABI from '../constants/abis/MonetaryPolicy.json' with {type: 'json'};
+import { resolveLendMonetaryPolicyAbi } from './monetaryPolicyAbi.js';
 import VaultABI from '../constants/abis/Vault.json' with {type: 'json'};
 import GaugeABI from '../constants/abis/GaugeV5.json' with {type: 'json'};
+import GaugeLendMainnetABI from '../constants/abis/GaugeLendMainnet.json' with {type: 'json'};
 import SidechainGaugeABI from '../constants/abis/SidechainGauge.json' with {type: 'json'};
 import ERC20ABI from '../constants/abis/ERC20.json' with {type: 'json'};
 
@@ -23,9 +24,13 @@ export const setupLendMarketContracts = (llamalend: Llamalend, marketData: IOneW
 
     llamalend.setContract(addresses.amm, LlammaABI);
     llamalend.setContract(addresses.controller, controllerAbiMap[version]);
-    llamalend.setContract(addresses.monetary_policy, MonetaryPolicyABI);
+    const monetaryPolicyAbi = resolveLendMonetaryPolicyAbi(version, addresses.controller);
+    llamalend.setContract(addresses.monetary_policy, monetaryPolicyAbi);
     llamalend.setContract(addresses.vault, VaultABI);
-    llamalend.setContract(addresses.gauge, llamalend.chainId === 1 ? GaugeABI : SidechainGaugeABI);
+    const gaugeAbi = llamalend.chainId !== 1
+        ? SidechainGaugeABI
+        : version === 'v2' ? GaugeLendMainnetABI : GaugeABI;
+    llamalend.setContract(addresses.gauge, gaugeAbi);
 
     llamalend.setContract(borrowed_token.address, ERC20ABI);
     llamalend.setContract(collateral_token.address, ERC20ABI);

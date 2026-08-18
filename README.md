@@ -2544,7 +2544,304 @@ import llamalend from "@curvefi/llamalend-api";
 })()
 ```
 
-### LeverageV2 (createLoan, borrowMore, repay) for mintMarket
+### LeverageZapV2 (createLoan, borrowMore, repay) for mintMarket
+
+MintMarket leverage operations support different routers and require quote information from external routing services.
+The API is identical to [lendMarket leverageZapV2](#leverage-createloan-borrowmore-repay-for-lendmarket-leveragezapv2):
+same `GetExpectedFn` / `IQuote` callbacks, same `*ExpectedMetrics` methods and the same `minRecv` slippage protection
+(see [Security Improvements](#security-improvements)). Detailed method reference: [docs/MINT_LEVERAGE_ZAP_V2.md](docs/MINT_LEVERAGE_ZAP_V2.md).
+
+Available for mint markets with `isDeleverageSupported` (markets fetched from the factory). Check with `hasLeverage()`.
+
+#### Which quotes are needed for different operations
+
+| Action type  | Quote inputAmount |
+|--------------|------------------|
+| createLoan   | debt |
+| borrowMore   | debt |
+| repay        | stateCollateral + userCollateral |
+
+**For createLoan and borrowMore:** get quote for swapping `debt` crvUSD → collateral.
+
+**For repay:** get quote for swapping `(stateCollateral + userCollateral)` collateral → crvUSD.
+
+```ts
+(async () => {
+    await llamalend.init('JsonRpc', {});
+    await llamalend.mintMarkets.fetchMintMarkets();
+
+    const mintMarket = llamalend.getMintMarket('cbbtc');
+
+    mintMarket.leverageZapV2.hasLeverage();
+    // true
+
+    const router = '0x.....'; // router address
+    const calldata = '0x...'; // calldata from router for executing swap
+    const quote = // quote from your router (debt)
+
+    // - Create Loan -
+
+    //        Creates leveraged position (userCollateral + leverage_collateral)
+    //                          ^
+    //                          |
+    //        userCollateral    |        debt                    debt
+    // user      --->      controller    ---->    leverage_zap   ---->      router
+    //                          ^                  |   ^                       |
+    //                          |__________________|   |_______________________|
+    //                          leverageCollateral
+
+    let userCollateral = 1;
+    let debt = 20000;
+    const range = 10;
+    await mintMarket.leverageZapV2.maxLeverage(range);
+    // 7.99723801989193483744
+
+    // Get maximum possible debt for given parameters
+    await mintMarket.leverageZapV2.createLoanMaxRecv({ userCollateral, range, getExpected });
+    // {
+    //     maxDebt: '260894.944060818628612140',
+    //     maxTotalCollateral: '4.98120572',
+    //     userCollateral: '1',
+    //     collateralFromUserBorrowed: '0',
+    //     collateralFromMaxDebt: '3.98120572',
+    //     maxLeverage: '4.98120572280420816524',
+    //     avgPrice: '65530.3757757003568790858'
+    // }
+
+    // Get quote for swapping (debt)!!!
+
+    // Get expected collateral amount
+    await mintMarket.leverageZapV2.createLoanExpectedCollateral({ userCollateral, debt, quote });
+    // {
+    //     totalCollateral: '1.30511433',
+    //     userCollateral: '1.0',
+    //     collateralFromUserBorrowed: '0.0',
+    //     collateralFromDebt: '0.30511433',
+    //     leverage: '1.30511433',
+    //     avgPrice: '65550.0609621205348294897'
+    // }
+
+    // Get all metrics in one call
+    const metrics = await mintMarket.leverageZapV2.createLoanExpectedMetrics({
+        userCollateral,
+        debt,
+        range,
+        quote,
+        healthIsFull: true  // true for full health, false for not full
+    });
+    // {
+    //     priceImpact: 0.08944411854377342,  // %
+    //     bands: [76, 67],
+    //     prices: ['33998.977701011670136614', '39187.061409925215211173'],
+    //     health: '195.8994783042570637'  // %
+    // }
+
+    await mintMarket.leverageZapV2.createLoanIsApproved({ userCollateral });
+    // false
+    await mintMarket.leverageZapV2.createLoanApprove({ userCollateral });
+    // ['0xd5491d9f1e9d8ac84b03867494e35b25efad151c597d2fa4211d7bf5d540c98e']
+
+    // Calculate minRecv with slippage protection (see Security Improvements)
+    // expected — amount from your router quote
+    const minRecv = mintMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
+
+    // Create loan, passing router address and calldata from router
+    await mintMarket.leverageZapV2.createLoan({ userCollateral, debt, range, minRecv, router, calldata });
+    // 0xeb1b7a92bcb02598f00dc8bbfe8fa3a554e7a2b1ca764e0ee45e2bf583edf731
+
+    await mintMarket.userState();
+    // {
+    //     collateral: '1.30511433',
+    //     stablecoin: '0.0',
+    //     debt: '20000.0',
+    //     isSoftLiquidation: false
+    // }
+
+
+    // - Borrow More -
+
+    //        Updates leveraged position (dCollateral = userCollateral + leverageCollateral)
+    //                          ^
+    //                          |
+    //        userCollateral    |        dDebt                   dDebt
+    // user      --->      controller    ---->    leverage_zap   ---->      router
+    //                          ^                  |   ^                       |
+    //                          |__________________|   |_______________________|
+    //                          leverageCollateral
+
+    userCollateral = 2;
+    debt = 100000;
+
+    // Get maximum possible debt for given parameters
+    await mintMarket.leverageZapV2.borrowMoreMaxRecv({ userCollateral, getExpected });
+    // {
+    //     maxDebt: '761828.497941193262889000',
+    //     maxTotalCollateral: '13.63977558',
+    //     userCollateral: '2',
+    //     collateralFromUserBorrowed: '0.0',
+    //     collateralFromMaxDebt: '11.63977558',
+    //     avgPrice: '65525.5402418338331369083'
+    // }
+
+    // Get quote for swapping (debt)
+
+    await mintMarket.leverageZapV2.borrowMoreExpectedCollateral({ userCollateral, dDebt: debt, quote });
+    // {
+    //     totalCollateral: '3.52557675',
+    //     userCollateral: '2.0',
+    //     collateralFromUserBorrowed: '0.0',
+    //     collateralFromDebt: '1.52557675',
+    //     avgPrice: '65548.7065974903812906723'
+    // }
+
+    // Get all metrics in one call
+    const metricsBM = await mintMarket.leverageZapV2.borrowMoreExpectedMetrics({
+        userCollateral,
+        debt,
+        quote,
+        healthIsFull: true  // true for full health, false for not full
+    });
+    // {
+    //     priceImpact: 0.010784277354269765,  // %
+    //     bands: [47, 38],
+    //     prices: ['41560.282474721398939216', '47801.742501325928269008'],
+    //     health: '91.6798951784708552'  // %
+    // }
+
+    await mintMarket.leverageZapV2.borrowMoreIsApproved({ userCollateral });
+    // true
+    await mintMarket.leverageZapV2.borrowMoreApprove({ userCollateral });
+    // []
+
+    // Calculate minRecv with slippage protection (see Security Improvements)
+    const minRecvBM = mintMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
+
+    // Execute borrowMore, passing router address and calldata from router
+    await mintMarket.leverageZapV2.borrowMore({ userCollateral, debt, minRecv: minRecvBM, router, calldata });
+    // 0x6357dd6ea7250d7adb2344cd9295f8255fd8fbbe85f00120fbcd1ebf139e057c
+
+
+    // - Repay -
+
+    //      Deleveraged position (-dDebt = borrowedFromStateCollateral + borrowedFromUserCollateral)
+    //          ^
+    //          |       userCollateral
+    //  user ___|__________________________
+    //                                     |
+    //          |     stateCollateral      ↓  userCollateral + stateCollateral
+    //        controller     -->     leverage_zap    -->      router
+    //           ^                      | ^                       |
+    //           |______________________| |_______________________|
+    //                                    borrowedFromStateCollateral
+    //                                                 +
+    //                                    borrowedFromUserCollateral
+
+    const stateCollateral = 2;
+    userCollateral = 1;
+
+    // Get quote for swapping (stateCollateral + userCollateral)
+
+    await mintMarket.leverageZapV2.repayExpectedBorrowed({ stateCollateral, userCollateral, quote });
+    // {
+    //     totalBorrowed: '196588.288385997415714720',
+    //     borrowedFromStateCollateral: '131058.858859066494374648',
+    //     borrowedFromUserCollateral: '65529.429279533247196824',
+    //     userBorrowed: '0.0',
+    //     avgPrice: '65529.4279533324743125312'
+    // }
+
+    await mintMarket.leverageZapV2.repayIsFull({ stateCollateral, userCollateral, quote });
+    // false
+    await mintMarket.leverageZapV2.repayIsAvailable({ stateCollateral, userCollateral, quote });
+    // true
+
+    // Get all metrics in one call
+    const metricsRepay = await mintMarket.leverageZapV2.repayExpectedMetrics({
+        stateCollateral,
+        userCollateral,
+        healthIsFull: true,  // true for full health, false for not full
+        quote,
+        address: llamalend.signerAddress
+    });
+    // {
+    //     priceImpact: 0.013150142802201724,  // %
+    //     bands: [199, 190],
+    //     prices: ['5175.130965754280721633', '6202.233191367561902757'],
+    //     health: '1699.6097751079226865'  // %
+    // }
+
+    await mintMarket.leverageZapV2.repayIsApproved({ userCollateral });
+    // false
+    await mintMarket.leverageZapV2.repayApprove({ userCollateral });
+    // ['0xd8a8d3b3f67395e1a4f4d4f95b041edcaf1c9f7bab5eb8a8a767467678295498']
+
+    // Calculate minRecv with slippage protection (see Security Improvements)
+    const minRecvRepay = mintMarket.leverageZapV2.calcMinRecv(quote.outAmount, 0.5); // 0.5% slippage
+
+    // Execute repay, passing router address and calldata from router
+    await mintMarket.leverageZapV2.repay({ stateCollateral, userCollateral, minRecv: minRecvRepay, router, calldata });
+    // 0xe48a97fef1c54180a2c7d104d210a95ac1a516fdd22109682179f1582da23a82
+})()
+```
+
+### LeverageZapV2 createLoan all ranges methods for mintMarket
+```ts
+    await llamalend.init('JsonRpc', {});
+    await llamalend.mintMarkets.fetchMintMarkets();
+
+    const mintMarket = llamalend.getMintMarket('cbbtc');
+
+    const userCollateral = 1;
+    const debt = 20000;
+
+    // Get maximum values for all possible ranges
+    await mintMarket.leverageZapV2.createLoanMaxRecvAllRanges({ userCollateral, getExpected });
+    // {
+    //     '4': {
+    //         maxDebt: '379163.380715048238752510',
+    //         maxTotalCollateral: '6.78698361',
+    //         userCollateral: '1',
+    //         collateralFromUserBorrowed: '0',
+    //         collateralFromMaxDebt: '5.78698361',
+    //         maxLeverage: '6.78698361736470347900',
+    //         avgPrice: '65528.1676562660727036890'
+    //     },
+    //     '5': {
+    //         maxDebt: '353634.405221433547297590',
+    //         maxTotalCollateral: '6.24809619',
+    //         userCollateral: '1',
+    //         collateralFromUserBorrowed: '0',
+    //         collateralFromMaxDebt: '5.24809619',
+    //         maxLeverage: '6.24809619842865748040',
+    //         avgPrice: '65528.1676562660727036890'
+    //     },
+    //     ...
+    // }
+
+    // Get max possible range for given debt
+    await mintMarket.leverageZapV2.createLoanMaxRange({ userCollateral, debt, getExpected });
+    // 50
+
+    // Get bands for all possible ranges
+    await mintMarket.leverageZapV2.createLoanBandsAllRanges({ userCollateral, debt, getExpected, quote });
+    // {
+    //     '4': [ 73, 70 ],
+    //     '5': [ 74, 70 ],
+    //     ...
+    //     '50': [ 97, 48 ]
+    // }
+
+    // Get prices for all possible ranges
+    await mintMarket.leverageZapV2.createLoanPricesAllRanges({ userCollateral, debt, getExpected, quote });
+    // {
+    //     '4': [ '36741.929355987974697422', '38238.276933545416006134' ],
+    //     '5': [ '36374.510062428094950448', '38238.276933545416006134' ],
+    //     ...
+    //     '50': [ '23292.086504719957130857', '38238.276933545416006134' ]
+    // }
+```
+
+### LeverageV2 (createLoan, borrowMore, repay) for mintMarket (Deprecated!!! Will be deleted in the future, please use leverageZapV2)
 ```ts
 (async () => {
     await llamalend.init('JsonRpc', {}, {});

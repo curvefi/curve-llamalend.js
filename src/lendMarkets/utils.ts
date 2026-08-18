@@ -8,6 +8,8 @@ export type RatesResult = {
     lendApy: string;
 };
 
+const PRECISION = BigInt("1000000000000000000"); // 1e18
+
 /**
  * Computes borrow/lend APR and APY from a raw per-second rate and current debt/cap.
  * borrowApy = e^(rate * 365 * 86400) - 1
@@ -16,17 +18,20 @@ export type RatesResult = {
 export const computeRatesFromRate = (
     _rate: bigint,
     debt: string | number,
-    cap: string | number
+    cap: string | number,
+    adminPercentage: bigint
 ): RatesResult => {
-    const annualFactor = toBN(_rate).times(365).times(86400);
-    const expFactor = Math.E ** annualFactor.toNumber();
+    const annualFactorBorrow = toBN(_rate).times(365).times(86400);
+    const annualFactorLend = toBN(_rate * (PRECISION - adminPercentage) / PRECISION).times(365).times(86400);
+    const expFactorBorrow = Math.E ** annualFactorBorrow.toNumber();
+    const expFactorLend = Math.E ** annualFactorLend.toNumber();
 
-    const borrowApr = annualFactor.times(100).toString();
-    const borrowApy = String((expFactor - 1) * 100);
+    const borrowApr = annualFactorBorrow.times(100).toString();
+    const borrowApy = String((expFactorBorrow - 1) * 100);
 
-    const lendAprRaw = annualFactor.times(debt).div(cap).times(100);
+    const lendAprRaw = annualFactorLend.times(debt).div(cap).times(100);
     const lendApr = lendAprRaw.isNaN() ? "0" : lendAprRaw.toString();
-    const lendApyRaw = BN(debt).times(expFactor).minus(debt).div(cap).times(100);
+    const lendApyRaw = BN(debt).times(expFactorLend).minus(debt).div(cap).times(100);
     const lendApy = lendApyRaw.isNaN() ? "0" : lendApyRaw.toString();
 
     return { borrowApr, lendApr, borrowApy, lendApy };

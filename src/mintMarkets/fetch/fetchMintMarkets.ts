@@ -28,7 +28,7 @@ export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void>
 
     for (const collateral of collaterals) llamalend.setContract(collateral, ERC20ABI);
     for (const amm of amms) llamalend.setContract(amm, llammaABI);
-    for (const controller of controllers) llamalend.setContract(controller, controllerABI);
+    for (const controller of controllers) llamalend.setContract(controller, controllerV2ABI);
 
     for (let i = 0; i < newMarkets.length; i++) {
         const market = newMarkets[i];

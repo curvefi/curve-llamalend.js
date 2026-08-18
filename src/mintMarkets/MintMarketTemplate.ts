@@ -20,11 +20,13 @@ import {
     _mulBy1_3,
     DIGas,
     calculateFutureLeverage,
+    calculateApprovalAmount,
 } from "../utils.js";
 import {IDict, ILlamma, TGas, IRates} from "../interfaces.js";
 import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
 import { ILeverageV2 } from "./interfaces/leverage.js";
-import { LeverageV2Module } from "./modules/index.js";
+import { ILeverageZapV2 } from "./interfaces/leverageZapV2.js";
+import { LeverageV2Module, MintLeverageZapV2Module } from "./modules/index.js";
 
 
 export class MintMarketTemplate {
@@ -50,21 +52,21 @@ export class MintMarketTemplate {
     isDeleverageSupported: boolean;
     index?: number;
     estimateGas: {
-        createLoanApprove: (collateral: number | string) => Promise<TGas>,
+        createLoanApprove: (collateral: number | string, isMax?: boolean) => Promise<TGas>,
         createLoan: (collateral: number | string, debt: number | string, range: number) => Promise<TGas>,
-        addCollateralApprove: (collateral: number | string) => Promise<TGas>,
+        addCollateralApprove: (collateral: number | string, isMax?: boolean) => Promise<TGas>,
         addCollateral: (collateral: number | string, address?: string) => Promise<TGas>,
-        borrowMoreApprove: (collateral: number | string) => Promise<TGas>,
+        borrowMoreApprove: (collateral: number | string, isMax?: boolean) => Promise<TGas>,
         borrowMore: (collateral: number | string, debt: number | string) => Promise<TGas>,
-        repayApprove: (debt: number | string) => Promise<TGas>,
+        repayApprove: (debt: number | string, isMax?: boolean) => Promise<TGas>,
         repay: (debt: number | string, address?: string) => Promise<TGas>,
-        fullRepayApprove: (address?: string) => Promise<TGas>,
+        fullRepayApprove: (address?: string, isMax?: boolean) => Promise<TGas>,
         fullRepay: (address?: string) => Promise<TGas>,
-        swapApprove: (i: number, amount: number | string) => Promise<TGas>,
+        swapApprove: (i: number, amount: number | string, isMax?: boolean) => Promise<TGas>,
         swap: (i: number, j: number, amount: number | string, slippage?: number) => Promise<TGas>,
-        liquidateApprove: (address: string) => Promise<TGas>,
+        liquidateApprove: (address: string, isMax?: boolean) => Promise<TGas>,
         liquidate: (address: string, slippage?: number) => Promise<TGas>,
-        selfLiquidateApprove: () => Promise<TGas>,
+        selfLiquidateApprove: (address?: string, isMax?: boolean) => Promise<TGas>,
         selfLiquidate: (slippage?: number) => Promise<TGas>,
     };
     stats: {
@@ -104,15 +106,16 @@ export class MintMarketTemplate {
         createLoanPricesAllRanges: (collateral: number | string, debt: number | string) => Promise<IDict<[string, string] | null>>,
         createLoanHealth: (collateral: number | string, debt: number | string, range: number, full?: boolean, address?: string) => Promise<string>,
         createLoanIsApproved: (collateral: number | string) => Promise<boolean>,
-        createLoanApprove: (collateral: number | string) => Promise<string[]>,
+        createLoanApprove: (collateral: number | string, isMax?: boolean) => Promise<string[]>,
         priceImpact: (collateral: number | string, debt: number | string) => Promise<string>,
-        createLoan: (collateral: number | string, debt: number | string, range: number, slippage?: number) => Promise<string>,
+        createLoan: (collateral: number | string, debt: number | string, range: number, slippage?: number, isMax?: boolean) => Promise<string>,
         estimateGas: {
-            createLoanApprove: (collateral: number | string) => Promise<TGas>,
+            createLoanApprove: (collateral: number | string, isMax?: boolean) => Promise<TGas>,
             createLoan: (collateral: number | string, debt: number | string, range: number, slippage?: number) => Promise<TGas>,
         }
     }
     leverageV2: ILeverageV2
+    leverageZapV2: ILeverageZapV2
     deleverage: {
         repayStablecoins: (collateral: number | string) => Promise<{ stablecoins: string, routeIdx: number }>,
         getRouteName: (routeIdx: number) => Promise<string>,
@@ -262,6 +265,53 @@ export class MintMarketTemplate {
 
                 repayApprove: leverageV2.leverageRepayApproveEstimateGas.bind(leverageV2),
                 repay: leverageV2.leverageRepayEstimateGas.bind(leverageV2),
+            },
+        }
+
+        const leverageZapV2 = new MintLeverageZapV2Module(this);
+        this.leverageZapV2 = {
+            hasLeverage: leverageZapV2.hasLeverage.bind(leverageZapV2),
+
+            maxLeverage: leverageZapV2.maxLeverage.bind(leverageZapV2),
+
+            createLoanMaxRecv: leverageZapV2.leverageCreateLoanMaxRecv.bind(leverageZapV2),
+            createLoanMaxRecvAllRanges: leverageZapV2.leverageCreateLoanMaxRecvAllRanges.bind(leverageZapV2),
+            createLoanExpectedCollateral: leverageZapV2.leverageCreateLoanExpectedCollateral.bind(leverageZapV2),
+            createLoanMaxRange: leverageZapV2.leverageCreateLoanMaxRange.bind(leverageZapV2),
+            createLoanBandsAllRanges: leverageZapV2.leverageCreateLoanBandsAllRanges.bind(leverageZapV2),
+            createLoanPricesAllRanges: leverageZapV2.leverageCreateLoanPricesAllRanges.bind(leverageZapV2),
+            createLoanIsApproved: leverageZapV2.leverageCreateLoanIsApproved.bind(leverageZapV2),
+            createLoanApprove: leverageZapV2.leverageCreateLoanApprove.bind(leverageZapV2),
+            createLoanExpectedMetrics: leverageZapV2.leverageCreateLoanExpectedMetrics.bind(leverageZapV2),
+            calcMinRecv: leverageZapV2.calcMinRecv.bind(leverageZapV2),
+            createLoan: leverageZapV2.leverageCreateLoan.bind(leverageZapV2),
+
+            borrowMoreMaxRecv: leverageZapV2.leverageBorrowMoreMaxRecv.bind(leverageZapV2),
+            borrowMoreExpectedCollateral: leverageZapV2.leverageBorrowMoreExpectedCollateral.bind(leverageZapV2),
+            borrowMoreIsApproved: leverageZapV2.leverageBorrowMoreIsApproved.bind(leverageZapV2),
+            borrowMoreApprove: leverageZapV2.leverageBorrowMoreApprove.bind(leverageZapV2),
+            borrowMoreExpectedMetrics: leverageZapV2.leverageBorrowMoreExpectedMetrics.bind(leverageZapV2),
+            borrowMore: leverageZapV2.leverageBorrowMore.bind(leverageZapV2),
+            borrowMoreFutureLeverage: leverageZapV2.leverageBorrowMoreFutureLeverage.bind(leverageZapV2),
+
+            repayExpectedBorrowed: leverageZapV2.leverageRepayExpectedBorrowed.bind(leverageZapV2),
+            repayIsFull: leverageZapV2.leverageRepayIsFull.bind(leverageZapV2),
+            repayIsAvailable: leverageZapV2.leverageRepayIsAvailable.bind(leverageZapV2),
+            repayExpectedMetrics: leverageZapV2.leverageRepayExpectedMetrics.bind(leverageZapV2),
+            repayIsApproved: leverageZapV2.leverageRepayIsApproved.bind(leverageZapV2),
+            repayApprove: leverageZapV2.leverageRepayApprove.bind(leverageZapV2),
+            repay: leverageZapV2.leverageRepay.bind(leverageZapV2),
+            repayFutureLeverage: leverageZapV2.leverageRepayFutureLeverage.bind(leverageZapV2),
+
+            estimateGas: {
+                createLoanApprove: leverageZapV2.leverageCreateLoanApproveEstimateGas.bind(leverageZapV2),
+                createLoan: leverageZapV2.leverageCreateLoanEstimateGas.bind(leverageZapV2),
+
+                borrowMoreApprove: leverageZapV2.leverageCreateLoanApproveEstimateGas.bind(leverageZapV2),
+                borrowMore: leverageZapV2.leverageBorrowMoreEstimateGas.bind(leverageZapV2),
+
+                repayApprove: leverageZapV2.leverageRepayApproveEstimateGas.bind(leverageZapV2),
+                repay: leverageZapV2.leverageRepayEstimateGas.bind(leverageZapV2),
             },
         }
         this.deleverage = {
@@ -506,6 +556,19 @@ export class MintMarketTemplate {
         _health = _health * BigInt(100);
 
         return formatUnits(_health);
+    }
+
+    public async userDiscounts(address = ""): Promise<{ loanDiscount: string, liquidationDiscount: string }> {
+        address = _getAddress.call(this.llamalend, address);
+        const controller = this.llamalend.contracts[this.controller].multicallContract;
+        const calls = [controller.loan_discount(), controller.liquidation_discounts(address)];
+        if (this.isDeleverageSupported) calls.push(controller.extra_health(address));
+
+        const [_loanDiscount, _liquidationDiscount, _extraHealth = BigInt(0)] = await this.llamalend.multicallProvider.all(calls) as bigint[];
+        return {
+            loanDiscount: formatUnits((_loanDiscount + _extraHealth) * BigInt(100)),
+            liquidationDiscount: formatUnits(_liquidationDiscount * BigInt(100)),
+        };
     }
 
     public async userBands(address = ""): Promise<number[]> {
@@ -822,12 +885,12 @@ export class MintMarketTemplate {
         return await hasAllowance.call(this.llamalend, [this.collateral], [collateral], this.llamalend.signerAddress, this.controller);
     }
 
-    private async createLoanApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.collateral], [collateral], this.controller);
+    private async createLoanApproveEstimateGas (collateral: number | string, isMax = false): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.collateral], [collateral], this.controller, isMax);
     }
 
-    public async createLoanApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.collateral], [collateral], this.controller);
+    public async createLoanApprove(collateral: number | string, isMax = false): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.collateral], [collateral], this.controller, isMax);
     }
 
     private async _createLoan(collateral: number | string, debt: number | string, range: number, estimateGas: boolean): Promise<string | TGas> {
@@ -851,8 +914,8 @@ export class MintMarketTemplate {
         return await this._createLoan(collateral, debt,  range, true) as number;
     }
 
-    public async createLoan(collateral: number | string, debt: number | string, range: number): Promise<string> {
-        await this.createLoanApprove(collateral);
+    public async createLoan(collateral: number | string, debt: number | string, range: number, isMax = false): Promise<string> {
+        await this.createLoanApprove(collateral, isMax);
         return await this._createLoan(collateral, debt, range, false) as string;
     }
 
@@ -911,12 +974,12 @@ export class MintMarketTemplate {
         return await hasAllowance.call(this.llamalend, [this.collateral], [collateral], this.llamalend.signerAddress, this.controller);
     }
 
-    private async borrowMoreApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.collateral], [collateral], this.controller);
+    private async borrowMoreApproveEstimateGas (collateral: number | string, isMax = false): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.collateral], [collateral], this.controller, isMax);
     }
 
-    public async borrowMoreApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.collateral], [collateral], this.controller);
+    public async borrowMoreApprove(collateral: number | string, isMax = false): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.collateral], [collateral], this.controller, isMax);
     }
 
     private async _borrowMore(collateral: number | string, debt: number | string, estimateGas: boolean): Promise<string | TGas> {
@@ -941,8 +1004,8 @@ export class MintMarketTemplate {
         return await this._borrowMore(collateral, debt, true) as number;
     }
 
-    public async borrowMore(collateral: number | string, debt: number | string): Promise<string> {
-        await this.borrowMoreApprove(collateral);
+    public async borrowMore(collateral: number | string, debt: number | string, isMax = false): Promise<string> {
+        await this.borrowMoreApprove(collateral, isMax);
         return await this._borrowMore(collateral, debt, false) as string;
     }
 
@@ -1013,12 +1076,12 @@ export class MintMarketTemplate {
         return await hasAllowance.call(this.llamalend, [this.collateral], [collateral], this.llamalend.signerAddress, this.controller);
     }
 
-    private async addCollateralApproveEstimateGas (collateral: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.collateral], [collateral], this.controller);
+    private async addCollateralApproveEstimateGas (collateral: number | string, isMax = false): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.collateral], [collateral], this.controller, isMax);
     }
 
-    public async addCollateralApprove(collateral: number | string): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.collateral], [collateral], this.controller);
+    public async addCollateralApprove(collateral: number | string, isMax = false): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.collateral], [collateral], this.controller, isMax);
     }
 
     private async _addCollateral(collateral: number | string, address: string, estimateGas: boolean): Promise<string | TGas> {
@@ -1043,9 +1106,9 @@ export class MintMarketTemplate {
         return await this._addCollateral(collateral, address, true) as number;
     }
 
-    public async addCollateral(collateral: number | string, address = ""): Promise<string> {
+    public async addCollateral(collateral: number | string, address = "", isMax = false): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
-        await this.addCollateralApprove(collateral);
+        await this.addCollateralApprove(collateral, isMax);
         return await this._addCollateral(collateral, address, false) as string;
     }
 
@@ -1164,12 +1227,12 @@ export class MintMarketTemplate {
         return await hasAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [debt], this.llamalend.signerAddress, this.controller);
     }
 
-    private async repayApproveEstimateGas (debt: number | string): Promise<TGas> {
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.llamalend.crvUsdAddress], [debt], this.controller);
+    private async repayApproveEstimateGas (debt: number | string, isMax = false): Promise<TGas> {
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.llamalend.crvUsdAddress], [debt], this.controller, isMax);
     }
 
-    public async repayApprove(debt: number | string): Promise<string[]> {
-        return await ensureAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [debt], this.controller);
+    public async repayApprove(debt: number | string, isMax = false): Promise<string[]> {
+        return await ensureAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [debt], this.controller, isMax);
     }
 
     public async repayHealth(debt: number | string, full = true, address = ""): Promise<string> {
@@ -1206,8 +1269,8 @@ export class MintMarketTemplate {
         return await this._repay(debt, address, true) as number;
     }
 
-    public async repay(debt: number | string, address = ""): Promise<string> {
-        await this.repayApprove(debt);
+    public async repay(debt: number | string, address = "", isMax = false): Promise<string> {
+        await this.repayApprove(debt, isMax);
         return await this._repay(debt, address, false) as string;
     }
 
@@ -1238,16 +1301,16 @@ export class MintMarketTemplate {
         return await this.repayIsApproved(fullRepayAmount);
     }
 
-    private async fullRepayApproveEstimateGas (address = ""): Promise<TGas> {
+    private async fullRepayApproveEstimateGas (address = "", isMax = false): Promise<TGas> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        return await this.repayApproveEstimateGas(fullRepayAmount);
+        return await this.repayApproveEstimateGas(calculateApprovalAmount(fullRepayAmount), isMax);
     }
 
-    public async fullRepayApprove(address = ""): Promise<string[]> {
+    public async fullRepayApprove(address = "", isMax = false): Promise<string[]> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        return await this.repayApprove(fullRepayAmount);
+        return await this.repayApprove(calculateApprovalAmount(fullRepayAmount), isMax);
     }
 
     public async fullRepayEstimateGas(address = ""): Promise<number> {
@@ -1257,10 +1320,10 @@ export class MintMarketTemplate {
         return await this._repay(fullRepayAmount, address, true) as number;
     }
 
-    public async fullRepay(address = ""): Promise<string> {
+    public async fullRepay(address = "", isMax = false): Promise<string> {
         address = _getAddress.call(this.llamalend, address);
         const fullRepayAmount = await this._fullRepayAmount(address);
-        await this.repayApprove(fullRepayAmount);
+        await this.repayApprove(calculateApprovalAmount(fullRepayAmount), isMax);
         return await this._repay(fullRepayAmount, address, false) as string;
     }
 
@@ -1337,16 +1400,16 @@ export class MintMarketTemplate {
         return await hasAllowance.call(this.llamalend, [this.coinAddresses[i]], [amount], this.llamalend.signerAddress, this.address);
     }
 
-    private async swapApproveEstimateGas (i: number, amount: number | string): Promise<TGas> {
+    private async swapApproveEstimateGas (i: number, amount: number | string, isMax = false): Promise<TGas> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.coinAddresses[i]], [amount], this.address);
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.coinAddresses[i]], [amount], this.address, isMax);
     }
 
-    public async swapApprove(i: number, amount: number | string): Promise<string[]> {
+    public async swapApprove(i: number, amount: number | string, isMax = false): Promise<string[]> {
         if (i !== 0 && i !== 1) throw Error("Wrong index");
 
-        return await ensureAllowance.call(this.llamalend, [this.coinAddresses[i]], [amount], this.address);
+        return await ensureAllowance.call(this.llamalend, [this.coinAddresses[i]], [amount], this.address, isMax);
     }
 
     private async _swap(i: number, j: number, amount: number | string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
@@ -1371,8 +1434,8 @@ export class MintMarketTemplate {
         return await this._swap(i, j, amount, slippage, true) as number;
     }
 
-    public async swap(i: number, j: number, amount: number | string, slippage = 0.1): Promise<string> {
-        await this.swapApprove(i, amount);
+    public async swap(i: number, j: number, amount: number | string, slippage = 0.1, isMax = false): Promise<string> {
+        await this.swapApprove(i, amount, isMax);
         return await this._swap(i, j, amount, slippage, false) as string;
     }
 
@@ -1386,18 +1449,18 @@ export class MintMarketTemplate {
     }
 
     public async liquidateIsApproved(address = ""): Promise<boolean> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await hasAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [tokensToLiquidate], this.llamalend.signerAddress, this.controller);
+        const amount = await this.tokensToLiquidate(address);
+        return await hasAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [amount], this.llamalend.signerAddress, this.controller);
     }
 
-    private async liquidateApproveEstimateGas (address = ""): Promise<TGas> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.llamalend.crvUsdAddress], [tokensToLiquidate], this.controller);
+    private async liquidateApproveEstimateGas (address = "", isMax = false): Promise<TGas> {
+        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        return await ensureAllowanceEstimateGas.call(this.llamalend, [this.llamalend.crvUsdAddress], [amount], this.controller, isMax);
     }
 
-    public async liquidateApprove(address = ""): Promise<string[]> {
-        const tokensToLiquidate = await this.tokensToLiquidate(address);
-        return await ensureAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [tokensToLiquidate], this.controller);
+    public async liquidateApprove(address = "", isMax = false): Promise<string[]> {
+        const amount = calculateApprovalAmount(await this.tokensToLiquidate(address));
+        return await ensureAllowance.call(this.llamalend, [this.llamalend.crvUsdAddress], [amount], this.controller, isMax);
     }
 
     private async _liquidate(address: string, slippage: number, estimateGas: boolean): Promise<string | TGas> {
@@ -1423,8 +1486,8 @@ export class MintMarketTemplate {
         return await this._liquidate(address, slippage, true) as number;
     }
 
-    public async liquidate(address: string, slippage = 0.1): Promise<string> {
-        await this.liquidateApprove(address);
+    public async liquidate(address: string, slippage = 0.1, isMax = false): Promise<string> {
+        await this.liquidateApprove(address, isMax);
         return await this._liquidate(address, slippage, false) as string;
     }
 
@@ -1434,12 +1497,12 @@ export class MintMarketTemplate {
         return await this.liquidateIsApproved()
     }
 
-    private async selfLiquidateApproveEstimateGas (): Promise<TGas> {
-        return this.liquidateApproveEstimateGas()
+    private async selfLiquidateApproveEstimateGas (address?: string, isMax = false): Promise<TGas> {
+        return this.liquidateApproveEstimateGas(address, isMax)
     }
 
-    public async selfLiquidateApprove(): Promise<string[]> {
-        return await this.liquidateApprove()
+    public async selfLiquidateApprove(address?: string, isMax = false): Promise<string[]> {
+        return await this.liquidateApprove(address, isMax)
     }
 
     public async selfLiquidateEstimateGas(slippage = 0.1): Promise<number> {
@@ -1447,8 +1510,8 @@ export class MintMarketTemplate {
         return await this._liquidate(this.llamalend.signerAddress, slippage, true) as number;
     }
 
-    public async selfLiquidate(slippage = 0.1): Promise<string> {
-        await this.selfLiquidateApprove();
+    public async selfLiquidate(slippage = 0.1, isMax = false): Promise<string> {
+        await this.selfLiquidateApprove(this.llamalend.signerAddress, isMax);
         return await this._liquidate(this.llamalend.signerAddress, slippage, false) as string;
     }
 
@@ -1761,9 +1824,9 @@ export class MintMarketTemplate {
         return await this._leverageCreateLoan(collateral, debt,  range, slippage,  true) as number;
     }
 
-    private async leverageCreateLoan(collateral: number | string, debt: number | string, range: number, slippage = 0.1): Promise<string> {
+    private async leverageCreateLoan(collateral: number | string, debt: number | string, range: number, slippage = 0.1, isMax = false): Promise<string> {
         this._checkLeverageZap();
-        await this.createLoanApprove(collateral);
+        await this.createLoanApprove(collateral, isMax);
         return await this._leverageCreateLoan(collateral, debt, range, slippage, false) as string;
     }
 
@@ -2015,6 +2078,7 @@ export class MintMarketTemplate {
     }
 
     public getZapAddress(): string {
+        if (this.leverageZapV2.hasLeverage()) return this.llamalend.constants.ALIASES.leverage_zap_v2_mint;
         return this.leverageZap;
     }
 }

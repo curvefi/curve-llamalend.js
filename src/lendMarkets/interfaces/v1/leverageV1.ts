@@ -34,9 +34,9 @@ export interface ILeverageV1 {
     createLoanPricesAllRanges: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount) => Promise<IDict<[string, string] | null>>;
     createLoanHealth: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, full?: boolean) => Promise<string>;
     createLoanIsApproved: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<boolean>;
-    createLoanApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<string[]>;
+    createLoanApprove: (userCollateral: TAmount, userBorrowed: TAmount, isMax?: boolean) => Promise<string[]>;
     createLoanRouteImage: (userBorrowed: TAmount, debt: TAmount) => Promise<string>;
-    createLoan: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage?: number) => Promise<string>;
+    createLoan: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage?: number, isMax?: boolean) => Promise<string>;
 
     borrowMoreMaxRecv: (userCollateral: TAmount, userBorrowed: TAmount, address?: string) =>
         Promise<{
@@ -54,9 +54,9 @@ export interface ILeverageV1 {
     borrowMorePrices: (userCollateral: TAmount, userBorrowed: TAmount, dDebt: TAmount, address?: string) => Promise<string[]>;
     borrowMoreHealth: (userCollateral: TAmount, userBorrowed: TAmount, dDebt: TAmount, full?: boolean, address?: string) => Promise<string>;
     borrowMoreIsApproved: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<boolean>;
-    borrowMoreApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<string[]>;
+    borrowMoreApprove: (userCollateral: TAmount, userBorrowed: TAmount, isMax?: boolean) => Promise<string[]>;
     borrowMoreRouteImage: (userBorrowed: TAmount, debt: TAmount) => Promise<string>;
-    borrowMore: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage?: number) => Promise<string>;
+    borrowMore: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage?: number, isMax?: boolean) => Promise<string>;
     borrowMoreFutureLeverage: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, userAddress?: string, slippage?: number) => Promise<string>;
 
     repayExpectedBorrowed: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, slippage?: number) =>
@@ -68,19 +68,19 @@ export interface ILeverageV1 {
     repayPrices: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, address?: string) => Promise<string[]>;
     repayHealth: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, full?: boolean, address?: string) => Promise<string>;
     repayIsApproved: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<boolean>;
-    repayApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<string[]>;
+    repayApprove: (userCollateral: TAmount, userBorrowed: TAmount, isMax?: boolean) => Promise<string[]>;
     repayRouteImage: (stateCollateral: TAmount, userCollateral: TAmount) => Promise<string>;
-    repay: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, slippage?: number) => Promise<string>;
+    repay: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, slippage?: number, isMax?: boolean) => Promise<string>;
     repayFutureLeverage: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, userAddress?: string, slippage?: number) => Promise<string>,
 
     estimateGas: {
-        createLoanApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<TGas>;
+        createLoanApprove: (userCollateral: TAmount, userBorrowed: TAmount, isMax?: boolean) => Promise<TGas>;
         createLoan: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, range: number, slippage?: number) => Promise<number>;
 
-        borrowMoreApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<TGas>;
+        borrowMoreApprove: (userCollateral: TAmount, userBorrowed: TAmount, isMax?: boolean) => Promise<TGas>;
         borrowMore: (userCollateral: TAmount, userBorrowed: TAmount, debt: TAmount, slippage?: number) => Promise<number>;
 
-        repayApprove: (userCollateral: TAmount, userBorrowed: TAmount) => Promise<TGas>;
+        repayApprove: (userCollateral: TAmount, userBorrowed: TAmount, isMax?: boolean) => Promise<TGas>;
         repay: (stateCollateral: TAmount, userCollateral: TAmount, userBorrowed: TAmount, slippage?: number) => Promise<number>;
     };
 }
