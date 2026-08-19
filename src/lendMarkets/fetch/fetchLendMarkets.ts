@@ -71,7 +71,7 @@ export const fetchOneWayMarketsByBlockchain = async (llamalend: Llamalend, versi
 };
 
 export const fetchOneWayMarketsByAPI = async (llamalend: Llamalend, version: 'v1' | 'v2' = 'v1') => {
-    const { names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges } = await getFactoryMarketDataByAPI(llamalend);
+    const { names, amms, controllers, borrowed_tokens, collateral_tokens, monetary_policies, vaults, gauges } = await getFactoryMarketDataByAPI(llamalend, version);
     const COIN_DATA = await llamalend.getCoins(collateral_tokens, borrowed_tokens, true);
     for (const c in COIN_DATA) {
         llamalend.constants.DECIMALS[c] = COIN_DATA[c].decimals;
