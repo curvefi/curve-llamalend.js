@@ -13,6 +13,7 @@ export const _getTokenUsdPrice = memoize(
     async (network: INetworkName, address: string): Promise<number> => {
         const url = `https://prices.curve.finance/v1/usd_price/${network}/${address}`;
         const response = await fetch(url, { headers: { accept: "application/json" } });
+        if (response.status === 404) return 0;
         if (response.status !== 200) throw Error(`Fetch error: ${response.status} ${response.statusText}`);
         const { data } = await response.json() as { data: { usd_price: number } };
         return data?.usd_price ?? 0;
