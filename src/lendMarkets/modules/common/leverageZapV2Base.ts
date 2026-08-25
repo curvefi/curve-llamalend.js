@@ -161,12 +161,11 @@ export abstract class LeverageZapV2BaseModule {
                 break;
             }
 
-            const _maxAdditionalCollateral = BigInt((await getExpected(
-                this.market.addresses.borrowed_token,
-                this.market.addresses.collateral_token,
-                _maxBorrowable,
-                this.market.addresses.amm
-            )).outAmount);
+            const { borrowed_token, collateral_token, amm } = this.market.addresses;
+            const quote = await getExpected(borrowed_token, collateral_token, _maxBorrowable, amm);
+            if (quote === null) break;
+
+            const _maxAdditionalCollateral = BigInt(quote.outAmount);
 
             pAvgBN = maxBorrowableBN.div(toBN(_maxAdditionalCollateral, this.market.collateral_token.decimals));
             _maxLeverageCollateral = _maxAdditionalCollateral;
@@ -232,12 +231,11 @@ export abstract class LeverageZapV2BaseModule {
             }
 
             if (pAvgBN === null){
-                const _y = BigInt((await getExpected(
-                    this.market.addresses.borrowed_token,
-                    this.market.addresses.collateral_token,
-                    _maxBorrowable[0],
-                    this.market.addresses.amm
-                )).outAmount);
+                const { borrowed_token, collateral_token, amm } = this.market.addresses;
+                const quote = await getExpected(borrowed_token, collateral_token, _maxBorrowable[0], amm);
+                if (quote === null) break;
+
+                const _y = BigInt(quote.outAmount);
                 const yBN = toBN(_y, this.market.collateral_token.decimals);
                 pAvgBN = maxBorrowableBN[0].div(yBN);
             }
@@ -599,8 +597,11 @@ export abstract class LeverageZapV2BaseModule {
             }
 
             // additionalCollateral = (userBorrowed / p) + leverageCollateral
-            const _maxAdditionalCollateral = BigInt((await getExpected(
-                this.market.addresses.borrowed_token, this.market.addresses.collateral_token, _maxBorrowable + _userBorrowed, this.market.addresses.amm)).outAmount);
+            const { borrowed_token, collateral_token, amm } = this.market.addresses;
+            const quote = await getExpected(borrowed_token, collateral_token, _maxBorrowable + _userBorrowed, amm);
+            if (quote === null) break;
+
+            const _maxAdditionalCollateral = BigInt(quote.outAmount);
             pAvgBN = maxBorrowableBN.plus(userBorrowed).div(toBN(_maxAdditionalCollateral, this.market.collateral_token.decimals));
             _maxLeverageCollateral = _maxAdditionalCollateral - fromBN(BN(userBorrowed).div(pAvgBN), this.market.collateral_token.decimals);
         }

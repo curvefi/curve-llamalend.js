@@ -214,7 +214,7 @@ export type GetExpectedFn = (
     toToken: string,
     amountIn: bigint,
     blacklist: string | string[],
-) => Promise<IQuote>;
+) => Promise<IQuote | null>;
 
 export interface IRates {
     borrowApr: string;
