@@ -1006,7 +1006,7 @@ type GetExpectedFn = (
     toToken: string,        // Address of token to swap to
     amountIn: bigint,       // Amount of tokens to swap (in wei)
     blacklist: string | string[], // Contract/pool addresses to exclude
-) => Promise<IQuote>;
+) => Promise<IQuote | null>; // null when no route is found
 ```
 
 **IQuote** - quote object with swap information:

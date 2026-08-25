@@ -134,12 +134,11 @@ export class MintLeverageZapV2Module {
                 break;
             }
 
-            const _maxAdditionalCollateral = BigInt((await getExpected(
-                this.market.coinAddresses[0],
-                this.market.coinAddresses[1],
-                _maxBorrowable,
-                this.market.address
-            )).outAmount);
+            const [fromToken, toToken] = this.market.coinAddresses;
+            const quote = await getExpected(fromToken, toToken, _maxBorrowable, this.market.address);
+            if (quote === null) break;
+
+            const _maxAdditionalCollateral = BigInt(quote.outAmount);
 
             pAvgBN = maxBorrowableBN.div(toBN(_maxAdditionalCollateral, this.market.coinDecimals[1]));
             _maxLeverageCollateral = _maxAdditionalCollateral;
@@ -205,12 +204,11 @@ export class MintLeverageZapV2Module {
             }
 
             if (pAvgBN === null){
-                const _y = BigInt((await getExpected(
-                    this.market.coinAddresses[0],
-                    this.market.coinAddresses[1],
-                    _maxBorrowable[0],
-                    this.market.address
-                )).outAmount);
+                const [fromToken, toToken] = this.market.coinAddresses;
+                const quote = await getExpected(fromToken, toToken, _maxBorrowable[0], this.market.address);
+                if (quote === null) break;
+
+                const _y = BigInt(quote.outAmount);
                 const yBN = toBN(_y, this.market.coinDecimals[1]);
                 pAvgBN = maxBorrowableBN[0].div(yBN);
             }
@@ -598,8 +596,11 @@ export class MintLeverageZapV2Module {
             }
 
             // additionalCollateral = (userBorrowed / p) + leverageCollateral
-            const _maxAdditionalCollateral = BigInt((await getExpected(
-                this.market.coinAddresses[0], this.market.coinAddresses[1], _maxBorrowable + _userBorrowed, this.market.address)).outAmount);
+            const [fromToken, toToken] = this.market.coinAddresses;
+            const quote = await getExpected(fromToken, toToken, _maxBorrowable + _userBorrowed, this.market.address);
+            if (quote === null) break;
+
+            const _maxAdditionalCollateral = BigInt(quote.outAmount);
             pAvgBN = maxBorrowableBN.plus(userBorrowed).div(toBN(_maxAdditionalCollateral, this.market.coinDecimals[1]));
             _maxLeverageCollateral = _maxAdditionalCollateral - fromBN(BN(userBorrowed).div(pAvgBN), this.market.coinDecimals[1]);
         }
