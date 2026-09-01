@@ -1,12 +1,14 @@
 import { LeverageZapV2BaseModule } from "../common/leverageZapV2Base.js";
-import type { TGas } from "../../../interfaces";
+import type { TAmount, TGas } from "../../../interfaces";
 import {
     _getAddress,
     smartNumber,
     _mulBy1_3,
     DIGas,
     MAX_ACTIVE_BAND,
-    buildCalldataForLeverageZapV2,
+    hasAllowance,
+    ensureAllowance,
+    ensureAllowanceEstimateGas,
 } from "../../../utils";
 
 export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
@@ -73,23 +75,17 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         exchangeCalldata: string,
         estimateGas: boolean
     ): Promise<string | TGas> {
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _for = _getAddress.call(this.llamalend, '');
-        const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV2({
-            controllerId: this._getMarketId(),
-            _minRecv,
-            router,
-            exchangeCalldata,
-        });
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
+        const controllerId = this._getMarketId();
 
         const gas = await contract.create_loan.estimateGas(
+            controllerId,
             _userCollateral,
             _debt,
             range,
-            _for,
-            _callbacker,
-            zapCalldata,
+            _minRecv,
+            router,
+            exchangeCalldata,
             { ...this.llamalend.constantOptions }
         );
         if (estimateGas) return smartNumber(gas);
@@ -97,12 +93,13 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.create_loan(
+            controllerId,
             _userCollateral,
             _debt,
             range,
-            _for,
-            _callbacker,
-            zapCalldata,
+            _minRecv,
+            router,
+            exchangeCalldata,
             { ...this.llamalend.options, gasLimit }
         )).hash;
     }
@@ -115,22 +112,16 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         exchangeCalldata: string,
         estimateGas: boolean
     ): Promise<string | TGas> {
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _for = _getAddress.call(this.llamalend, '');
-        const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV2({
-            controllerId: this._getMarketId(),
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
+        const controllerId = this._getMarketId();
+
+        const gas = await contract.borrow_more.estimateGas(
+            controllerId,
+            _userCollateral,
+            _debt,
             _minRecv,
             router,
             exchangeCalldata,
-        });
-
-        const gas = await contract.borrow_more.estimateGas(
-            _userCollateral,
-            _debt,
-            _for,
-            _callbacker,
-            zapCalldata,
             { ...this.llamalend.constantOptions }
         );
         if (estimateGas) return smartNumber(gas);
@@ -138,11 +129,12 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.borrow_more(
+            controllerId,
             _userCollateral,
             _debt,
-            _for,
-            _callbacker,
-            zapCalldata,
+            _minRecv,
+            router,
+            exchangeCalldata,
             { ...this.llamalend.options, gasLimit }
         )).hash;
     }
@@ -154,25 +146,19 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         exchangeCalldata: string,
         estimateGas: boolean
     ): Promise<string | TGas> {
-        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
-        const _for = _getAddress.call(this.llamalend, '');
-        const _callbacker = this._getLeverageZapAddress();
-        const zapCalldata = buildCalldataForLeverageZapV2({
-            controllerId: this._getMarketId(),
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
+        const controllerId = this._getMarketId();
+        const _walletDDebt = BigInt(0);
+        const _shrink = false;
+
+        const gas = await contract.repay.estimateGas(
+            controllerId,
+            _walletDDebt,
             _minRecv,
             router,
             exchangeCalldata,
-        });
-
-        const _walletDDebt = BigInt(0);
-
-        const gas = await contract.repay.estimateGas(
-            _walletDDebt,
-            _for,
             MAX_ACTIVE_BAND,
-            _callbacker,
-            zapCalldata,
-            false,
+            _shrink,
             { ...this.llamalend.constantOptions }
         );
         if (estimateGas) return smartNumber(gas);
@@ -180,13 +166,72 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         await this.llamalend.updateFeeData();
         const gasLimit = _mulBy1_3(DIGas(gas));
         return (await contract.repay(
+            controllerId,
             _walletDDebt,
-            _for,
+            _minRecv,
+            router,
+            exchangeCalldata,
             MAX_ACTIVE_BAND,
-            _callbacker,
-            zapCalldata,
-            false,
+            _shrink,
             { ...this.llamalend.options, gasLimit }
         )).hash;
+    }
+
+    public override async leverageCreateLoanIsApproved({ userCollateral }: { userCollateral: TAmount }): Promise<boolean> {
+        this._checkLeverageZap();
+        return await hasAllowance.call(this.llamalend,
+            [this.market.collateral_token.address], [userCollateral], this.llamalend.signerAddress, this._getLeverageZapAddress());
+    }
+
+    public override async leverageCreateLoanApprove({ userCollateral, isMax = false }: { userCollateral: TAmount, isMax?: boolean }): Promise<string[]> {
+        this._checkLeverageZap();
+        return await ensureAllowance.call(this.llamalend,
+            [this.market.collateral_token.address], [userCollateral], this._getLeverageZapAddress(), isMax);
+    }
+
+    public override async leverageCreateLoanApproveEstimateGas({ userCollateral, isMax = false }: { userCollateral: TAmount, isMax?: boolean }): Promise<TGas> {
+        this._checkLeverageZap();
+        return await ensureAllowanceEstimateGas.call(this.llamalend,
+            [this.market.collateral_token.address], [userCollateral], this._getLeverageZapAddress(), isMax);
+    }
+
+    public override async leverageRepayIsApproved(): Promise<boolean> {
+        this._checkLeverageZap();
+        return true;
+    }
+
+    public override async leverageRepayApprove(): Promise<string[]> {
+        this._checkLeverageZap();
+        return [];
+    }
+
+    public override async leverageRepayApproveEstimateGas(): Promise<TGas> {
+        this._checkLeverageZap();
+        return 0;
+    }
+
+    public override async leverageIsControllerApproved(address = ""): Promise<boolean> {
+        this._checkLeverageZap();
+        const owner = _getAddress.call(this.llamalend, address);
+        return await this.llamalend.contracts[this.market.addresses.controller].contract.approval(
+            owner, this._getLeverageZapAddress(), this.llamalend.constantOptions
+        ) as boolean;
+    }
+
+    public override async leverageSetControllerApproval(): Promise<string[]> {
+        this._checkLeverageZap();
+        if (await this.leverageIsControllerApproved()) return [];
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
+        await this.llamalend.updateFeeData();
+        const gas = await contract.approve.estimateGas(this._getLeverageZapAddress(), true, { ...this.llamalend.constantOptions });
+        const gasLimit = _mulBy1_3(DIGas(gas));
+        return [(await contract.approve(this._getLeverageZapAddress(), true, { ...this.llamalend.options, gasLimit })).hash];
+    }
+
+    public override async leverageSetControllerApprovalEstimateGas(): Promise<TGas> {
+        this._checkLeverageZap();
+        if (await this.leverageIsControllerApproved()) return 0;
+        const contract = this.llamalend.contracts[this.market.addresses.controller].contract;
+        return smartNumber(await contract.approve.estimateGas(this._getLeverageZapAddress(), true, { ...this.llamalend.constantOptions }));
     }
 }

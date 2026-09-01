@@ -284,6 +284,10 @@ export class MintMarketTemplate {
             createLoanApprove: leverageZapV2.leverageCreateLoanApprove.bind(leverageZapV2),
             createLoanExpectedMetrics: leverageZapV2.leverageCreateLoanExpectedMetrics.bind(leverageZapV2),
             calcMinRecv: leverageZapV2.calcMinRecv.bind(leverageZapV2),
+
+            isControllerApproved: leverageZapV2.leverageIsControllerApproved.bind(leverageZapV2),
+            setControllerApproval: leverageZapV2.leverageSetControllerApproval.bind(leverageZapV2),
+
             createLoan: leverageZapV2.leverageCreateLoan.bind(leverageZapV2),
 
             borrowMoreMaxRecv: leverageZapV2.leverageBorrowMoreMaxRecv.bind(leverageZapV2),
@@ -312,6 +316,8 @@ export class MintMarketTemplate {
 
                 repayApprove: leverageZapV2.leverageRepayApproveEstimateGas.bind(leverageZapV2),
                 repay: leverageZapV2.leverageRepayEstimateGas.bind(leverageZapV2),
+
+                setControllerApproval: leverageZapV2.leverageSetControllerApprovalEstimateGas.bind(leverageZapV2),
             },
         }
         this.deleverage = {

@@ -503,6 +503,18 @@ export abstract class LeverageZapV2BaseModule {
             [this.market.collateral_token.address], [userCollateral], this.market.addresses.controller, isMax);
     }
 
+    public async leverageIsControllerApproved(): Promise<boolean> {
+        return true;
+    }
+
+    public async leverageSetControllerApproval(): Promise<string[]> {
+        return [];
+    }
+
+    public async leverageSetControllerApprovalEstimateGas(): Promise<TGas> {
+        return 0;
+    }
+
     private async _leverageCreateLoan(
         userCollateral: TAmount,
         debt: TAmount,
