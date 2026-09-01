@@ -110,6 +110,10 @@ export interface ILeverageZapV2 {
         isMax?: boolean,
     }) => Promise<string[]>,
     calcMinRecv: (expected: TAmount, slippage: number) => string,
+
+    isControllerApproved: (address?: string) => Promise<boolean>,
+    setControllerApproval: () => Promise<string[]>,
+
     createLoan: ({
         userCollateral,
         debt,
@@ -269,5 +273,7 @@ export interface ILeverageZapV2 {
             router: string,
             calldata: string
         }) => Promise<number>,
+
+        setControllerApproval: () => Promise<TGas>,
     }
 }

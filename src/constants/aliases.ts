@@ -11,7 +11,7 @@ export const ALIASES_ETHEREUM = lowerCaseValues({
     "gauge_factory_v2": "0x64e1a69732fAC63F6790b3d8a34C5D713cC623E6",
     "leverage_zap_deprecated": "0xC8E8430dc7Cb23C32543329acCC68c9055C23e18", // odos v3
     "leverage_zap_v2": "0x19010d0f5D5a88aC609B568c91057679eed643d3",
-    "leverage_zap_v2_llv2": "0x5D847c892891B503c3483D3Abbc2a23774279b85",
+    "leverage_zap_v2_llv2": "0x676D83f9fD0E4bf0aB7539463c0c4a23E13982BF",
     "leverage_zap_v2_mint": "0xe1834af57923059b4306b468013262d73f344d4e",
     "leverage_markets_start_id": "9",
     "crvUSD": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
@@ -39,7 +39,7 @@ export const ALIASES_OPTIMISM = lowerCaseValues({
     "old_gauge_end_index": "4",
     "leverage_zap_deprecated": "0xBFab8ebc836E1c4D81837798FC076D219C9a1855", // odos v3
     "leverage_zap_v2": "0x56C526b0159a258887e0d79ec3a80dfb940d0cD7",
-    "leverage_zap_v2_llv2": "0xdbeBDaE6f2D47B553B984E4091693824cf38584a",
+    "leverage_zap_v2_llv2": "0x3294514B78Df4Bb90132567fcf8E5e99f390B687",
     "leverage_markets_start_id": "0",
     "gas_oracle": '0xc0d3C0d3C0d3c0D3C0D3C0d3C0d3C0D3C0D3000f',
     "gas_oracle_blob": '0x420000000000000000000000000000000000000f',
