@@ -126,6 +126,7 @@ export class LeverageV1ZapV2Module extends LeverageZapV2BaseModule {
     }
 
     protected override async _repayContractCall(
+        _stateCollateral: bigint,
         _userCollateral: bigint,
         _minRecv: bigint,
         router: string,

@@ -24,6 +24,22 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         );
     }
 
+    protected override _zapMaxBorrowableCall(
+        _userCollateral: bigint, _leverageCollateral: bigint, N: number | bigint, _pAvg: bigint
+    ): Promise<bigint> {
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
+        const _user = this.llamalend.signerAddress || this.llamalend.constants.ZERO_ADDRESS;
+        return contract.max_borrowable(this.market.addresses.controller, _userCollateral, _leverageCollateral, N, _pAvg, _user);
+    }
+
+    protected override _zapMaxBorrowableMulticallCall(
+        _userCollateral: bigint, _leverageCollateral: bigint, N: number | bigint, _pAvg: bigint
+    ): any {
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].multicallContract;
+        const _user = this.llamalend.signerAddress || this.llamalend.constants.ZERO_ADDRESS;
+        return contract.max_borrowable(this.market.addresses.controller, _userCollateral, _leverageCollateral, N, _pAvg, _user);
+    }
+
     protected override async _calcDebtN1Call(_collateral: bigint, _debt: bigint, N: number | bigint): Promise<bigint> {
         const address = _getAddress.call(this.llamalend, '');
         return await this.llamalend.contracts[this.market.addresses.controller].contract.calculate_debt_n1(
@@ -140,6 +156,7 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
     }
 
     protected override async _repayContractCall(
+        _stateCollateral: bigint,
         _userCollateral: bigint,
         _minRecv: bigint,
         router: string,
@@ -149,11 +166,13 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
         const controllerId = this._getMarketId();
         const _walletDDebt = BigInt(0);
+        const _collateralToSpend = _stateCollateral;
         const _shrink = false;
 
         const gas = await contract.repay.estimateGas(
             controllerId,
             _walletDDebt,
+            _collateralToSpend,
             _minRecv,
             router,
             exchangeCalldata,
@@ -168,6 +187,7 @@ export class LeverageV2ZapV2Module extends LeverageZapV2BaseModule {
         return (await contract.repay(
             controllerId,
             _walletDDebt,
+            _collateralToSpend,
             _minRecv,
             router,
             exchangeCalldata,
