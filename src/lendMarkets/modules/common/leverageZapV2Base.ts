@@ -64,6 +64,7 @@ export abstract class LeverageZapV2BaseModule {
     ): Promise<string | TGas>;
 
     protected abstract _repayContractCall(
+        _stateCollateral: bigint,
         _userCollateral: bigint,
         _minRecv: bigint,
         router: string,
@@ -78,6 +79,20 @@ export abstract class LeverageZapV2BaseModule {
         _stateDebt: bigint,
         address: string,
     ): Promise<bigint>;
+
+    protected _zapMaxBorrowableCall(
+        _userCollateral: bigint, _leverageCollateral: bigint, N: number | bigint, _pAvg: bigint
+    ): Promise<bigint> {
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
+        return contract.max_borrowable(this.market.addresses.controller, _userCollateral, _leverageCollateral, N, _pAvg);
+    }
+
+    protected _zapMaxBorrowableMulticallCall(
+        _userCollateral: bigint, _leverageCollateral: bigint, N: number | bigint, _pAvg: bigint
+    ): any {
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].multicallContract;
+        return contract.max_borrowable(this.market.addresses.controller, _userCollateral, _leverageCollateral, N, _pAvg);
+    }
 
     protected _getMarketId = (): number => Number(this.market.id.split("-").slice(-1)[0]);
 
@@ -147,11 +162,10 @@ export abstract class LeverageZapV2BaseModule {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral;
-            let _maxBorrowable = await contract.max_borrowable(this.market.addresses.controller, _userEffectiveCollateral, _maxLeverageCollateral, range, fromBN(pAvgBN));
+            let _maxBorrowable = await this._zapMaxBorrowableCall(_userEffectiveCollateral, _maxLeverageCollateral, range, fromBN(pAvgBN));
             _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000)
             if (_maxBorrowable === BigInt(0)) break;
             maxBorrowableBN = toBN(_maxBorrowable, this.market.borrowed_token.decimals);
@@ -200,7 +214,6 @@ export abstract class LeverageZapV2BaseModule {
         }>> => {
         this._checkLeverageZap();
         const _userCollateral = parseUnits(userCollateral, this.market.collateral_token.decimals);
-        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].multicallContract;
 
         const oraclePriceBand = await this.market.prices.oraclePriceBand();
         const pAvgApproxBN = BN(await this.market.prices.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
@@ -219,7 +232,7 @@ export abstract class LeverageZapV2BaseModule {
             const calls = [];
             for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
                 const j = N - this.market.minBands;
-                calls.push(contract.max_borrowable(this.market.addresses.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
+                calls.push(this._zapMaxBorrowableMulticallCall(_userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
             }
             _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(970) / BigInt(1000));
             maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.market.borrowed_token.decimals));
@@ -503,6 +516,18 @@ export abstract class LeverageZapV2BaseModule {
             [this.market.collateral_token.address], [userCollateral], this.market.addresses.controller, isMax);
     }
 
+    public async leverageIsControllerApproved(): Promise<boolean> {
+        return true;
+    }
+
+    public async leverageSetControllerApproval(): Promise<string[]> {
+        return [];
+    }
+
+    public async leverageSetControllerApprovalEstimateGas(): Promise<TGas> {
+        return 0;
+    }
+
     private async _leverageCreateLoan(
         userCollateral: TAmount,
         debt: TAmount,
@@ -582,11 +607,10 @@ export abstract class LeverageZapV2BaseModule {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.market.collateral_token.decimals);
-            let _maxBorrowable = await contract.max_borrowable(this.market.addresses.controller, _userEffectiveCollateral, _maxLeverageCollateral, _N, fromBN(pAvgBN));
+            let _maxBorrowable = await this._zapMaxBorrowableCall(_userEffectiveCollateral, _maxLeverageCollateral, _N, fromBN(pAvgBN));
             _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000);
             if (_maxBorrowable === BigInt(0)) break;
             maxBorrowableBN = toBN(_maxBorrowable, this.market.borrowed_token.decimals);
@@ -946,7 +970,7 @@ export abstract class LeverageZapV2BaseModule {
         const exchangeCalldata = _stateCollateral + _userCollateral > BigInt(0) ? calldata : "0x";
 
         return await this._repayContractCall(
-            _userCollateral, _minRecv, router, exchangeCalldata, estimateGas
+            _stateCollateral, _userCollateral, _minRecv, router, exchangeCalldata, estimateGas
         );
     }
 

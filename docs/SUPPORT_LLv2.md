@@ -116,9 +116,9 @@ There is **no need** for frontend developers to adjust logic based on internal r
 
 ### 🚧 Temporary Limitations
 
-- Leverage functionality is temporarily unavailable in v2.
+- Leverage via `market.leverageZapV2` is now available in v2 (see the Leverage Module section). It adds one new step — a controller approval (`setControllerApproval`).
+- The legacy `market.leverage` namespace is still unavailable in v2.
 - Upcoming updates will introduce adjustments related to `repay` methods due to the new `shrink` mechanism.
-- Full leverage support will be restored in future releases.
 
 # Methods supporting matrix
 
@@ -502,17 +502,29 @@ market.userPosition.userStateBigInt(address?: string): Promise<{
 
 ---
 
-## Leverage Module (`market.leverage`)
+## Leverage Module (`market.leverage` / `market.leverageZapV2`)
 
 | Method | v1 | v2 |
 |--------|----|----|
 | leverage() | ✅ | ❌ |
-| leverageZapV2() | ✅ | ❌ |
+| leverageZapV2() | ✅ | ✅ |
+| leverageZapV2.isControllerApproved() | ✅ | ✅ |
+| leverageZapV2.setControllerApproval() | ✅ | ✅ |
 
-> ⚠️ **Temporary Status**
+> **Leverage v2**
 >
-> Leverage functionality is temporarily unavailable in v2.
+> `market.leverageZapV2` now works on v2 markets. There is **one new step**: a controller
+> approval. Everything else (createLoan, borrowMore, repay, all expected/bands/prices/metrics,
+> and the ERC20 `*Approve` methods) stays the same.
 >
-> It is expected that upcoming changes will primarily affect `repay`-related methods due to the introduction of the `shrink` mechanism.
+> ```ts
+> if (!await market.leverageZapV2.isControllerApproved()) {
+>     await market.leverageZapV2.setControllerApproval();   // once per user, persists
+> }
+> // then the usual ERC20 approve + action, as before
+> ```
 >
-> Full leverage support will be restored in upcoming versions.
+> The two new methods are no-ops on v1 and mint markets (read → `true`, write → `[]`), so the
+> same code works on every market. See `docs/LEVERAGE_ZAP_V2.md`.
+>
+> The legacy `market.leverage` namespace is still unavailable in v2.
