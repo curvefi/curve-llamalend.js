@@ -1,7 +1,7 @@
 import type { Llamalend } from "../llamalend.js";
 import {IDict, IQuoteOdos, IOneWayMarket} from "../interfaces.js";
 import {ILeverageZapV2} from "./interfaces/leverageZapV2.js";
-import {IUserPosition, IWallet, IPrices, IAmm, IVault} from "./interfaces/common";
+import {IUserPosition, IWallet, IPrices, IAmm, IVault, ICollateralRewards} from "./interfaces/common";
 import {IStatsV1, ILoanV1, ILeverageV1} from "./interfaces/v1";
 import {IStatsV2, ILoanV2, ILeverageV2} from "./interfaces/v2";
 import {
@@ -22,6 +22,7 @@ import {
     PricesModule,
     AmmModule,
     VaultModule,
+    CollateralRewardsModule,
 } from "./modules/common";
 
 type LoanForVersion<V extends 'v1' | 'v2'> = V extends 'v1' ? ILoanV1 : ILoanV2;
@@ -35,6 +36,7 @@ type V1ModuleConstructors = {
     Prices: typeof PricesModule;
     Amm: typeof AmmModule;
     Vault: typeof VaultModule;
+    CollateralRewards: typeof CollateralRewardsModule;
     Loan: typeof LoanV1Module;
     Leverage: typeof LeverageV1ZapV1Module;
     LeverageZapV2: typeof LeverageV1ZapV2Module;
@@ -46,6 +48,7 @@ type V2ModuleConstructors = {
     Prices: typeof PricesModule;
     Amm: typeof AmmModule;
     Vault: typeof VaultModule;
+    CollateralRewards: typeof CollateralRewardsModule;
     Stats: typeof StatsV2Module;
     Loan: typeof LoanV2Module;
     Leverage: typeof LeverageV2ZapV1Module;
@@ -59,6 +62,7 @@ const versionModules: { v1: V1ModuleConstructors; v2: V2ModuleConstructors } = {
         Prices: PricesModule,
         Amm: AmmModule,
         Vault: VaultModule,
+        CollateralRewards: CollateralRewardsModule,
         Stats: StatsV1Module,
         Loan: LoanV1Module,
         Leverage: LeverageV1ZapV1Module,
@@ -70,6 +74,7 @@ const versionModules: { v1: V1ModuleConstructors; v2: V2ModuleConstructors } = {
         Prices: PricesModule,
         Amm: AmmModule,
         Vault: VaultModule,
+        CollateralRewards: CollateralRewardsModule,
         Stats: StatsV2Module,
         Loan: LoanV2Module,
         Leverage: LeverageV2ZapV1Module,
@@ -120,6 +125,7 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
     prices: IPrices;
     amm: IAmm;
     vault: IVault;
+    collateralRewards: ICollateralRewards;
     stats: StatsForVersion<V>;
     loan: LoanForVersion<V>;
     leverage: LeverageForVersion<V>;
@@ -147,6 +153,7 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
         const prices = new modules.Prices(this);
         const amm = new modules.Amm(this);
         const vault = new modules.Vault(this);
+        const collateralRewards = new modules.CollateralRewards(this);
         const loan = new modules.Loan(this);
         const leverageZapV1 = new modules.Leverage(this);
         const leverageZapV2 = new modules.LeverageZapV2(this);
@@ -346,6 +353,18 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
                 unstake: vault.vaultUnstakeEstimateGas.bind(vault),
                 claimCrv: vault.vaultClaimCrvEstimateGas.bind(vault),
                 claimRewards: vault.vaultClaimRewardsEstimateGas.bind(vault),
+            },
+        }
+
+        this.collateralRewards = {
+            callbackAddress: collateralRewards.callbackAddress.bind(collateralRewards),
+            isCollateralRewardEnable: collateralRewards.isCollateralRewardEnable.bind(collateralRewards),
+            totalCollateral: collateralRewards.totalCollateral.bind(collateralRewards),
+            userCollateral: collateralRewards.userCollateral.bind(collateralRewards),
+            claimableCrv: collateralRewards.claimableCrv.bind(collateralRewards),
+            claimCrv: collateralRewards.claimCrv.bind(collateralRewards),
+            estimateGas: {
+                claimCrv: collateralRewards.claimCrvEstimateGas.bind(collateralRewards),
             },
         }
 
