@@ -14,18 +14,14 @@ export class CollateralRewardsModule {
         this.llamalend = market.getLlamalend();
     }
 
-    private _getCallback = memoize(async (): Promise<string> => {
+    private _resolveCallback = memoize(async (): Promise<string> => {
         if (this.market.version !== 'v2') return this.llamalend.constants.ZERO_ADDRESS;
 
         const ammContract = this.llamalend.contracts[this.market.addresses.amm].contract;
         if (!("liquidity_mining_callback" in ammContract)) return this.llamalend.constants.ZERO_ADDRESS;
 
         const callback: string = await ammContract.liquidity_mining_callback(this.llamalend.constantOptions);
-        if (
-            callback &&
-            callback !== this.llamalend.constants.ZERO_ADDRESS &&
-            !(callback in this.llamalend.contracts)
-        ) {
+        if (!(callback in this.llamalend.contracts)) {
             this.llamalend.setContract(callback, LMCallbackABI);
         }
         return callback;
@@ -34,28 +30,30 @@ export class CollateralRewardsModule {
         maxAge: 60 * 60 * 1000, // 1h
     });
 
+    private async _getCallback(): Promise<string> {
+        const callback = await this._resolveCallback();
+        if (callback === this.llamalend.constants.ZERO_ADDRESS) {
+            throw Error(`${this.market.name} has no collateral LM callback`);
+        }
+        return callback;
+    }
+
     public async callbackAddress(): Promise<string> {
-        return await this._getCallback();
+        return await this._resolveCallback();
     }
 
     public async isCollateralRewardEnable(): Promise<boolean> {
-        return (await this._getCallback()) !== this.llamalend.constants.ZERO_ADDRESS;
+        return (await this._resolveCallback()) !== this.llamalend.constants.ZERO_ADDRESS;
     }
 
     public async totalCollateral(): Promise<string> {
         const callback = await this._getCallback();
-        if (callback === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`${this.market.name} has no collateral LM callback`);
-        }
         const _amount = await this.llamalend.contracts[callback].contract.total_collateral(this.llamalend.constantOptions);
         return this.llamalend.formatUnits(_amount, this.market.collateral_token.decimals);
     }
 
     public async userCollateral(address = ""): Promise<string> {
         const callback = await this._getCallback();
-        if (callback === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`${this.market.name} has no collateral LM callback`);
-        }
         address = address || this.llamalend.signerAddress;
         if (!address) throw Error("Need to connect wallet or pass address into args");
 
@@ -65,9 +63,6 @@ export class CollateralRewardsModule {
 
     public async claimableCrv(address = ""): Promise<string> {
         const callback = await this._getCallback();
-        if (callback === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`${this.market.name} has no collateral LM callback`);
-        }
         address = address || this.llamalend.signerAddress;
         if (!address) throw Error("Need to connect wallet or pass address into args");
 
@@ -77,9 +72,6 @@ export class CollateralRewardsModule {
 
     private async _claimCrv(estimateGas: boolean): Promise<string | TGas> {
         const callback = await this._getCallback();
-        if (callback === this.llamalend.constants.ZERO_ADDRESS) {
-            throw Error(`${this.market.name} has no collateral LM callback`);
-        }
 
         // On mainnet ALIASES.minter is the CRV Minter; on sidechains it is the gauge factory. Both expose mint(gauge).
         const contract = this.llamalend.contracts[this.llamalend.constants.ALIASES.minter].contract;
