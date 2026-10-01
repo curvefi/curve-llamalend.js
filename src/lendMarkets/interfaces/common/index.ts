@@ -3,3 +3,4 @@ export * from './wallet';
 export * from './amm';
 export * from './prices'
 export * from './vault';
+export * from './collateralRewards';

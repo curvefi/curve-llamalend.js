@@ -480,6 +480,38 @@ import llamalend from "@curvefi/llamalend-api";
     // 0xb0906c3a2dea66d1ab6f280833f7205f46af7374f8cf9baa5429f881094140ba
 ````
 
+### Collateral rewards for lendMarket
+CRV liquidity-mining rewards accrued on the collateral kept in the AMM. Available on LLv2 markets that have an LM callback attached to their AMM; on LLv1 `isCollateralRewardEnable` always returns `false`. The call surface is identical for both versions.
+```ts
+(async () => {
+    await llamalend.init('JsonRpc', {});
+
+    await llamalend.lendMarkets.fetchMarkets();
+
+    const lendMarket = llamalend.getLendMarket('one-way-market-0');
+
+    // Check support before showing/using the rest
+    await lendMarket.collateralRewards.isCollateralRewardEnable();
+    // true
+
+    await lendMarket.collateralRewards.callbackAddress();
+    // 0x...
+
+    await lendMarket.collateralRewards.userCollateral();
+    // 1.5
+    await lendMarket.collateralRewards.totalCollateral();
+    // 1250.0
+
+    await lendMarket.collateralRewards.claimableCrv();
+    // 0.0
+
+    await lendMarket.collateralRewards.estimateGas.claimCrv();
+    // 250000
+    await lendMarket.collateralRewards.claimCrv();
+    // 0x8325bada809340d681c165ffc5bac0ba490f8350872b5d0aa82f3fe6c01205aa
+})()
+````
+
 ### Create loan, add collateral, borrow more, repay for lendMarket
 ```ts
 (async () => {

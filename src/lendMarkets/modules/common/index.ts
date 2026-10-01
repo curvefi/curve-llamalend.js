@@ -3,6 +3,7 @@ export { WalletModule } from './wallet.js';
 export { PricesModule } from './prices.js';
 export { AmmModule } from './amm.js';
 export { VaultModule } from './vault.js';
+export { CollateralRewardsModule } from './collateralRewards.js';
 export { StatsBaseModule } from './statsBase.js';
 export { LoanBaseModule } from './loanBase.js';
 export { LeverageZapV1BaseModule } from './leverageZapV1Base.js';

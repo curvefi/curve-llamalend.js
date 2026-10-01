@@ -1,0 +1,93 @@
+[
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "factory",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "address" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "version",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "string" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "AMM",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "address" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "COLLATERAL_TOKEN",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "address" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "attached",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "bool" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "detached",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "bool" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "total_collateral",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "uint256" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "user_collateral",
+        "inputs": [{ "name": "user", "type": "address" }],
+        "outputs": [{ "name": "", "type": "uint256" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "claimable_tokens",
+        "inputs": [{ "name": "addr", "type": "address" }],
+        "outputs": [{ "name": "", "type": "uint256" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "integrate_fraction",
+        "inputs": [{ "name": "arg0", "type": "address" }],
+        "outputs": [{ "name": "", "type": "uint256" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "inflation_rate",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "uint256" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "future_epoch_time",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "uint256" }]
+    },
+    {
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "name": "user_checkpoint",
+        "inputs": [{ "name": "addr", "type": "address" }],
+        "outputs": [{ "name": "", "type": "bool" }]
+    }
+]
