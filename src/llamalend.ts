@@ -30,6 +30,7 @@ import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" with {type: 'json
 import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" with {type: 'json'};
 import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: 'json'};
 import TransientLeverageZapLendABI from "./constants/abis/leverageZapV2.json" with {type: 'json'};
+import TransientLeverageZapLlv1ABI from "./constants/abis/leverageZapV2Llv1.json" with {type: 'json'};
 import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {type: 'json'};
 
 import {
@@ -292,6 +293,9 @@ class Llamalend implements ILlamalend {
         this.setContract(this.constants.ALIASES['gauge_controller'], GaugeControllerABI);
         this.setContract(this.constants.ALIASES['leverage_zap_deprecated'], LeverageZapABI);
         this.setContract(this.constants.ALIASES['leverage_zap_v2'], LeverageZapABI);
+        if (this.constants.ALIASES['leverage_zap_v2_transient'] && this.constants.ALIASES['leverage_zap_v2_transient'] !== this.constants.ZERO_ADDRESS) {
+            this.setContract(this.constants.ALIASES['leverage_zap_v2_transient'], TransientLeverageZapLlv1ABI);
+        }
         this.setContract(this.constants.ALIASES['leverage_zap_v2_llv2'], TransientLeverageZapLendABI);
         if (this.constants.ALIASES['leverage_zap_v2_mint'] && this.constants.ALIASES['leverage_zap_v2_mint'] !== this.constants.ZERO_ADDRESS) {
             this.setContract(this.constants.ALIASES['leverage_zap_v2_mint'], LeverageZapABI);

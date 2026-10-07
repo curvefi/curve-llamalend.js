@@ -6,7 +6,8 @@ import {IStatsV1, ILoanV1, ILeverageV1} from "./interfaces/v1";
 import {IStatsV2, ILoanV2, ILeverageV2} from "./interfaces/v2";
 import {
     LeverageV1ZapV1Module,
-    LeverageV1ZapV2Module,
+    LeverageV1LegacyZapModule,
+    LeverageV1TransientZapModule,
     StatsV1Module,
     LoanV1Module,
 } from "./modules/v1";
@@ -39,7 +40,7 @@ type V1ModuleConstructors = {
     CollateralRewards: typeof CollateralRewardsModule;
     Loan: typeof LoanV1Module;
     Leverage: typeof LeverageV1ZapV1Module;
-    LeverageZapV2: typeof LeverageV1ZapV2Module;
+    LeverageZapV2: typeof LeverageV1TransientZapModule;
 };
 
 type V2ModuleConstructors = {
@@ -66,7 +67,7 @@ const versionModules: { v1: V1ModuleConstructors; v2: V2ModuleConstructors } = {
         Stats: StatsV1Module,
         Loan: LoanV1Module,
         Leverage: LeverageV1ZapV1Module,
-        LeverageZapV2: LeverageV1ZapV2Module,
+        LeverageZapV2: LeverageV1TransientZapModule,
     },
     v2: {
         UserPosition: UserPositionModule,
@@ -82,9 +83,16 @@ const versionModules: { v1: V1ModuleConstructors; v2: V2ModuleConstructors } = {
     },
 };
 
-const ZAP_ALIAS_BY_VERSION: Record<'v1' | 'v2', string> = {
-    v1: 'leverage_zap_v2',
-    v2: 'leverage_zap_v2_llv2',
+const marketIndex = (id: string): number => Number(id.split('-').slice(-1)[0]);
+
+const v1UsesTransientZap = (marketId: number, aliases: IDict<string>): boolean => {
+    const startId = aliases.leverage_markets_transient_start_id;
+    return startId !== undefined && marketId >= Number(startId);
+};
+
+const leverageZapAlias = (version: 'v1' | 'v2', marketId: number, aliases: IDict<string>): string => {
+    if (version === 'v2') return 'leverage_zap_v2_llv2';
+    return v1UsesTransientZap(marketId, aliases) ? 'leverage_zap_v2_transient' : 'leverage_zap_v2';
 };
 
 export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
@@ -156,7 +164,9 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
         const collateralRewards = new modules.CollateralRewards(this);
         const loan = new modules.Loan(this);
         const leverageZapV1 = new modules.Leverage(this);
-        const leverageZapV2 = new modules.LeverageZapV2(this);
+        const leverageZapV2 = this.version === 'v1' && !v1UsesTransientZap(marketIndex(this.id), this.llamalend.constants.ALIASES)
+            ? new LeverageV1LegacyZapModule(this)
+            : new modules.LeverageZapV2(this);
 
 
         this.userPosition = {
@@ -484,6 +494,6 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
     }
 
     public getZapAddress(): string {
-        return this.llamalend.constants.ALIASES[ZAP_ALIAS_BY_VERSION[this.version]];
+        return this.llamalend.constants.ALIASES[leverageZapAlias(this.version, marketIndex(this.id), this.llamalend.constants.ALIASES)];
     }
 }
