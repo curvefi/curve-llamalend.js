@@ -30,29 +30,35 @@ export class StatsV2Module extends StatsBaseModule {
         const vaultContract = this.llamalend.contracts[this.market.addresses.vault].multicallContract;
         const controllerContract = this.llamalend.contracts[this.market.addresses.controller].multicallContract;
 
-        let _cap: bigint, _available: bigint, _totalAssets: bigint, _totalDebt: bigint;
+        let _cap: bigint, _available: bigint, _totalAssets: bigint, _totalDebt: bigint, _adminFees: bigint;
         if(isGetter) {
             _totalAssets = cacheStats.get(cacheKey(this.market.addresses.vault, 'totalAssets', this.market.addresses.controller));
             _cap = cacheStats.get(cacheKey(this.market.addresses.controller, 'borrow_cap'));
             _available = cacheStats.get(cacheKey(this.market.addresses.controller, 'available_balance'));
             _totalDebt = cacheStats.get(cacheKey(this.market.addresses.controller, 'total_debt'));
+            _adminFees = cacheStats.get(cacheKey(this.market.addresses.controller, 'admin_fees'));
         } else {
-            [_totalAssets, _available, _cap, _totalDebt] = await this.llamalend.multicallProvider.all([
+            [_totalAssets, _available, _cap, _totalDebt, _adminFees] = await this.llamalend.multicallProvider.all([
                 vaultContract.totalAssets(this.market.addresses.controller),
                 controllerContract.available_balance(),
                 controllerContract.borrow_cap(),
                 controllerContract.total_debt(),
+                controllerContract.admin_fees(),
             ]);
 
             cacheStats.set(cacheKey(this.market.addresses.vault, 'totalAssets', this.market.addresses.controller), _totalAssets);
             cacheStats.set(cacheKey(this.market.addresses.controller, 'borrow_cap'), _cap);
             cacheStats.set(cacheKey(this.market.addresses.controller, 'available_balance'), _available);
             cacheStats.set(cacheKey(this.market.addresses.controller, 'total_debt'), _totalDebt);
+            cacheStats.set(cacheKey(this.market.addresses.controller, 'admin_fees'), _adminFees);
         }
 
         const totalAssets = this.llamalend.formatUnits(_totalAssets, this.market.borrowed_token.decimals);
         const borrowCap = this.llamalend.formatUnits(_cap, this.market.borrowed_token.decimals);
-        const available = this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals);
+        const availableBalance = this.llamalend.formatUnits(_available, this.market.borrowed_token.decimals);
+        const adminFees = this.llamalend.formatUnits(_adminFees, this.market.borrowed_token.decimals);
+        // available_balance() includes accrued admin fees, which are reserved and can be neither borrowed nor withdrawn
+        const available = BigNumber.max(BN(availableBalance).minus(BN(adminFees)), 0).toFixed();
         const totalDebt = this.llamalend.formatUnits(_totalDebt, this.market.borrowed_token.decimals);
         const availableForBorrow = BigNumber.min(BN(available), BN(borrowCap).minus(BN(totalDebt))).toFixed();
 
