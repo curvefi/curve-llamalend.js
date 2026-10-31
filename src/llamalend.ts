@@ -31,6 +31,7 @@ import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.
 import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: 'json'};
 import TransientLeverageZapLendABI from "./constants/abis/leverageZapV2.json" with {type: 'json'};
 import TransientLeverageZapLlv1ABI from "./constants/abis/leverageZapV2Llv1.json" with {type: 'json'};
+import TransientLeverageZapMintABI from "./constants/abis/leverageZapV2MintTransient.json" with {type: 'json'};
 import DeleverageZapABI from "./constants/abis/crvUSD/DeleverageZap.json" with {type: 'json'};
 
 import {
@@ -299,6 +300,9 @@ class Llamalend implements ILlamalend {
         this.setContract(this.constants.ALIASES['leverage_zap_v2_llv2'], TransientLeverageZapLendABI);
         if (this.constants.ALIASES['leverage_zap_v2_mint'] && this.constants.ALIASES['leverage_zap_v2_mint'] !== this.constants.ZERO_ADDRESS) {
             this.setContract(this.constants.ALIASES['leverage_zap_v2_mint'], LeverageZapABI);
+        }
+        if (this.constants.ALIASES['leverage_zap_v2_mint_transient'] && this.constants.ALIASES['leverage_zap_v2_mint_transient'] !== this.constants.ZERO_ADDRESS) {
+            this.setContract(this.constants.ALIASES['leverage_zap_v2_mint_transient'], TransientLeverageZapMintABI);
         }
 
         if (this.chainId === 1) {

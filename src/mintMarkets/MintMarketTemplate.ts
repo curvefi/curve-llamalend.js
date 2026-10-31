@@ -26,7 +26,7 @@ import {IDict, ILlamma, TGas, IRates} from "../interfaces.js";
 import {_getUserCollateralCrvUsd, _getUserCollateralCrvUsdFull} from "../external-api.js";
 import { ILeverageV2 } from "./interfaces/leverage.js";
 import { ILeverageZapV2 } from "./interfaces/leverageZapV2.js";
-import { LeverageV2Module, MintLeverageZapV2Module } from "./modules/index.js";
+import { LeverageV2Module, MintLeverageZapV2Module, MintLeverageZapV2TransientModule } from "./modules/index.js";
 
 
 export class MintMarketTemplate {
@@ -268,7 +268,16 @@ export class MintMarketTemplate {
             },
         }
 
-        const leverageZapV2 = new MintLeverageZapV2Module(this);
+        const aliases = this.llamalend.constants.ALIASES;
+        const transientZap = aliases.leverage_zap_v2_mint_transient;
+        const transientStartId = aliases.leverage_mint_markets_transient_start_id;
+        const useTransientZap = this.index !== undefined
+            && !!transientZap && transientZap !== this.llamalend.constants.ZERO_ADDRESS
+            && transientStartId !== undefined
+            && this.index >= Number(transientStartId);
+        const leverageZapV2 = useTransientZap
+            ? new MintLeverageZapV2TransientModule(this)
+            : new MintLeverageZapV2Module(this);
         this.leverageZapV2 = {
             hasLeverage: leverageZapV2.hasLeverage.bind(leverageZapV2),
 
