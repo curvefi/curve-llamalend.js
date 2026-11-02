@@ -29,6 +29,11 @@ import { ILeverageZapV2 } from "./interfaces/leverageZapV2.js";
 import { LeverageV2Module, MintLeverageZapV2Module, MintLeverageZapV2TransientModule } from "./modules/index.js";
 
 
+const mintUsesTransientZap = (index: number | undefined, aliases: IDict<string>): boolean => {
+    const startId = aliases.leverage_mint_markets_transient_start_id;
+    return index !== undefined && startId !== undefined && index >= Number(startId);
+};
+
 export class MintMarketTemplate {
     private llamalend: Llamalend;
     id: string;
@@ -268,14 +273,7 @@ export class MintMarketTemplate {
             },
         }
 
-        const aliases = this.llamalend.constants.ALIASES;
-        const transientZap = aliases.leverage_zap_v2_mint_transient;
-        const transientStartId = aliases.leverage_mint_markets_transient_start_id;
-        const useTransientZap = this.index !== undefined
-            && !!transientZap && transientZap !== this.llamalend.constants.ZERO_ADDRESS
-            && transientStartId !== undefined
-            && this.index >= Number(transientStartId);
-        const leverageZapV2 = useTransientZap
+        const leverageZapV2 = mintUsesTransientZap(this.index, this.llamalend.constants.ALIASES)
             ? new MintLeverageZapV2TransientModule(this)
             : new MintLeverageZapV2Module(this);
         this.leverageZapV2 = {
