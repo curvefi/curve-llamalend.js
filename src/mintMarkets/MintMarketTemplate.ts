@@ -2091,7 +2091,9 @@ export class MintMarketTemplate {
     }
 
     public getZapAddress(): string {
-        if (this.leverageZapV2.hasLeverage()) return this.llamalend.constants.ALIASES.leverage_zap_v2_mint;
-        return this.leverageZap;
+        if (!this.leverageZapV2.hasLeverage()) return this.leverageZap;
+        return mintUsesTransientZap(this.index, this.llamalend.constants.ALIASES)
+            ? this.llamalend.constants.ALIASES.leverage_zap_v2_mint_transient
+            : this.llamalend.constants.ALIASES.leverage_zap_v2_mint;
     }
 }
