@@ -22,18 +22,19 @@ import {Llamalend} from "../../llamalend.js";
 import FactoryABI from "../../constants/abis/crvUSD/Factory.json" with { type: "json" };
 
 export class MintLeverageZapV2Module {
-    private market: MintMarketTemplate;
-    private llamalend: Llamalend;
+    protected market: MintMarketTemplate;
+    protected llamalend: Llamalend;
 
     constructor(market: MintMarketTemplate) {
         this.market = market;
         this.llamalend = market.getLlamalend();
     }
 
-    private _getLeverageZapAddress = (): string =>
-        this.llamalend.constants.ALIASES.leverage_zap_v2_mint ?? this.llamalend.constants.ZERO_ADDRESS;
+    protected _getLeverageZapAddress(): string {
+        return this.llamalend.constants.ALIASES.leverage_zap_v2_mint ?? this.llamalend.constants.ZERO_ADDRESS;
+    }
 
-    private _getControllerId = memoize(async (): Promise<bigint> => {
+    protected _getControllerId = memoize(async (): Promise<bigint> => {
         const factoryAddress = this.llamalend.constants.FACTORY;
         if (!this.llamalend.contracts[factoryAddress]) this.llamalend.setContract(factoryAddress, FactoryABI);
         const factory = this.llamalend.contracts[factoryAddress];
@@ -48,6 +49,20 @@ export class MintLeverageZapV2Module {
     {
         promise: true,
     });
+
+    protected _zapMaxBorrowableCall(
+        _userCollateral: bigint, _leverageCollateral: bigint, N: number | bigint, _pAvg: bigint
+    ): Promise<bigint> {
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
+        return contract.max_borrowable(this.market.controller, _userCollateral, _leverageCollateral, N, _pAvg);
+    }
+
+    protected _zapMaxBorrowableMulticallCall(
+        _userCollateral: bigint, _leverageCollateral: bigint, N: number | bigint, _pAvg: bigint
+    ): any {
+        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].multicallContract;
+        return contract.max_borrowable(this.market.controller, _userCollateral, _leverageCollateral, N, _pAvg);
+    }
 
     // ============ CREATE LOAN METHODS ============
 
@@ -120,11 +135,10 @@ export class MintLeverageZapV2Module {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral;
-            let _maxBorrowable = await contract.max_borrowable(this.market.controller, _userEffectiveCollateral, _maxLeverageCollateral, range, fromBN(pAvgBN));
+            let _maxBorrowable = await this._zapMaxBorrowableCall(_userEffectiveCollateral, _maxLeverageCollateral, range, fromBN(pAvgBN));
             _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000)
             if (_maxBorrowable === BigInt(0)) break;
             maxBorrowableBN = toBN(_maxBorrowable, this.market.coinDecimals[0]);
@@ -173,7 +187,6 @@ export class MintLeverageZapV2Module {
         }>> => {
         this._checkLeverageZap();
         const _userCollateral = parseUnits(userCollateral, this.market.coinDecimals[1]);
-        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].multicallContract;
 
         const oraclePriceBand = await this.market.oraclePriceBand();
         const pAvgApproxBN = BN(await this.market.calcTickPrice(oraclePriceBand)); // upper tick of oracle price band
@@ -192,7 +205,7 @@ export class MintLeverageZapV2Module {
             const calls = [];
             for (let N = this.market.minBands; N <= this.market.maxBands; N++) {
                 const j = N - this.market.minBands;
-                calls.push(contract.max_borrowable(this.market.controller, _userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
+                calls.push(this._zapMaxBorrowableMulticallCall(_userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
             }
             _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(970) / BigInt(1000));
             maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.market.coinDecimals[0]));
@@ -501,7 +514,19 @@ export class MintLeverageZapV2Module {
         const _debt = parseUnits(debt, this.market.coinDecimals[0]);
         const _minRecv = parseUnits(minRecv, this.market.coinDecimals[1]);
 
-        const zapCalldata = buildCalldataForLeverageZapV2({ controllerId: await this._getControllerId(), _minRecv, router, exchangeCalldata: calldata });
+        return await this._createLoanContractCall(_userCollateral, _debt, _minRecv, range, router, calldata, estimateGas);
+    }
+
+    protected async _createLoanContractCall(
+        _userCollateral: bigint,
+        _debt: bigint,
+        _minRecv: bigint,
+        range: number,
+        router: string,
+        exchangeCalldata: string,
+        estimateGas: boolean
+    ): Promise<string | TGas> {
+        const zapCalldata = buildCalldataForLeverageZapV2({ controllerId: await this._getControllerId(), _minRecv, router, exchangeCalldata });
         const contract = this.llamalend.contracts[this.market.controller].contract;
         const gas = await contract.create_loan_extended.estimateGas(
             _userCollateral,
@@ -593,11 +618,10 @@ export class MintLeverageZapV2Module {
         let _userEffectiveCollateral = BigInt(0);
         let _maxLeverageCollateral = BigInt(0);
 
-        const contract = this.llamalend.contracts[this._getLeverageZapAddress()].contract;
         for (let i = 0; i < 5; i++) {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.market.coinDecimals[1]);
-            let _maxBorrowable = await contract.max_borrowable(this.market.controller, _userEffectiveCollateral, _maxLeverageCollateral, N, fromBN(pAvgBN));
+            let _maxBorrowable = await this._zapMaxBorrowableCall(_userEffectiveCollateral, _maxLeverageCollateral, N, fromBN(pAvgBN));
             _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000);
             if (_maxBorrowable === BigInt(0)) break;
             maxBorrowableBN = toBN(_maxBorrowable, this.market.coinDecimals[0]);
@@ -688,7 +712,18 @@ export class MintLeverageZapV2Module {
         const _debt = parseUnits(debt, this.market.coinDecimals[0]);
         const _minRecv = parseUnits(minRecv, this.market.coinDecimals[1]);
 
-        const zapCalldata = buildCalldataForLeverageZapV2({ controllerId: await this._getControllerId(), _minRecv, router, exchangeCalldata: calldata });
+        return await this._borrowMoreContractCall(_userCollateral, _debt, _minRecv, router, calldata, estimateGas);
+    }
+
+    protected async _borrowMoreContractCall(
+        _userCollateral: bigint,
+        _debt: bigint,
+        _minRecv: bigint,
+        router: string,
+        exchangeCalldata: string,
+        estimateGas: boolean
+    ): Promise<string | TGas> {
+        const zapCalldata = buildCalldataForLeverageZapV2({ controllerId: await this._getControllerId(), _minRecv, router, exchangeCalldata });
         const contract = this.llamalend.contracts[this.market.controller].contract;
         const gas = await contract.borrow_more_extended.estimateGas(
             _userCollateral,
@@ -976,6 +1011,18 @@ export class MintLeverageZapV2Module {
         const _minRecv = parseUnits(minRecv, this.market.coinDecimals[0]);
 
         const exchangeCalldata = _stateCollateral + _userCollateral > BigInt(0) ? calldata : "0x";
+
+        return await this._repayContractCall(_stateCollateral, _userCollateral, _minRecv, router, exchangeCalldata, estimateGas);
+    }
+
+    protected async _repayContractCall(
+        _stateCollateral: bigint,
+        _userCollateral: bigint,
+        _minRecv: bigint,
+        router: string,
+        exchangeCalldata: string,
+        estimateGas: boolean
+    ): Promise<string | TGas> {
         const zapCalldata = buildCalldataForLeverageZapV2({ controllerId: await this._getControllerId(), _minRecv, router, exchangeCalldata });
         const contract = this.llamalend.contracts[this.market.controller].contract;
         const gas = await contract.repay_extended.estimateGas(

@@ -14,8 +14,10 @@ export const ALIASES_ETHEREUM = lowerCaseValues({
     "leverage_zap_v2_transient": "0x9577086c6E38d38359872F903Da201f1bdCc0323",
     "leverage_zap_v2_llv2": "0xFE02553d3Ba4c3f39F36a4632F91404DF94b9AE2",
     "leverage_zap_v2_mint": "0xe1834af57923059b4306b468013262d73f344d4e",
+    "leverage_zap_v2_mint_transient": "0x227d2f40E3a66C0344D8Af373b4d48A8744d6560",
     "leverage_markets_start_id": "9",
     "leverage_markets_transient_start_id": "28",
+    "leverage_mint_markets_transient_start_id": "6",
     "crvUSD": "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
     "st_crvUSD": "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367",
 });
