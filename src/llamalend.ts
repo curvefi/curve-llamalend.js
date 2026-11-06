@@ -27,6 +27,7 @@ import gasOracleBlobABI from './constants/abis/gas_oracle_optimism_blob.json' wi
 import llammaABI from "./constants/abis/crvUSD/llamma.json" with {type: 'json'};
 import controllerABI from "./constants/abis/crvUSD/controller.json" with {type: 'json'};
 import PegKeeper from "./constants/abis/crvUSD/PegKeeper.json" with {type: 'json'};
+import FactoryABI from "./constants/abis/crvUSD/Factory.json" with {type: 'json'};
 import HealthCalculatorZapABI from "./constants/abis/crvUSD/HealthCalculatorZap.json" with {type: 'json'};
 import LeverageZapCrvUSDABI from "./constants/abis/crvUSD/LeverageZap.json" with {type: 'json'};
 import TransientLeverageZapLendABI from "./constants/abis/leverageZapV2.json" with {type: 'json'};
@@ -306,6 +307,7 @@ class Llamalend implements ILlamalend {
         }
 
         if (this.chainId === 1) {
+            this.setContract(this.constants.FACTORY, FactoryABI);
             this.setContract(this.constants.ALIASES.minter, MinterABI);
             this.setContract(this.constants.ALIASES.gauge_factory, GaugeFactoryMainnetABI);
             if (this.constants.ALIASES.gauge_factory_v2 && this.constants.ALIASES.gauge_factory_v2 !== this.constants.ZERO_ADDRESS) {

@@ -19,7 +19,6 @@ import {
     buildCalldataForLeverageZapV2,
 } from "../../utils.js";
 import {Llamalend} from "../../llamalend.js";
-import FactoryABI from "../../constants/abis/crvUSD/Factory.json" with { type: "json" };
 
 export class MintLeverageZapV2Module {
     protected market: MintMarketTemplate;
@@ -36,7 +35,6 @@ export class MintLeverageZapV2Module {
 
     protected _getControllerId = memoize(async (): Promise<bigint> => {
         const factoryAddress = this.llamalend.constants.FACTORY;
-        if (!this.llamalend.contracts[factoryAddress]) this.llamalend.setContract(factoryAddress, FactoryABI);
         const factory = this.llamalend.contracts[factoryAddress];
         const _n = await factory.contract.n_collaterals(this.llamalend.constantOptions) as bigint;
         const calls = [];
