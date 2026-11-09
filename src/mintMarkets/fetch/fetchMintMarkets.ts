@@ -4,7 +4,6 @@ import ERC20ABI from '../../constants/abis/ERC20.json' with {type: 'json'};
 import llammaABI from "../../constants/abis/crvUSD/llamma.json" with {type: 'json'};
 import controllerABI from "../../constants/abis/crvUSD/controller.json" with {type: 'json'};
 import controllerV2ABI from "../../constants/abis/crvUSD/controller_v2.json" with {type: 'json'};
-import FactoryABI from "../../constants/abis/crvUSD/Factory.json" with {type: 'json'};
 import {extractDecimals} from "../../constants/utils.js";
 import {handleMultiCallResponse} from "../../utils.js";
 import {resolveMonetaryPolicyAbi} from "../monetaryPolicyAbi.js";
@@ -68,7 +67,6 @@ export const fetchMintMarketsByAPI = async (llamalend: Llamalend): Promise<void>
 export const fetchMintMarketsByBlockchain = async (llamalend: Llamalend): Promise<void> => {
     if (llamalend.chainId !== 1) return;
 
-    llamalend.setContract(llamalend.constants.FACTORY, FactoryABI);
     const factoryContract = llamalend.contracts[llamalend.constants.FACTORY].contract;
     const factoryMulticallContract = llamalend.contracts[llamalend.constants.FACTORY].multicallContract;
 
