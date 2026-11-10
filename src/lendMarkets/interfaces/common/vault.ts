@@ -24,6 +24,8 @@ export interface IVault {
     stake: (vaultShares: number | string, isMax?: boolean) => Promise<string>,
     unstake: (vaultShares: number | string) => Promise<string>,
     rewardsOnly: () => boolean,
+    isGaugeKilled: () => Promise<boolean | null>,
+    isGaugeRegistered: () => Promise<boolean | null>,
     totalLiquidity: () => Promise<string>,
     crvApr: (useApi?: boolean) => Promise<[baseApy: number, boostedApy: number]>,
     claimableCrv: (address?: string) => Promise<string>,

@@ -170,3 +170,33 @@ const _assembleTxOdosMemoized = memoize(
 export async function _assembleTxOdos(this: Llamalend, pathId: string): Promise<string> {
     return _assembleTxOdosMemoized(this.constants.ALIASES.leverage_zap_deprecated, pathId);
 }
+
+export interface IPricesGauge {
+    address: string;
+    effective_address: string;
+    name: string;
+    lp_token: string;
+    pool: { address: string, name: string, chain: string } | null;
+    market: { name: string, chain: string } | null;
+    is_killed: boolean;
+    is_approved: boolean;
+    root_gauge: string | null;
+}
+
+const _getGaugesOverview = memoize(
+    async (): Promise<IPricesGauge[]> => {
+        const url = `https://prices.curve.finance/v1/dao/gauges/overview`;
+        const response = await fetch(url, { headers: { "accept": "application/json" } });
+        if (response.status !== 200) {
+            throw Error(`Fetch error: ${response.status} ${response.statusText}`);
+        }
+        const { gauges } = await response.json() as { gauges: IPricesGauge[] };
+        return gauges ?? [];
+    },
+    {
+        promise: true,
+        maxAge: 5 * 60 * 1000,
+    }
+);
+
+export const getGaugesOverview = async (): Promise<IPricesGauge[]> => _getGaugesOverview();

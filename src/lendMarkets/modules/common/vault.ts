@@ -18,7 +18,7 @@ import {
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
-import { _getMarketsData } from "../../../external-api";
+import { _getMarketsData, getGaugesOverview } from "../../../external-api";
 import ERC20Abi from '../../../constants/abis/ERC20.json' with {type: 'json'};
 import {WEEK} from "../../../constants/utils";
 
@@ -289,6 +289,63 @@ export class VaultModule {
         const gaugeContract = this.llamalend.contracts[this.market.addresses.gauge].contract;
 
         return !('inflation_rate()' in gaugeContract || 'inflation_rate(uint256)' in gaugeContract);
+    }
+
+    public async isGaugeKilled(): Promise<boolean | null> {
+        const gaugeAddress = this.market.addresses.gauge;
+        if (!gaugeAddress || gaugeAddress === this.llamalend.constants.ZERO_ADDRESS) return null;
+        const target = gaugeAddress.toLowerCase();
+
+        try {
+            const gauges = await getGaugesOverview();
+            const gauge = gauges.find((g) => g.address.toLowerCase() === target);
+            if (gauge) return gauge.is_killed;
+        } catch (e) {
+            console.warn(`isGaugeKilled: prices API unavailable, falling through to on-chain`, e);
+        }
+
+        if (this.llamalend.chainId === 1) return this._isGaugeKilledOnchain(gaugeAddress);
+        return null;
+    }
+
+    public async isGaugeRegistered(): Promise<boolean | null> {
+        const gaugeAddress = this.market.addresses.gauge;
+        if (!gaugeAddress || gaugeAddress === this.llamalend.constants.ZERO_ADDRESS) return null;
+        const target = gaugeAddress.toLowerCase();
+
+        try {
+            const gauges = await getGaugesOverview();
+            const gauge = gauges.find((g) => g.address.toLowerCase() === target);
+            if (gauge) return gauge.is_approved;
+        } catch (e) {
+            console.warn(`isGaugeRegistered: prices API unavailable, falling through to on-chain`, e);
+        }
+
+        if (this.llamalend.chainId === 1) return this._isGaugeRegisteredOnchain(gaugeAddress);
+        return null;
+    }
+
+    private async _isGaugeKilledOnchain(gaugeAddress: string): Promise<boolean | null> {
+        const gaugeContract = this.llamalend.contracts[gaugeAddress]?.contract;
+        if (!gaugeContract || !('is_killed()' in gaugeContract)) return null;
+        try {
+            return await gaugeContract.is_killed(this.llamalend.constantOptions);
+        } catch (e) {
+            console.warn(`_isGaugeKilledOnchain: read failed`, e);
+            return null;
+        }
+    }
+
+    private async _isGaugeRegisteredOnchain(gaugeAddress: string): Promise<boolean | null> {
+        const gaugeController = this.llamalend.contracts[this.llamalend.constants.ALIASES.gauge_controller]?.contract;
+        if (!gaugeController) return null;
+        try {
+            await gaugeController.gauge_types(gaugeAddress, this.llamalend.constantOptions);
+            return true;
+        } catch (e: any) {
+            if (e?.code === 'CALL_EXCEPTION' || e?.code === 'BAD_DATA') return false;
+            return null;
+        }
     }
 
     public async vaultTotalLiquidity(useAPI = true): Promise<string> {
