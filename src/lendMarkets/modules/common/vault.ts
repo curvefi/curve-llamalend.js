@@ -1,4 +1,5 @@
 import memoize from "memoizee";
+import { isError } from "ethers";
 import type { TAmount, TGas, IReward } from "../../../interfaces";
 import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import {
@@ -342,8 +343,9 @@ export class VaultModule {
         try {
             await gaugeController.gauge_types(gaugeAddress, this.llamalend.constantOptions);
             return true;
-        } catch (e: any) {
-            if (e?.code === 'CALL_EXCEPTION' || e?.code === 'BAD_DATA') return false;
+        } catch (e) {
+            // gauge_types reverts for an unregistered gauge; a network error stays null, not false
+            if (isError(e, "CALL_EXCEPTION") || isError(e, "BAD_DATA")) return false;
             return null;
         }
     }
