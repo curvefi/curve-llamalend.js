@@ -463,9 +463,9 @@ import llamalend from "@curvefi/llamalend-api";
     lendMarket.vault.rewardsOnly();
     // false
     await lendMarket.vault.isGaugeKilled();
-    // false  (true = gauge stopped accruing CRV; null = status could not be determined)
+    // false  (true = gauge stopped accruing CRV; null = the market has no gauge; throws if the status can't be read)
     await lendMarket.vault.isGaugeRegistered();
-    // true   (false = not approved in the GaugeController; null = status could not be determined)
+    // true   (false = not approved in the GaugeController; null = the market has no gauge; throws if the status can't be read)
     await lendMarket.vault.totalLiquidity();
     // 180638.919172
     await lendMarket.vault.crvApr();

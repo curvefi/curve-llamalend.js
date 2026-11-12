@@ -302,11 +302,11 @@ export class VaultModule {
             const gauge = gauges.find((g) => g.address.toLowerCase() === target);
             if (gauge) return gauge.is_killed;
         } catch (e) {
-            console.warn(`isGaugeKilled: prices API unavailable, falling through to on-chain`, e);
+            if (this.llamalend.chainId !== 1) throw e;
         }
 
         if (this.llamalend.chainId === 1) return this._isGaugeKilledOnchain(gaugeAddress);
-        return null;
+        throw new Error(`Cannot determine killed status of gauge ${gaugeAddress}: not indexed by the prices API and on-chain reads require Ethereum`);
     }
 
     public async isGaugeRegistered(): Promise<boolean | null> {
@@ -319,34 +319,31 @@ export class VaultModule {
             const gauge = gauges.find((g) => g.address.toLowerCase() === target);
             if (gauge) return gauge.is_approved;
         } catch (e) {
-            console.warn(`isGaugeRegistered: prices API unavailable, falling through to on-chain`, e);
+            if (this.llamalend.chainId !== 1) throw e;
         }
 
         if (this.llamalend.chainId === 1) return this._isGaugeRegisteredOnchain(gaugeAddress);
-        return null;
+        throw new Error(`Cannot determine registration of gauge ${gaugeAddress}: not indexed by the prices API and on-chain reads require Ethereum`);
     }
 
-    private async _isGaugeKilledOnchain(gaugeAddress: string): Promise<boolean | null> {
+    private async _isGaugeKilledOnchain(gaugeAddress: string): Promise<boolean> {
         const gaugeContract = this.llamalend.contracts[gaugeAddress]?.contract;
-        if (!gaugeContract || !('is_killed()' in gaugeContract)) return null;
-        try {
-            return await gaugeContract.is_killed(this.llamalend.constantOptions);
-        } catch (e) {
-            console.warn(`_isGaugeKilledOnchain: read failed`, e);
-            return null;
+        if (!gaugeContract || !('is_killed()' in gaugeContract)) {
+            throw new Error(`Gauge ${gaugeAddress} has no is_killed() method`);
         }
+        return await gaugeContract.is_killed(this.llamalend.constantOptions);
     }
 
-    private async _isGaugeRegisteredOnchain(gaugeAddress: string): Promise<boolean | null> {
+    private async _isGaugeRegisteredOnchain(gaugeAddress: string): Promise<boolean> {
         const gaugeController = this.llamalend.contracts[this.llamalend.constants.ALIASES.gauge_controller]?.contract;
-        if (!gaugeController) return null;
+        if (!gaugeController) throw new Error("GaugeController contract is not available");
         try {
             await gaugeController.gauge_types(gaugeAddress, this.llamalend.constantOptions);
             return true;
         } catch (e) {
-            // gauge_types reverts for an unregistered gauge; a network error stays null, not false
+            // gauge_types reverts for an unregistered gauge; a network error propagates, not becomes false
             if (isError(e, "CALL_EXCEPTION") || isError(e, "BAD_DATA")) return false;
-            return null;
+            throw e;
         }
     }
 
