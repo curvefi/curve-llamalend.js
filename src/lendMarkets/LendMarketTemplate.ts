@@ -343,6 +343,8 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
             stake: vault.vaultStake.bind(vault),
             unstake: vault.vaultUnstake.bind(vault),
             rewardsOnly: vault.vaultRewardsOnly.bind(vault),
+            isGaugeKilled: vault.isGaugeKilled.bind(vault),
+            isGaugeRegistered: vault.isGaugeRegistered.bind(vault),
             totalLiquidity: vault.vaultTotalLiquidity.bind(vault),
             crvApr: vault.vaultCrvApr.bind(vault),
             claimableCrv: vault.vaultClaimableCrv.bind(vault),
