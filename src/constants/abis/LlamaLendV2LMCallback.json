@@ -89,5 +89,12 @@
         "name": "user_checkpoint",
         "inputs": [{ "name": "addr", "type": "address" }],
         "outputs": [{ "name": "", "type": "bool" }]
+    },
+    {
+        "stateMutability": "view",
+        "type": "function",
+        "name": "is_killed",
+        "inputs": [],
+        "outputs": [{ "name": "", "type": "bool" }]
     }
 ]

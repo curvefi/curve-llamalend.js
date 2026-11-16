@@ -1,5 +1,4 @@
 import memoize from "memoizee";
-import { isError } from "ethers";
 import type { TAmount, TGas, IReward } from "../../../interfaces";
 import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import {
@@ -19,7 +18,8 @@ import {
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
-import { _getMarketsData, getGaugesOverview } from "../../../external-api";
+import { _getMarketsData } from "../../../external-api";
+import { _isGaugeKilled, _isGaugeRegistered } from "./gaugeStatus";
 import ERC20Abi from '../../../constants/abis/ERC20.json' with {type: 'json'};
 import {WEEK} from "../../../constants/utils";
 
@@ -292,59 +292,13 @@ export class VaultModule {
         return !('inflation_rate()' in gaugeContract || 'inflation_rate(uint256)' in gaugeContract);
     }
 
+    // `null` only when the market has no gauge; throws if the status can't be read.
     public async isGaugeKilled(): Promise<boolean | null> {
-        const gaugeAddress = this.market.addresses.gauge;
-        if (!gaugeAddress || gaugeAddress === this.llamalend.constants.ZERO_ADDRESS) return null;
-        const target = gaugeAddress.toLowerCase();
-
-        try {
-            const gauges = await getGaugesOverview();
-            const gauge = gauges.find((g) => g.address.toLowerCase() === target);
-            if (gauge) return gauge.is_killed;
-        } catch (e) {
-            if (this.llamalend.chainId !== 1) throw e;
-        }
-
-        if (this.llamalend.chainId === 1) return this._isGaugeKilledOnchain(gaugeAddress);
-        throw new Error(`Cannot determine killed status of gauge ${gaugeAddress}: not indexed by the prices API and on-chain reads require Ethereum`);
+        return _isGaugeKilled(this.llamalend, this.market.addresses.gauge);
     }
 
     public async isGaugeRegistered(): Promise<boolean | null> {
-        const gaugeAddress = this.market.addresses.gauge;
-        if (!gaugeAddress || gaugeAddress === this.llamalend.constants.ZERO_ADDRESS) return null;
-        const target = gaugeAddress.toLowerCase();
-
-        try {
-            const gauges = await getGaugesOverview();
-            const gauge = gauges.find((g) => g.address.toLowerCase() === target);
-            if (gauge) return gauge.is_approved;
-        } catch (e) {
-            if (this.llamalend.chainId !== 1) throw e;
-        }
-
-        if (this.llamalend.chainId === 1) return this._isGaugeRegisteredOnchain(gaugeAddress);
-        throw new Error(`Cannot determine registration of gauge ${gaugeAddress}: not indexed by the prices API and on-chain reads require Ethereum`);
-    }
-
-    private async _isGaugeKilledOnchain(gaugeAddress: string): Promise<boolean> {
-        const gaugeContract = this.llamalend.contracts[gaugeAddress]?.contract;
-        if (!gaugeContract || !('is_killed()' in gaugeContract)) {
-            throw new Error(`Gauge ${gaugeAddress} has no is_killed() method`);
-        }
-        return await gaugeContract.is_killed(this.llamalend.constantOptions);
-    }
-
-    private async _isGaugeRegisteredOnchain(gaugeAddress: string): Promise<boolean> {
-        const gaugeController = this.llamalend.contracts[this.llamalend.constants.ALIASES.gauge_controller]?.contract;
-        if (!gaugeController) throw new Error("GaugeController contract is not available");
-        try {
-            await gaugeController.gauge_types(gaugeAddress, this.llamalend.constantOptions);
-            return true;
-        } catch (e) {
-            // gauge_types reverts for an unregistered gauge; a network error propagates, not becomes false
-            if (isError(e, "CALL_EXCEPTION") || isError(e, "BAD_DATA")) return false;
-            throw e;
-        }
+        return _isGaugeRegistered(this.llamalend, this.market.addresses.gauge);
     }
 
     public async vaultTotalLiquidity(useAPI = true): Promise<string> {
