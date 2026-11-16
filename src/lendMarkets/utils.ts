@@ -1,15 +1,5 @@
-import BigNumber from "bignumber.js";
 import { BN, toBN } from "../utils";
 import { ILendMarketFromPricesAPI, INetworkName, IMarketData, IMarketDataAPI } from "../interfaces";
-
-const SECONDS_PER_YEAR = 365 * 86400;
-
-export const aprApyFromRatePerSecond = (ratePerSecond: BigNumber): { apr: number, apy: number } => {
-    const annualFactor = ratePerSecond.times(SECONDS_PER_YEAR);
-    const apr = annualFactor.times(100).toNumber();
-    const apy = ((Math.E ** annualFactor.toNumber()) - 1) * 100;
-    return { apr, apy };
-};
 
 export type RatesResult = {
     borrowApr: string;

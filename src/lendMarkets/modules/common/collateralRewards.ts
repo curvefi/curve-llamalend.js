@@ -4,7 +4,6 @@ import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import { smartNumber, _mulBy1_3, DIGas, _getUsdRate, toBN } from "../../../utils";
 import { Llamalend } from "../../../llamalend";
 import { _isGaugeKilled, _isGaugeRegistered } from "./gaugeStatus";
-import { aprApyFromRatePerSecond } from "../../utils";
 import LMCallbackABI from '../../../constants/abis/LlamaLendV2LMCallback.json' with {type: 'json'};
 
 export class CollateralRewardsModule {
@@ -58,10 +57,10 @@ export class CollateralRewardsModule {
         return _isGaugeRegistered(this.llamalend, await this._resolveCallback());
     }
 
-    public async stats(): Promise<{ crvApr: number, crvApy: number }> {
+    public async stats(): Promise<{ crvApr: number }> {
         const callback = await this._resolveCallback();
-        if (callback === this.llamalend.constants.ZERO_ADDRESS) return { crvApr: 0, crvApy: 0 };
-        if (await _isGaugeKilled(this.llamalend, callback)) return { crvApr: 0, crvApy: 0 };
+        if (callback === this.llamalend.constants.ZERO_ADDRESS) return { crvApr: 0 };
+        if (await _isGaugeKilled(this.llamalend, callback)) return { crvApr: 0 };
 
         const callbackContract = this.llamalend.contracts[callback].contract;
         const [_inflationRate, _totalCollateral] = await Promise.all([
@@ -77,14 +76,15 @@ export class CollateralRewardsModule {
         }
 
         const totalCollateralBN = toBN(_totalCollateral, this.market.collateral_token.decimals);
-        if (inflationRateBN.eq(0) || totalCollateralBN.eq(0)) return { crvApr: 0, crvApy: 0 };
+        if (inflationRateBN.eq(0) || totalCollateralBN.eq(0)) return { crvApr: 0 };
 
         const crvPrice = await _getUsdRate.call(this.llamalend, this.llamalend.constants.ALIASES.crv);
         const collateralPrice = await _getUsdRate.call(this.llamalend, this.market.addresses.collateral_token);
 
+        // CRV paid per second as a fraction of the total collateral value, annualized (no compounding).
         const ratePerSecond = inflationRateBN.times(crvPrice).div(totalCollateralBN.times(collateralPrice));
-        const { apr, apy } = aprApyFromRatePerSecond(ratePerSecond);
-        return { crvApr: apr, crvApy: apy };
+        const crvApr = ratePerSecond.times(31536000).times(100).toNumber();
+        return { crvApr };
     }
 
     public async totalCollateral(): Promise<string> {
