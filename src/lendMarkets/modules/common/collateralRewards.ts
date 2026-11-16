@@ -3,6 +3,7 @@ import type { TGas } from "../../../interfaces";
 import type { LendMarketTemplate } from "../../LendMarketTemplate";
 import { smartNumber, _mulBy1_3, DIGas } from "../../../utils";
 import { Llamalend } from "../../../llamalend";
+import { _isGaugeKilled, _isGaugeRegistered } from "./gaugeStatus";
 import LMCallbackABI from '../../../constants/abis/LlamaLendV2LMCallback.json' with {type: 'json'};
 
 export class CollateralRewardsModule {
@@ -44,6 +45,16 @@ export class CollateralRewardsModule {
 
     public async isCollateralRewardEnable(): Promise<boolean> {
         return (await this._resolveCallback()) !== this.llamalend.constants.ZERO_ADDRESS;
+    }
+
+    // The LM callback behaves as a DAO gauge (indexed by the prices API, registered in the
+    // GaugeController). `null` only when the market has no callback; throws if the status can't be read.
+    public async isCallbackKilled(): Promise<boolean | null> {
+        return _isGaugeKilled(this.llamalend, await this._resolveCallback());
+    }
+
+    public async isCallbackRegistered(): Promise<boolean | null> {
+        return _isGaugeRegistered(this.llamalend, await this._resolveCallback());
     }
 
     public async totalCollateral(): Promise<string> {

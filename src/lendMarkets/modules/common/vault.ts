@@ -19,6 +19,7 @@ import {
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
 import { _getMarketsData } from "../../../external-api";
+import { _isGaugeKilled, _isGaugeRegistered } from "./gaugeStatus";
 import ERC20Abi from '../../../constants/abis/ERC20.json' with {type: 'json'};
 import {WEEK} from "../../../constants/utils";
 
@@ -289,6 +290,15 @@ export class VaultModule {
         const gaugeContract = this.llamalend.contracts[this.market.addresses.gauge].contract;
 
         return !('inflation_rate()' in gaugeContract || 'inflation_rate(uint256)' in gaugeContract);
+    }
+
+    // `null` only when the market has no gauge; throws if the status can't be read.
+    public async isGaugeKilled(): Promise<boolean | null> {
+        return _isGaugeKilled(this.llamalend, this.market.addresses.gauge);
+    }
+
+    public async isGaugeRegistered(): Promise<boolean | null> {
+        return _isGaugeRegistered(this.llamalend, this.market.addresses.gauge);
     }
 
     public async vaultTotalLiquidity(useAPI = true): Promise<string> {

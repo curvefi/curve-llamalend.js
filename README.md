@@ -462,6 +462,10 @@ import llamalend from "@curvefi/llamalend-api";
 
     lendMarket.vault.rewardsOnly();
     // false
+    await lendMarket.vault.isGaugeKilled();
+    // false  (true = gauge stopped accruing CRV; null = the market has no gauge; throws if the status can't be read)
+    await lendMarket.vault.isGaugeRegistered();
+    // true   (false = not approved in the GaugeController; null = the market has no gauge; throws if the status can't be read)
     await lendMarket.vault.totalLiquidity();
     // 180638.919172
     await lendMarket.vault.crvApr();
@@ -496,6 +500,12 @@ CRV liquidity-mining rewards accrued on the collateral kept in the AMM. Availabl
 
     await lendMarket.collateralRewards.callbackAddress();
     // 0x...
+
+    // The LM callback is itself a DAO gauge, so its status can be read like the vault gauge.
+    await lendMarket.collateralRewards.isCallbackKilled();
+    // false  (true = callback stopped accruing CRV; null = the market has no callback; throws if the status can't be read)
+    await lendMarket.collateralRewards.isCallbackRegistered();
+    // true   (false = not approved in the GaugeController; null = the market has no callback; throws if the status can't be read)
 
     await lendMarket.collateralRewards.userCollateral();
     // 1.5
