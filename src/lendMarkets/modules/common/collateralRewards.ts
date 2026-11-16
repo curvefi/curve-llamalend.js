@@ -1,9 +1,10 @@
 import memoize from "memoizee";
 import type { TGas } from "../../../interfaces";
 import type { LendMarketTemplate } from "../../LendMarketTemplate";
-import { smartNumber, _mulBy1_3, DIGas } from "../../../utils";
+import { smartNumber, _mulBy1_3, DIGas, _getUsdRate, toBN } from "../../../utils";
 import { Llamalend } from "../../../llamalend";
 import { _isGaugeKilled, _isGaugeRegistered } from "./gaugeStatus";
+import { aprApyFromRatePerSecond } from "../../utils";
 import LMCallbackABI from '../../../constants/abis/LlamaLendV2LMCallback.json' with {type: 'json'};
 
 export class CollateralRewardsModule {
@@ -55,6 +56,35 @@ export class CollateralRewardsModule {
 
     public async isCallbackRegistered(): Promise<boolean | null> {
         return _isGaugeRegistered(this.llamalend, await this._resolveCallback());
+    }
+
+    public async stats(): Promise<{ crvApr: number, crvApy: number }> {
+        const callback = await this._resolveCallback();
+        if (callback === this.llamalend.constants.ZERO_ADDRESS) return { crvApr: 0, crvApy: 0 };
+        if (await _isGaugeKilled(this.llamalend, callback)) return { crvApr: 0, crvApy: 0 };
+
+        const callbackContract = this.llamalend.contracts[callback].contract;
+        const [_inflationRate, _totalCollateral] = await Promise.all([
+            callbackContract.inflation_rate(this.llamalend.constantOptions),
+            callbackContract.total_collateral(this.llamalend.constantOptions),
+        ]);
+
+        let inflationRateBN = toBN(_inflationRate);
+        if (this.llamalend.chainId === 1) {
+            const gaugeController = this.llamalend.contracts[this.llamalend.constants.ALIASES.gauge_controller].contract;
+            const weightBN = toBN(await gaugeController.gauge_relative_weight(callback, this.llamalend.constantOptions));
+            inflationRateBN = inflationRateBN.times(weightBN);
+        }
+
+        const totalCollateralBN = toBN(_totalCollateral, this.market.collateral_token.decimals);
+        if (inflationRateBN.eq(0) || totalCollateralBN.eq(0)) return { crvApr: 0, crvApy: 0 };
+
+        const crvPrice = await _getUsdRate.call(this.llamalend, this.llamalend.constants.ALIASES.crv);
+        const collateralPrice = await _getUsdRate.call(this.llamalend, this.market.addresses.collateral_token);
+
+        const ratePerSecond = inflationRateBN.times(crvPrice).div(totalCollateralBN.times(collateralPrice));
+        const { apr, apy } = aprApyFromRatePerSecond(ratePerSecond);
+        return { crvApr: apr, crvApy: apy };
     }
 
     public async totalCollateral(): Promise<string> {

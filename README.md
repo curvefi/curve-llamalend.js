@@ -507,6 +507,11 @@ CRV liquidity-mining rewards accrued on the collateral kept in the AMM. Availabl
     await lendMarket.collateralRewards.isCallbackRegistered();
     // true   (false = not approved in the GaugeController; null = the market has no callback; throws if the status can't be read)
 
+    // CRV emissions APR/APY as a PERCENTAGE OF COLLATERAL value (not of debt).
+    // Returns { crvApr: 0, crvApy: 0 } when the market has no callback or its gauge is killed.
+    await lendMarket.collateralRewards.stats();
+    // { crvApr: 34.37, crvApy: 41.02 }
+
     await lendMarket.collateralRewards.userCollateral();
     // 1.5
     await lendMarket.collateralRewards.totalCollateral();
