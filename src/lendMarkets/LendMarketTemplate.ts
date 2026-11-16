@@ -373,6 +373,7 @@ export class LendMarketTemplate<V extends 'v1' | 'v2' = 'v1' | 'v2'> {
             isCollateralRewardEnable: collateralRewards.isCollateralRewardEnable.bind(collateralRewards),
             isCallbackKilled: collateralRewards.isCallbackKilled.bind(collateralRewards),
             isCallbackRegistered: collateralRewards.isCallbackRegistered.bind(collateralRewards),
+            stats: collateralRewards.stats.bind(collateralRewards),
             totalCollateral: collateralRewards.totalCollateral.bind(collateralRewards),
             userCollateral: collateralRewards.userCollateral.bind(collateralRewards),
             claimableCrv: collateralRewards.claimableCrv.bind(collateralRewards),
