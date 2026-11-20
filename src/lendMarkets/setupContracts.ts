@@ -24,7 +24,7 @@ export const setupLendMarketContracts = (llamalend: Llamalend, marketData: IOneW
 
     llamalend.setContract(addresses.amm, LlammaABI);
     llamalend.setContract(addresses.controller, controllerAbiMap[version]);
-    const monetaryPolicyAbi = resolveLendMonetaryPolicyAbi(version, addresses.controller);
+    const monetaryPolicyAbi = resolveLendMonetaryPolicyAbi(version);
     llamalend.setContract(addresses.monetary_policy, monetaryPolicyAbi);
     llamalend.setContract(addresses.vault, VaultABI);
     const gaugeAbi = llamalend.chainId !== 1
