@@ -280,6 +280,7 @@ export class MintMarketTemplate {
             hasLeverage: leverageZapV2.hasLeverage.bind(leverageZapV2),
 
             maxLeverage: leverageZapV2.maxLeverage.bind(leverageZapV2),
+            maxEquityLeverage: leverageZapV2.maxEquityLeverage.bind(leverageZapV2),
 
             createLoanMaxRecv: leverageZapV2.leverageCreateLoanMaxRecv.bind(leverageZapV2),
             createLoanMaxRecvAllRanges: leverageZapV2.leverageCreateLoanMaxRecvAllRanges.bind(leverageZapV2),

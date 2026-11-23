@@ -12,6 +12,8 @@ import {
     ensureAllowanceEstimateGas,
     formatUnits,
     formatNumber,
+    _applyLeverageDebtCut,
+    _maxEquityLeverageBN,
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
@@ -132,6 +134,20 @@ export abstract class LeverageZapV2BaseModule {
         return BN(1).div(BN(1).minus(k_effective_BN)).toString()
     }
 
+    public async maxEquityLeverage(N: number): Promise<string> {
+        // equity leverage = collateral / (collateral - debt), swap priced at the oracle, with the
+        // same 3% max-debt cut, using the controller's max_p_base (so it depends on market state).
+        const [k_effective_BN, oraclePrice, basePrice, A] = await Promise.all([
+            this._get_k_effective_BN(N),
+            this.market.prices.oraclePrice(),
+            this.market.prices.basePrice(),
+            this.market.prices.A(),
+        ]);
+        const _activeBand = await this.llamalend.contracts[this.market.addresses.amm].contract.active_band_with_skip(this.llamalend.constantOptions) as bigint;
+
+        return _maxEquityLeverageBN(k_effective_BN, BN(oraclePrice), BN(basePrice), Number(A), Number(_activeBand)).toString()
+    }
+
     public calcMinRecv(expected: TAmount, slippage: number): string {
         if (slippage < 0 || slippage > 100) throw Error("Slippage must be between 0 and 100");
         return BN(expected).times(BN(100).minus(slippage)).div(100).toString();
@@ -166,7 +182,7 @@ export abstract class LeverageZapV2BaseModule {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral;
             let _maxBorrowable = await this._zapMaxBorrowableCall(_userEffectiveCollateral, _maxLeverageCollateral, range, fromBN(pAvgBN));
-            _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000)
+            _maxBorrowable = _applyLeverageDebtCut(_maxBorrowable)
             if (_maxBorrowable === BigInt(0)) break;
             maxBorrowableBN = toBN(_maxBorrowable, this.market.borrowed_token.decimals);
 
@@ -234,7 +250,7 @@ export abstract class LeverageZapV2BaseModule {
                 const j = N - this.market.minBands;
                 calls.push(this._zapMaxBorrowableMulticallCall(_userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
             }
-            _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(970) / BigInt(1000));
+            _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map(_applyLeverageDebtCut);
             maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.market.borrowed_token.decimals));
 
             const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
@@ -611,7 +627,7 @@ export abstract class LeverageZapV2BaseModule {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.market.collateral_token.decimals);
             let _maxBorrowable = await this._zapMaxBorrowableCall(_userEffectiveCollateral, _maxLeverageCollateral, _N, fromBN(pAvgBN));
-            _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000);
+            _maxBorrowable = _applyLeverageDebtCut(_maxBorrowable);
             if (_maxBorrowable === BigInt(0)) break;
             maxBorrowableBN = toBN(_maxBorrowable, this.market.borrowed_token.decimals);
 
@@ -633,7 +649,7 @@ export abstract class LeverageZapV2BaseModule {
         if (maxBorrowableBN.eq(0)) _userEffectiveCollateral = BigInt(0);
         const _maxTotalCollateral = _userEffectiveCollateral + _maxLeverageCollateral
         let _maxBorrowable = await this._getMaxAdditionalBorrowable(_stateCollateral, _maxTotalCollateral, _N, _stateDebt, address);
-        _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000);
+        _maxBorrowable = _applyLeverageDebtCut(_maxBorrowable);
 
         return {
             maxDebt: formatUnits(_maxBorrowable, this.market.borrowed_token.decimals),
