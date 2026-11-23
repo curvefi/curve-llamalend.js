@@ -18,7 +18,7 @@ import {
     DIGas,
     buildCalldataForLeverageZapV2,
     _applyLeverageDebtCut,
-    LEVERAGE_DEBT_CUT_BN,
+    _maxEquityLeverageBN,
 } from "../../utils.js";
 import {Llamalend} from "../../llamalend.js";
 
@@ -106,11 +106,16 @@ export class MintLeverageZapV2Module {
     }
 
     public async maxEquityLeverage(N: number): Promise<string> {
-        // equity leverage = collateral / (collateral - debt), swap priced at the oracle,
-        // with the same 3% max-debt cut: 1 + 0.97 * k_effective / (1 - k_effective)
-        const k_effective_BN = await this._get_k_effective_BN(N);
+        // equity leverage = collateral / (collateral - debt), swap priced at the oracle, with the
+        // same 3% max-debt cut, using the controller's max_p_base (so it depends on market state).
+        const [k_effective_BN, oraclePrice, basePrice] = await Promise.all([
+            this._get_k_effective_BN(N),
+            this.market.oraclePrice(),
+            this.market.basePrice(),
+        ]);
+        const _activeBand = await this.llamalend.contracts[this.market.address].contract.active_band_with_skip(this.llamalend.constantOptions) as bigint;
 
-        return BN(1).plus(LEVERAGE_DEBT_CUT_BN.times(k_effective_BN).div(BN(1).minus(k_effective_BN))).toString()
+        return _maxEquityLeverageBN(k_effective_BN, BN(oraclePrice), BN(basePrice), this.market.A, Number(_activeBand)).toString()
     }
 
     public calcMinRecv(expected: TAmount, slippage: number): string {

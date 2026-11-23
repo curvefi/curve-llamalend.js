@@ -91,6 +91,30 @@ const LEVERAGE_DEBT_CUT_DENOMINATOR = BigInt(1000);
 export const _applyLeverageDebtCut = (n: bigint): bigint => n * LEVERAGE_DEBT_CUT_NUMERATOR / LEVERAGE_DEBT_CUT_DENOMINATOR;
 export const LEVERAGE_DEBT_CUT_BN = BN(LEVERAGE_DEBT_CUT_NUMERATOR.toString()).div(LEVERAGE_DEBT_CUT_DENOMINATOR.toString());
 
+export const _maxEquityLeverageBN = (
+    k_effective_BN: BigNumber,
+    oracleBN: BigNumber,
+    baseBN: BigNumber,
+    A: number,
+    activeBandWithSkip: number
+): BigNumber => {
+    const ratioBN = BN(A - 1).div(A);
+    const priceAt = (band: number): BigNumber => baseBN.times(ratioBN.pow(band));
+    // Highest band price at or below the oracle, and above the active band after skipping empties.
+    const oracleBand = Math.ceil(Math.log(oracleBN.div(baseBN).toNumber()) / Math.log(ratioBN.toNumber()));
+    let band = Math.max(oracleBand, activeBandWithSkip + 1);
+    let maxPBaseBN = priceAt(band);
+    if (maxPBaseBN.gt(oracleBN)) {
+        band += 1;
+        maxPBaseBN = priceAt(band);
+    } else if (band > activeBandWithSkip + 1 && priceAt(band - 1).lte(oracleBN)) {
+        maxPBaseBN = priceAt(band - 1);
+    }
+    const debtRatioBN = k_effective_BN.times(maxPBaseBN).div(oracleBN);
+
+    return BN(1).plus(LEVERAGE_DEBT_CUT_BN.times(debtRatioBN).div(BN(1).minus(debtRatioBN)));
+};
+
 
 export const smartNumber = (abstractNumber: bigint | bigint[]): number | number[] => {
     if(Array.isArray(abstractNumber)) {
