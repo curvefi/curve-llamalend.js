@@ -5,6 +5,8 @@ export interface ILeverageZapV2 {
 
     maxLeverage: (N: number) => Promise<string>,
 
+    maxEquityLeverage: (N: number) => Promise<string>,
+
     createLoanMaxRecv: ({
         userCollateral,
         range,
