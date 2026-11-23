@@ -12,6 +12,8 @@ import {
     ensureAllowanceEstimateGas,
     formatUnits,
     formatNumber,
+    _applyLeverageDebtCut,
+    LEVERAGE_DEBT_CUT_BN,
 } from "../../../utils";
 import {Llamalend} from "../../../llamalend";
 import BigNumber from "bignumber.js";
@@ -136,9 +138,8 @@ export abstract class LeverageZapV2BaseModule {
         // equity leverage = collateral / (collateral - debt), swap priced at the oracle,
         // with the same 3% max-debt cut: 1 + 0.97 * k_effective / (1 - k_effective)
         const k_effective_BN = await this._get_k_effective_BN(N);
-        const debtCut_BN = BN(970).div(1000);
 
-        return BN(1).plus(debtCut_BN.times(k_effective_BN).div(BN(1).minus(k_effective_BN))).toString()
+        return BN(1).plus(LEVERAGE_DEBT_CUT_BN.times(k_effective_BN).div(BN(1).minus(k_effective_BN))).toString()
     }
 
     public calcMinRecv(expected: TAmount, slippage: number): string {
@@ -175,7 +176,7 @@ export abstract class LeverageZapV2BaseModule {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral;
             let _maxBorrowable = await this._zapMaxBorrowableCall(_userEffectiveCollateral, _maxLeverageCollateral, range, fromBN(pAvgBN));
-            _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000)
+            _maxBorrowable = _applyLeverageDebtCut(_maxBorrowable)
             if (_maxBorrowable === BigInt(0)) break;
             maxBorrowableBN = toBN(_maxBorrowable, this.market.borrowed_token.decimals);
 
@@ -243,7 +244,7 @@ export abstract class LeverageZapV2BaseModule {
                 const j = N - this.market.minBands;
                 calls.push(this._zapMaxBorrowableMulticallCall(_userEffectiveCollateral, _maxLeverageCollateral[j], N, fromBN(pBN)));
             }
-            _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map((_mb) => _mb * BigInt(970) / BigInt(1000));
+            _maxBorrowable = (await this.llamalend.multicallProvider.all(calls) as bigint[]).map(_applyLeverageDebtCut);
             maxBorrowableBN = _maxBorrowable.map((_mb) => toBN(_mb, this.market.borrowed_token.decimals));
 
             const deltaBN = maxBorrowableBN.map((mb, l) => mb.minus(maxBorrowablePrevBN[l]).abs().div(mb));
@@ -620,7 +621,7 @@ export abstract class LeverageZapV2BaseModule {
             maxBorrowablePrevBN = maxBorrowableBN;
             _userEffectiveCollateral = _userCollateral + fromBN(BN(userBorrowed).div(pAvgBN), this.market.collateral_token.decimals);
             let _maxBorrowable = await this._zapMaxBorrowableCall(_userEffectiveCollateral, _maxLeverageCollateral, _N, fromBN(pAvgBN));
-            _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000);
+            _maxBorrowable = _applyLeverageDebtCut(_maxBorrowable);
             if (_maxBorrowable === BigInt(0)) break;
             maxBorrowableBN = toBN(_maxBorrowable, this.market.borrowed_token.decimals);
 
@@ -642,7 +643,7 @@ export abstract class LeverageZapV2BaseModule {
         if (maxBorrowableBN.eq(0)) _userEffectiveCollateral = BigInt(0);
         const _maxTotalCollateral = _userEffectiveCollateral + _maxLeverageCollateral
         let _maxBorrowable = await this._getMaxAdditionalBorrowable(_stateCollateral, _maxTotalCollateral, _N, _stateDebt, address);
-        _maxBorrowable = _maxBorrowable * BigInt(970) / BigInt(1000);
+        _maxBorrowable = _applyLeverageDebtCut(_maxBorrowable);
 
         return {
             maxDebt: formatUnits(_maxBorrowable, this.market.borrowed_token.decimals),

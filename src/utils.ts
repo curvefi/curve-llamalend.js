@@ -85,6 +85,12 @@ export const isEth = (address: string): boolean => address.toLowerCase() === ETH
 export const getEthIndex = (addresses: string[]): number => addresses.map((address: string) => address.toLowerCase()).indexOf(ETH_ADDRESS.toLowerCase());
 export const _mulBy1_3 = (n: bigint): bigint => n * parseUnits("130", 0) / parseUnits("100", 0);
 
+// 3% safety cut applied to the leverage zap's max borrowable debt.
+const LEVERAGE_DEBT_CUT_NUMERATOR = BigInt(970);
+const LEVERAGE_DEBT_CUT_DENOMINATOR = BigInt(1000);
+export const _applyLeverageDebtCut = (n: bigint): bigint => n * LEVERAGE_DEBT_CUT_NUMERATOR / LEVERAGE_DEBT_CUT_DENOMINATOR;
+export const LEVERAGE_DEBT_CUT_BN = BN(LEVERAGE_DEBT_CUT_NUMERATOR.toString()).div(LEVERAGE_DEBT_CUT_DENOMINATOR.toString());
+
 
 export const smartNumber = (abstractNumber: bigint | bigint[]): number | number[] => {
     if(Array.isArray(abstractNumber)) {
