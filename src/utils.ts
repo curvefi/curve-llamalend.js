@@ -331,7 +331,6 @@ export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins
             if (await _approveRequiresReset.call(this, contract, coinAddresses[i], spender, _allowance[i], _approveAmount, resettable)) {
                 const resetGas = smartNumber(await contract.approve.estimateGas(spender, 0, this.constantOptions));
                 gas = gasSum(gas, resetGas);
-                gas = gasSum(gas, resetGas);
             } else {
                 const currentGas = smartNumber(await contract.approve.estimateGas(spender, _approveAmount, this.constantOptions));
                 gas = gasSum(gas, currentGas);
