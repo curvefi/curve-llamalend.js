@@ -2,7 +2,7 @@ import { ethers,  BigNumberish, Numeric } from "ethers";
 import { Call } from "@curvefi/ethcall";
 import BigNumber from 'bignumber.js';
 import { ICurveContract, IDict, TAmount, TGas } from "./interfaces.js";
-import { _getTokenUsdPrice } from "./external-api.js";
+import { _getTokenUsdPrice, _getResettableApprovalTokens } from "./external-api.js";
 import type { Llamalend } from "./llamalend.js";
 import { JsonFragment } from "ethers/lib.esm";
 import { L2Networks } from "./constants/L2Networks.js";
@@ -270,15 +270,42 @@ export const hasAllowance = async function (this: Llamalend, coins: string[], am
     return _allowance.map((a, i) => a >= _amounts[i]).reduce((a, b) => a && b);
 }
 
+const _approveRequiresReset = async function (
+    this: Llamalend,
+    contract: ethers.Contract,
+    coin: string,
+    spender: string,
+    _currentAllowance: bigint,
+    _approveAmount: bigint,
+    resettable: Set<string>
+): Promise<boolean> {
+    if (_currentAllowance === BigInt(0)) return false;
+    if (resettable.has(coin.toLowerCase())) return true;
+    try {
+        await contract.approve.staticCall(spender, _approveAmount, this.constantOptions);
+        return false;
+    } catch {
+        return true;
+    }
+}
+
 export const _ensureAllowance = async function (this: Llamalend, coins: string[], _amounts: bigint[], spender: string, isMax = false): Promise<string[]> {
     const address = this.signerAddress;
     const _allowance: bigint[] = await _getAllowance.call(this, coins, address, spender);
+    const resettable = await _getResettableApprovalTokens(this.constants.NETWORK_NAME);
 
     const txHashes: string[] = []
     for (let i = 0; i < _allowance.length; i++) {
         if (_allowance[i] < _amounts[i]) {
             const contract = this.contracts[coins[i]].contract;
             const _approveAmount = isMax ? MAX_ALLOWANCE : _amounts[i];
+            if (await _approveRequiresReset.call(this, contract, coins[i], spender, _allowance[i], _approveAmount, resettable)) {
+                await this.updateFeeData();
+                const resetGasLimit = _mulBy1_3(DIGas(await contract.approve.estimateGas(spender, 0, this.constantOptions)));
+                const resetTx = await contract.approve(spender, 0, { ...this.options, gasLimit: resetGasLimit });
+                await resetTx.wait();
+                txHashes.push(resetTx.hash);
+            }
             await this.updateFeeData();
             const gasLimit = _mulBy1_3(DIGas(await contract.approve.estimateGas(spender, _approveAmount, this.constantOptions)));
             txHashes.push((await contract.approve(spender, _approveAmount, { ...this.options, gasLimit })).hash);
@@ -294,14 +321,21 @@ export const ensureAllowanceEstimateGas = async function (this: Llamalend, coins
     const decimals = _getCoinDecimals.call(this, coinAddresses).map((item) => Number(item));
     const _amounts = amounts.map((a, i) => parseUnits(a, decimals[i]));
     const _allowance: bigint[] = await _getAllowance.call(this, coinAddresses, this.signerAddress, spender);
+    const resettable = await _getResettableApprovalTokens(this.constants.NETWORK_NAME);
 
     let gas = [0,0];
     for (let i = 0; i < _allowance.length; i++) {
         if (_allowance[i] < _amounts[i]) {
             const contract = this.contracts[coinAddresses[i]].contract;
             const _approveAmount = isMax ? MAX_ALLOWANCE : _amounts[i];
-            const currentGas = smartNumber(await contract.approve.estimateGas(spender, _approveAmount, this.constantOptions));
-            gas = gasSum(gas, currentGas);
+            if (await _approveRequiresReset.call(this, contract, coinAddresses[i], spender, _allowance[i], _approveAmount, resettable)) {
+                const resetGas = smartNumber(await contract.approve.estimateGas(spender, 0, this.constantOptions));
+                gas = gasSum(gas, resetGas);
+                gas = gasSum(gas, resetGas);
+            } else {
+                const currentGas = smartNumber(await contract.approve.estimateGas(spender, _approveAmount, this.constantOptions));
+                gas = gasSum(gas, currentGas);
+            }
         }
     }
 

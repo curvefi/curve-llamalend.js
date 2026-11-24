@@ -24,6 +24,24 @@ export const _getTokenUsdPrice = memoize(
     }
 )
 
+export const _getResettableApprovalTokens = memoize(
+    async (network: INetworkName): Promise<Set<string>> => {
+        try {
+            const url = `https://prices.curve.finance/v1/tokens/${network}/resettable_approval`;
+            const response = await fetch(url, { headers: { accept: "application/json" } });
+            if (response.status !== 200) return new Set();
+            const { data } = await response.json() as { data: string[] };
+            return new Set((data ?? []).map((address) => address.toLowerCase()));
+        } catch {
+            return new Set();
+        }
+    },
+    {
+        promise: true,
+        maxAge: 10 * 60 * 1000, // 10m
+    }
+)
+
 type UserCollateral = { total_deposit_precise: string, total_deposit_from_user: number, total_deposit_usd_value: number , total_borrowed: number, total_deposit_from_user_precise: number, total_deposit_from_user_usd_value: number}
 export const _getUserCollateral = memoize(
     async (network: INetworkName, controller: string, user: string): Promise<UserCollateral> => {
